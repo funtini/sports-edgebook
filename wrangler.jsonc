@@ -1,5 +1,5 @@
 // Cloudflare Workers static assets: serves the Vite build as a single-page app.
-// Build: npm run build-only · Deploy: npx wrangler deploy · Non-production branches: npx wrangler versions upload
+// Build: npm run build-only · Production deploy: npx wrangler deploy · PR branches: npx wrangler preview
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "sports-edgebook",
@@ -8,4 +8,6 @@
     "directory": "./dist",
     "not_found_handling": "single-page-application",
   },
+  // Required by `wrangler preview` (Cloudflare Previews, used for non-production branches). Empty is valid.
+  "previews": {},
 }
