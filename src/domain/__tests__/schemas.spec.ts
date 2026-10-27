@@ -6,6 +6,7 @@ import {
   newGameFormSchema,
   predictionCreateSchema,
   predictionFormSchema,
+  userSettingsUpdateSchema,
 } from '../schemas'
 
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
@@ -171,5 +172,30 @@ describe('newGameFormSchema', () => {
       away: 'sporting cp',
     })
     expect(issuePaths(result)).toEqual(['away'])
+  })
+})
+
+describe('userSettingsUpdateSchema', () => {
+  const parse = (starting_bankroll_units: number | null) =>
+    userSettingsUpdateSchema.safeParse({ unit_value: 10, starting_bankroll_units })
+
+  it.each([null, 0])('saves %s as no starting bankroll', (units) => {
+    expect(parse(units)).toEqual({
+      success: true,
+      data: { unit_value: 10, starting_bankroll_units: null },
+    })
+  })
+
+  it('keeps a positive bankroll', () => {
+    expect(parse(50).data?.starting_bankroll_units).toBe(50)
+  })
+
+  it('rejects a negative bankroll with a PT-PT message', () => {
+    expect(parse(-5).error?.issues[0]?.message).toBe('A banca inicial não pode ser negativa')
+  })
+
+  it('still requires a positive unit value', () => {
+    const result = userSettingsUpdateSchema.safeParse({ unit_value: 0, starting_bankroll_units: 0 })
+    expect(result.error?.issues[0]?.message).toBe('O valor da unidade tem de ser maior que 0')
   })
 })

@@ -52,7 +52,7 @@ Code: `src/domain/value.ts`.
 
 Everything is stored and computed in units; the base stake is 1 unit, and a bet may use any stake (0.5, 2...). `user_settings.unit_value` (default 10, typical 10/20/30/100) converts units to currency for display. The dashboard shows units and euros side by side. Amounts render in PT-PT format as `+1,80 u · +36,00 €` (signed for profit, unsigned for balances). Code: `src/domain/money.ts`.
 
-The settings screen (`/definicoes`) edits `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units`, and shows the confidence anchors read-only; editing them comes with calibration in phase 4.
+The settings screen (`/definicoes`) edits `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds "Sair" (sign out). The header reaches it through a gear icon so the nav stays on one line on a 390px phone; below `sm` the "Edgebook" brand is hidden, since "Hoje" goes to the same place.
 
 ## Settlement
 

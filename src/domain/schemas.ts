@@ -124,11 +124,13 @@ export const userSettingsUpdateSchema = z.object({
     .number('Indica o valor da unidade')
     .positive('O valor da unidade tem de ser maior que 0')
     .max(NUMERIC_10_2_MAX, 'Valor demasiado alto'),
+  /** Empty or 0 both mean "no starting bankroll" and are saved as `null`. */
   starting_bankroll_units: z
     .number()
-    .positive('A banca inicial tem de ser maior que 0')
+    .min(0, 'A banca inicial não pode ser negativa')
     .max(NUMERIC_10_2_MAX, 'Valor demasiado alto')
-    .nullable(),
+    .nullable()
+    .transform((units) => (units === 0 ? null : units)),
 })
 
 export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>
