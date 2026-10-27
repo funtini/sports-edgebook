@@ -14,6 +14,22 @@
     <meta name="apple-mobile-web-app-title" content="Edgebook">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <title>Sports Edgebook</title>
+    <script>
+      // Applies the theme before the app loads so there is no flash of the wrong one.
+      // Mirrors src/lib/preferences.ts (storage key, class, colours); a test keeps them in sync.
+      (function () {
+        var theme = null
+        try {
+          theme = localStorage.getItem('edgebook.theme')
+        } catch (e) {}
+        if (theme !== 'light' && theme !== 'dark') {
+          theme = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        }
+        if (theme === 'dark') document.documentElement.classList.add('app-dark')
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', theme === 'dark' ? '#09090b' : '#10b981')
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

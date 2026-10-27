@@ -6,6 +6,7 @@ import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 
 import App from './App.vue'
+import { i18n, syncLocale } from './i18n'
 import router from './router'
 import { EdgebookPreset } from './theme'
 
@@ -20,5 +21,7 @@ app.use(PrimeVue, {
   },
 })
 app.use(ToastService)
+app.use(i18n)
+syncLocale(app.config.globalProperties.$primevue)
 
 app.mount('#app')
