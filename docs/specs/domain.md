@@ -17,8 +17,8 @@ Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues
 1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
 2. **Mercado** (category) + **Tipo** (name), autocompleted from the user's markets; a new pair is created on save.
 3. **Aposta** (selection) and optional **Linha**; **Odd** with a decimal keyboard, comma or dot. Linha has a ± button because the iOS decimal keypad has no minus key (handicap lines are often negative).
-4. **Confiança**: five buttons with the level labels. The **Índice de valor** shows live (value index, fair odd, band colour) once odd and confidence are set.
-5. **Punter**: when on, **Stake (u)** (starts at 1) and **Casa de apostas** (autocompleted from bookmakers used before).
+4. **Confiança**: five buttons with the level labels; the chosen level's probability and fair odd show beside the title. The **Índice de valor** card shows live once odd and confidence are set: band pill (short label, see Value index), the index, "odd X vs justa Y" and a bar from 0,80 to 1,30 with the neutral zone marked. The card takes the band's soft background and colour (neutral: surface + border).
+5. **Aposta real (punter)**: when on, **Valor apostado** (typed in units, starts at 1, shown in the info colour; in euros mode its euro value shows beside it) and **Casa de apostas** (autocompleted from bookmakers used before).
 6. **Notas**, collapsed by default.
 
 Errors show inline, from `predictionFormSchema`, `marketFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic PT-PT message. Saving shows "Prognóstico guardado" and clears the form except the game, marked "Mesmo jogo", so the next market for the same game is one tap away; "Outro jogo" clears it.
@@ -42,17 +42,29 @@ fair odd    = 1 / p
 value index = p × odd
 ```
 
-- `> 1.05` favourable (green), `0.95–1.05` neutral (grey), `< 0.95` unfavourable (red).
-- Shown live in the logging form before saving.
-- Example: level 3 (65%) at 1.80 → 1.17. Level 4 (75%) at 1.25 → 0.94.
+Five bands (`valueBand`), judged on the index rounded to 2 decimals, as it is shown:
+
+| Band | Index | Row label (Hoje, Evento) | Pill (Registo) | Colour |
+| --- | --- | --- | --- | --- |
+| `banger` | > 1.35 | Banger (1,37) | Banger | purple |
+| `favourable` | 1.06 – 1.35 | Favorável (1,20) | Favorável | pos |
+| `neutral` | 0.95 – 1.05 | Neutro | Neutro | muted |
+| `reduced` | 0.85 – 0.94 | Valor reduzido (0,90) | Desfavorável | amber |
+| `no_value` | < 0.85 | Odd sem valor (0,77) | Sem valor | neg |
+
+- Shown live in the logging form before saving, and on every prediction row.
+- Labels and colours: `src/components/valueBands.ts`.
+- Example: level 3 (65%) at 1.80 → 1.17 (favourable). Level 4 (75%) at 1.25 → 0.94 (reduced).
 
 Code: `src/domain/value.ts`.
 
 ## Units and money
 
-Everything is stored and computed in units; the base stake is 1 unit, and a bet may use any stake (0.5, 2...). `user_settings.unit_value` (default 10, typical 10/20/30/100) converts units to currency for display. The dashboard shows units and euros side by side. Amounts render in PT-PT format as `+1,80 u · +36,00 €` (signed for profit, unsigned for balances). Code: `src/domain/money.ts`.
+Everything is stored and computed in units; the base stake is 1 unit, and a bet may use any stake (0.5, 2...). `user_settings.unit_value` (default 10, typical 10/20/30/100) converts units to currency for display.
 
-The settings screen (`/definicoes`) edits `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds "Sair" (sign out). The header reaches it through a gear icon so the nav stays on one line on a 390px phone; below `sm` the "Edgebook" brand is hidden, since "Hoje" goes to the same place.
+`user_settings.money_display` (`units` by default, or `euros`) chooses how money is shown. Every amount shows **one** value: units mode shows the bare number (`+1,81`, no "u"); euros mode shows units × `unit_value` (`+36,20 €`). Signed for profit, unsigned for stakes and balances, PT-PT format. It applies to Hoje, Evento and Registo; the Dashboard has its own toggle (see [metrics.md](metrics.md)). Code: `formatMoney` in `src/domain/money.ts`.
+
+The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds "Sair" (sign out). The header reaches it through a gear icon (see [ui.md](ui.md)).
 
 ## Settlement
 
@@ -69,20 +81,22 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 
 - **Day**: selected with previous / next, or a date picker. Today has no query; any other day is `?dia=YYYY-MM-DD` (local date), so back/forward and links work. A malformed `dia` falls back to today and is dropped from the URL. The view follows the date past midnight when left open.
 - **Games**: predictions of the day grouped by game, by kickoff. The game header links to `/eventos/:id`.
-- **Settlement**: Ganho / Perdido / Nulo on each row; tapping the active one returns it to pending and clears `settled_at`. The row updates at once and rolls back with an error message if the save fails. Settled rows show their profit; non-punter profit is virtual and muted.
-- **Day summary**: number of predictions, settled, hit rate, and P/L of punter bets in units and €.
-- **Pendentes de dias anteriores**: count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
+- **Settlement**: Ganho / Perdido / Nulo on each row; tapping the active one returns it to pending and clears `settled_at`. The row updates at once and rolls back with an error message if the save fails. Each row shows the amount staked and its result (see the prediction row in [ui.md](ui.md)); non-punter results are on 1 virtual unit and tagged "virtual".
+- **Day summary**: "Lucro punter" (P/L of punter bets, one value per the money display) with the amount staked, "N de M liquidados", and tiles Prognósticos / Taxa de acerto / Em aberto.
+- **Pendentes de dias anteriores**: amber banner with the count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
 
 Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/composables/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
 
 ## Event screen
 
-Route `/eventos/:id`, one game. Phase 6 adds the Game Analyser below (see [future-integrations.md](future-integrations.md)); the layout reserves an empty container for it.
+Route `/eventos/:id`, one game. Phase 6 adds the Game Analyser below (see [future-integrations.md](future-integrations.md)); until then a placeholder card (`data-slot="game-analyser"`) holds its place.
 
-- **Header**: league, kickoff date and time, home vs away; the final score replaces "vs" once set.
-- **Resultado**: home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 5 fills it from the API. Saving the score does not settle predictions.
-- **Os teus prognósticos neste jogo**: the game's predictions in logging order, with the same row and one-tap settlement as the today view. "+ Registar prognóstico" opens `/registo?evento=<id>`.
+- **Back link** "‹ Hoje".
+- **Game card**: league, kickoff date and time, home and away teams with the score between them ("vs" until set), and the Resultado inputs.
+- **Resultado** ("Casa" / "Fora"): home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 5 fills it from the API. Saving the score does not settle predictions.
+- **Prognósticos** (count and settled): the game's predictions in logging order, with the same row and one-tap settlement as the today view. A dashed "+ Registar prognóstico" button opens `/registo?evento=<id>`.
+- **Análise do jogo · Em breve**: placeholder card reserved for the Game Analyser.
 - **Unknown or malformed id**: "Jogo não encontrado" with a link back to today.
 
 Code: `src/views/EventView.vue`, `eventScoreSchema` / `scoreFormSchema` in `src/domain/schemas.ts`, `setScore` in `src/stores/events.ts`.

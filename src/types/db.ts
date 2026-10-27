@@ -4,6 +4,7 @@
  * Postgres `numeric` columns arrive as numbers and `timestamptz` as ISO strings.
  */
 
+import type { MoneyDisplay } from '@/domain/money'
 import type { BetStatus } from '@/domain/settlement'
 
 export type { BetStatus }
@@ -114,6 +115,7 @@ export interface UserSettingsRow {
   /** Keys are the confidence levels as strings ("1".."5"). */
   confidence_anchors: Record<string, number>
   odds_bands: number[]
+  money_display: MoneyDisplay
 }
 
 /** Columns the database fills in: `id`, `user_id` (auth.uid()) and `created_at`. */

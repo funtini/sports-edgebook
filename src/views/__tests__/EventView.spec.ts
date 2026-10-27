@@ -109,8 +109,9 @@ describe('EventView', () => {
 
     expect(wrapper.text()).toContain('Liga Portugal')
     expect(wrapper.get('h1').text()).toMatch(/^Benfica\s*vs\s*Porto$/)
-    expect(wrapper.text()).toContain('Os teus prognósticos neste jogo')
-    expect(wrapper.text()).toContain('@ 2,00')
+    expect(wrapper.get('h2').text()).toBe('Prognósticos')
+    expect(wrapper.text()).toContain('Odd 2,00')
+    expect(wrapper.text()).toContain('Análise do jogo')
   })
 
   it('says the game was not found for an unknown or malformed id', async () => {
@@ -204,7 +205,7 @@ describe('EventView', () => {
     const wrapper = await render()
     const link = wrapper
       .findAllComponents(RouterLinkStub)
-      .find((l) => l.text() === '+ Registar prognóstico')!
+      .find((l) => l.text() === 'Registar prognóstico')!
     expect(link.props('to')).toEqual({ name: 'predictions', query: { evento: EVENT_ID } })
   })
 })

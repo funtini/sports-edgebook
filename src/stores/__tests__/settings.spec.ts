@@ -19,6 +19,7 @@ const row = {
   starting_bankroll_units: null,
   confidence_anchors: { '1': 0.45, '2': 0.55, '3': 0.65, '4': 0.75, '5': 0.85 },
   odds_bands: [1.5, 1.8, 2.2, 3, 5],
+  money_display: 'units',
 }
 
 function setup(respond: Responder) {
@@ -35,6 +36,7 @@ describe('settings store', () => {
   it('exposes defaults before loading', () => {
     const store = useSettingsStore()
     expect(store.unitValue).toBe(10)
+    expect(store.moneyDisplay).toBe('units')
     expect(store.confidenceAnchors).toEqual(DEFAULT_CONFIDENCE_ANCHORS)
   })
 
@@ -81,6 +83,19 @@ describe('settings store', () => {
     expect(argsOf(update, 'eq')).toEqual(['user_id', 'u'])
     expect(store.unitValue).toBe(30)
     expect(store.settings?.starting_bankroll_units).toBe(50)
+  })
+
+  it('saves and exposes the money display', async () => {
+    const queries = setup((q) =>
+      has(q, 'update') ? { data: { ...row, money_display: 'euros' } } : { data: row },
+    )
+    const store = useSettingsStore()
+    await store.update({ unit_value: 20, starting_bankroll_units: null, money_display: 'euros' })
+
+    expect(argsOf(queries[1]!, 'update')).toEqual([
+      { unit_value: 20, starting_bankroll_units: null, money_display: 'euros' },
+    ])
+    expect(store.moneyDisplay).toBe('euros')
   })
 
   it('rejects an invalid unit value without querying', async () => {

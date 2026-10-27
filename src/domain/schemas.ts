@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
+import { MONEY_DISPLAYS } from './money'
 import { sameName, tidyName } from './names'
 
 export const idSchema = z.uuid('Identificador inválido')
@@ -132,6 +133,8 @@ export const userSettingsUpdateSchema = z.object({
     .max(NUMERIC_10_2_MAX, 'Valor demasiado alto')
     .nullable()
     .transform((units) => (units === 0 ? null : units)),
+  /** Left as it is when omitted. */
+  money_display: z.enum(MONEY_DISPLAYS).optional(),
 })
 
 export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>

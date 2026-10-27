@@ -7,7 +7,7 @@ Every metric filters by period (day, week, month, custom) and scope (punter only
 | Hit rate | won ÷ (won + lost); voids excluded |
 | Break-even hit rate | mean of 1 ÷ odd over the bets |
 | Edge | hit rate − break-even hit rate |
-| P/L | sum of profit, in units and currency |
+| P/L | sum of profit, in units or currency (see Units or euros) |
 | Yield | P/L ÷ total staked (main metric to compare segments) |
 | Bankroll ROI | P/L ÷ starting bankroll |
 | Average odd | mean odd |
@@ -16,6 +16,10 @@ Every metric filters by period (day, week, month, custom) and scope (punter only
 | CLV | odd ÷ closing odd − 1 |
 | Max drawdown | largest drop from a peak of the cumulative P/L curve |
 | Streaks | longest winning and losing streaks |
+
+## Units or euros
+
+The Dashboard has its own **Unidades / €** toggle. It starts from `user_settings.money_display` (set in Definições) and changing it on the Dashboard only affects the Dashboard view, without saving the setting. Values follow the same format as the rest of the app: units as a bare number (`+1,81`), euros as units × `unit_value` (`+36,20 €`). Ratios (yield, hit rate, ROI) are the same in both.
 
 ## Breakdowns
 

@@ -2,8 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PrimeVue from 'primevue/config'
 import PunterFields from '../PunterFields.vue'
+import type { MoneyDisplay } from '@/domain/money'
 
-function render(props: { isPunter?: boolean; stake?: string; stakeError?: string } = {}) {
+function render(
+  props: {
+    isPunter?: boolean
+    stake?: string
+    stakeError?: string
+    unitValue?: number
+    moneyDisplay?: MoneyDisplay
+  } = {},
+) {
   const wrapper = mount(PunterFields, {
     props: {
       isPunter: false,
@@ -54,5 +63,15 @@ describe('PunterFields', () => {
       stakeError: 'O stake tem de ser maior que 0',
     })
     expect(wrapper.get('#stake-error').text()).toBe('O stake tem de ser maior que 0')
+  })
+
+  it('types the stake in units and shows its euro value in euros mode', async () => {
+    const hint = (wrapper: ReturnType<typeof render>) => wrapper.get('[data-hint="stake"]').text()
+    expect(hint(render({ isPunter: true, stake: '2' }))).toBe('unidades')
+
+    const euros = render({ isPunter: true, stake: '1,5', unitValue: 20, moneyDisplay: 'euros' })
+    expect(hint(euros)).toBe('unidades · 30,00 €')
+    await euros.setProps({ stake: 'x' })
+    expect(hint(euros)).toBe('unidades')
   })
 })

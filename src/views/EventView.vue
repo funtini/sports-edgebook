@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import AppIcon from '@/components/AppIcon.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSettlement } from '@/composables/useSettlement'
+import { shortDayLabel } from '@/domain/days'
 import { scoreFormSchema, toScoreForm, type ScoreForm } from '@/domain/schemas'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
@@ -31,19 +32,16 @@ const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
 const savingScore = ref(false)
 
-const kickoffFormat = new Intl.DateTimeFormat('pt-PT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
+const time = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' })
 
-const kickoff = computed(() =>
-  event.value ? kickoffFormat.format(new Date(event.value.kickoff_at)) : '',
-)
+/** `ter, 27 out · 20:15` */
+const kickoff = computed(() => {
+  if (!event.value) return ''
+  const date = new Date(event.value.kickoff_at)
+  return `${shortDayLabel(date)} · ${time.format(date)}`
+})
 const hasScore = computed(() => event.value?.home_score != null && event.value.away_score != null)
+const settled = computed(() => rows.value.filter((p) => p.status !== 'pending').length)
 
 const loads = useLatestRequest()
 async function load() {
@@ -101,107 +99,161 @@ async function saveScore() {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-4">
-    <p v-if="loading" class="text-center text-surface-500">A carregar…</p>
+  <div class="mx-auto flex max-w-3xl flex-col gap-3.5 tabular-nums">
+    <RouterLink
+      :to="{ name: 'today' }"
+      class="-mt-2 flex min-h-11 items-center gap-1 self-start text-[15px] font-semibold text-eb-accent-text"
+    >
+      <AppIcon name="chevron-left" class="size-[18px]" />
+      Hoje
+    </RouterLink>
+
+    <p v-if="loading" class="text-center text-eb-muted">A carregar…</p>
 
     <Message v-else-if="error" severity="error">{{ error }}</Message>
 
     <section
       v-else-if="!event"
-      class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center"
+      class="flex flex-col items-center gap-3 rounded-2xl border border-eb-border bg-eb-surface p-8 text-center"
     >
-      <h1 class="m-0 text-xl font-semibold">Jogo não encontrado</h1>
-      <p class="m-0 text-surface-600">Este jogo não existe ou foi apagado.</p>
+      <h1 class="m-0 text-xl font-bold">Jogo não encontrado</h1>
+      <p class="m-0 text-eb-muted">Este jogo não existe ou foi apagado.</p>
       <RouterLink
         :to="{ name: 'today' }"
-        class="inline-flex min-h-11 items-center rounded-lg px-4 font-medium text-primary-700 hover:bg-primary-50"
+        class="inline-flex min-h-11 items-center rounded-xl px-4 font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
       >
         Voltar a hoje
       </RouterLink>
     </section>
 
     <template v-else>
-      <header class="flex flex-col gap-1 rounded-xl border border-surface-200 bg-surface-0 p-4">
-        <span class="text-sm text-surface-500">
-          <template v-if="event.league">{{ event.league.name }} · </template>
-          <span class="first-letter:uppercase">{{ kickoff }}</span>
-        </span>
-        <h1 class="m-0 flex flex-wrap items-baseline gap-x-3 text-2xl font-semibold">
-          <span>{{ event.home_team.name }}</span>
-          <span v-if="hasScore" class="tabular-nums">
+      <section class="rounded-2xl border border-eb-border bg-eb-surface px-4 py-[18px]">
+        <div class="flex flex-wrap justify-between gap-x-3 text-[13px] text-eb-muted">
+          <span class="font-semibold">{{ event.league?.name }}</span>
+          <span>{{ kickoff }}</span>
+        </div>
+        <h1
+          class="m-0 mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-lg font-bold"
+        >
+          <span class="text-right break-words">{{ event.home_team.name }}</span>
+          <span
+            v-if="hasScore"
+            class="rounded-xl bg-eb-surface-2 px-3 py-1.5 text-[26px] tracking-wide"
+          >
             {{ event.home_score }} – {{ event.away_score }}
           </span>
-          <span v-else class="text-surface-400" aria-hidden="true">vs</span>
-          <span>{{ event.away_team.name }}</span>
+          <span v-else class="px-1 text-base font-semibold text-eb-muted">vs</span>
+          <span class="break-words">{{ event.away_team.name }}</span>
         </h1>
-      </header>
 
-      <section class="flex flex-col gap-3 rounded-xl border border-surface-200 bg-surface-0 p-4">
-        <h2 class="m-0 text-lg font-semibold">Resultado</h2>
-        <form class="flex flex-wrap items-end gap-3" novalidate @submit.prevent="saveScore">
-          <div class="flex flex-col gap-1">
-            <label for="home-score" class="text-sm font-medium">{{ event.home_team.name }}</label>
+        <form
+          class="mt-[18px] flex flex-wrap items-end gap-2 border-t border-eb-border pt-3.5"
+          aria-label="Resultado"
+          novalidate
+          @submit.prevent="saveScore"
+        >
+          <div class="flex flex-col gap-1.5">
+            <label for="home-score" class="text-[13px] font-semibold text-eb-muted">
+              Casa<span class="sr-only"> ({{ event.home_team.name }})</span>
+            </label>
             <InputText
               id="home-score"
               v-model="score.home"
               inputmode="numeric"
               autocomplete="off"
               maxlength="2"
-              class="min-h-11 w-20 text-center text-lg"
+              class="min-h-11 w-14 text-center text-lg font-bold"
               :invalid="!!scoreError"
             />
           </div>
-          <span class="pb-2.5 text-surface-400" aria-hidden="true">–</span>
-          <div class="flex flex-col gap-1">
-            <label for="away-score" class="text-sm font-medium">{{ event.away_team.name }}</label>
+          <span class="flex h-11 items-center text-eb-muted" aria-hidden="true">–</span>
+          <div class="flex flex-col gap-1.5">
+            <label for="away-score" class="text-[13px] font-semibold text-eb-muted">
+              Fora<span class="sr-only"> ({{ event.away_team.name }})</span>
+            </label>
             <InputText
               id="away-score"
               v-model="score.away"
               inputmode="numeric"
               autocomplete="off"
               maxlength="2"
-              class="min-h-11 w-20 text-center text-lg"
+              class="min-h-11 w-14 text-center text-lg font-bold"
               :invalid="!!scoreError"
             />
           </div>
-          <Button type="submit" label="Guardar resultado" :loading="savingScore" class="min-h-11" />
+          <button
+            type="submit"
+            class="ml-auto min-h-11 rounded-[10px] border border-eb-border bg-eb-surface-2 px-4 text-sm font-semibold text-eb-text hover:border-eb-muted disabled:opacity-60"
+            :disabled="savingScore"
+          >
+            {{ savingScore ? 'A guardar…' : 'Guardar resultado' }}
+          </button>
         </form>
-        <small v-if="scoreError" class="text-red-600">{{ scoreError }}</small>
+        <small v-if="scoreError" class="mt-2 block text-eb-neg">{{ scoreError }}</small>
       </section>
 
-      <section class="rounded-xl border border-surface-200 bg-surface-0">
-        <div
-          class="flex flex-wrap items-center justify-between gap-2 border-b border-surface-200 px-4 py-2.5"
-        >
-          <h2 class="m-0 text-lg font-semibold">Os teus prognósticos neste jogo</h2>
-          <RouterLink
-            :to="{ name: 'predictions', query: { evento: event.id } }"
-            class="inline-flex min-h-11 items-center rounded-lg px-3 font-medium text-primary-700 hover:bg-primary-50"
-          >
-            + Registar prognóstico
-          </RouterLink>
-        </div>
-        <Message v-if="settleError" severity="error" class="m-4">{{ settleError }}</Message>
-        <p v-if="!rows.length" class="m-0 p-4 text-surface-600">
-          Ainda não tens prognósticos neste jogo.
-        </p>
-        <div v-else class="divide-y divide-surface-100 px-4">
-          <PredictionRow
-            v-for="prediction in rows"
-            :key="prediction.id"
-            :prediction="prediction"
-            :unit-value="settings.unitValue"
-            :busy="saving.has(prediction.id)"
-            @settle="settle(prediction, $event)"
-          />
-        </div>
-      </section>
+      <div class="mt-1 flex items-baseline justify-between gap-3">
+        <h2 class="m-0 text-[17px] font-bold">Prognósticos</h2>
+        <span v-if="rows.length" class="text-[13px] text-eb-muted">
+          {{ rows.length }} · {{ settled }} liquidados
+        </span>
+      </div>
+
+      <Message v-if="settleError" severity="error">{{ settleError }}</Message>
+      <p
+        v-if="!rows.length"
+        class="m-0 rounded-2xl border border-eb-border bg-eb-surface p-4 text-eb-muted"
+      >
+        Ainda não tens prognósticos neste jogo.
+      </p>
+      <div
+        v-else
+        class="divide-y divide-eb-border overflow-hidden rounded-2xl border border-eb-border bg-eb-surface"
+      >
+        <PredictionRow
+          v-for="prediction in rows"
+          :key="prediction.id"
+          :prediction="prediction"
+          :unit-value="settings.unitValue"
+          :money-display="settings.moneyDisplay"
+          :busy="saving.has(prediction.id)"
+          @settle="settle(prediction, $event)"
+        />
+      </div>
+
+      <RouterLink
+        :to="{ name: 'predictions', query: { evento: event.id } }"
+        class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-eb-accent text-[15px] font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
+      >
+        <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+        Registar prognóstico
+      </RouterLink>
 
       <!--
         Reserved for the Game Analyser (phase 6, docs/specs/future-integrations.md): API stats,
-        AI summary and news for this game. Empty until then; shows nothing to the user.
+        AI summary and news for this game. A placeholder card until then.
       -->
-      <section aria-hidden="true" data-slot="game-analyser" />
+      <section
+        data-slot="game-analyser"
+        class="mt-1.5 flex flex-col gap-2.5 rounded-2xl border border-dashed border-eb-border p-4"
+      >
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="m-0 text-[17px] font-bold">Análise do jogo</h2>
+          <span
+            class="rounded-full bg-eb-surface-2 px-2 py-0.5 text-xs font-semibold text-eb-muted"
+          >
+            Em breve
+          </span>
+        </div>
+        <p class="m-0 text-sm leading-snug text-eb-muted">
+          Estatísticas, notícias e resumo com IA para este jogo.
+        </p>
+        <div class="grid grid-cols-3 gap-2" aria-hidden="true">
+          <div class="h-14 rounded-[10px] bg-eb-surface-2" />
+          <div class="h-14 rounded-[10px] bg-eb-surface-2" />
+          <div class="h-14 rounded-[10px] bg-eb-surface-2" />
+        </div>
+      </section>
     </template>
   </div>
 </template>
