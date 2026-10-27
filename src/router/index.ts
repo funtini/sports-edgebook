@@ -12,6 +12,7 @@ const router = createRouter({
     },
     { path: '/multiplas', name: 'multiples', component: () => import('@/views/MultiplesView.vue') },
     { path: '/dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
+    { path: '/definicoes', name: 'settings', component: () => import('@/views/SettingsView.vue') },
     {
       path: '/login',
       name: 'login',

@@ -10,6 +10,7 @@ const links = [
   { to: { name: 'predictions' }, label: 'Registo' },
   { to: { name: 'multiples' }, label: 'Múltiplas' },
   { to: { name: 'dashboard' }, label: 'Dashboard' },
+  { to: { name: 'settings' }, label: 'Definições' },
 ]
 </script>
 
