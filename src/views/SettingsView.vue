@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
@@ -7,9 +7,11 @@ import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS } from '@/domain/confidence'
 import { DEFAULT_UNIT_VALUE, UNIT_VALUE_PRESETS, formatDecimal, formatMoney } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { userMessage } from '@/lib/errors'
+import { useAuthStore } from '@/stores/auth'
 import { useSettingsStore } from '@/stores/settings'
 
 const store = useSettingsStore()
+const auth = useAuthStore()
 
 const unitValue = ref<number | null>(DEFAULT_UNIT_VALUE)
 const bankroll = ref<number | null>(null)
@@ -34,9 +36,16 @@ const levels = computed(() =>
 
 const example = computed(() => formatMoney(1.8, unitValue.value ?? 0))
 const bankrollInEuros = computed(() =>
-  bankroll.value == null
-    ? null
-    : formatMoney(bankroll.value, unitValue.value ?? 0, { signed: false }),
+  !bankroll.value ? null : formatMoney(bankroll.value, unitValue.value ?? 0, { signed: false }),
+)
+
+// The confirmation only describes what was saved; any edit makes it stale.
+watch(
+  [unitValue, bankroll],
+  () => {
+    saved.value = false
+  },
+  { flush: 'sync' },
 )
 
 onMounted(async () => {
@@ -56,10 +65,13 @@ async function save() {
   saved.value = false
   error.value = null
   try {
-    await store.update({
+    const row = await store.update({
       unit_value: unitValue.value as number,
       starting_bankroll_units: bankroll.value,
     })
+    // Shows what was stored (0 becomes empty) before confirming.
+    unitValue.value = row.unit_value
+    bankroll.value = row.starting_bankroll_units
     saved.value = true
   } catch (e) {
     error.value = userMessage(e, 'Não foi possível guardar as definições.')
@@ -111,7 +123,9 @@ async function save() {
 
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
         <legend class="mb-1 p-0 text-lg font-semibold">Banca inicial</legend>
-        <label for="bankroll" class="text-sm text-surface-600">Em unidades (opcional).</label>
+        <label for="bankroll" class="text-sm text-surface-600">
+          Em unidades (opcional). Vazio ou 0 = sem banca inicial.
+        </label>
         <InputNumber
           v-model="bankroll"
           input-id="bankroll"
@@ -166,6 +180,24 @@ async function save() {
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section
+      v-if="auth.session"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-surface-200 bg-surface-0 p-5"
+    >
+      <div>
+        <h2 class="m-0 text-lg font-semibold">Conta</h2>
+        <p class="mt-1 mb-0 text-sm text-surface-600">{{ auth.session.user.email }}</p>
+      </div>
+      <Button
+        type="button"
+        label="Sair"
+        severity="secondary"
+        outlined
+        class="min-h-11"
+        @click="auth.signOut()"
+      />
     </section>
   </div>
 </template>
