@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { probabilityFor, type ConfidenceLevel } from '@/domain/confidence'
+import { addDays, startOfDay } from '@/domain/days'
 import { predictionCreateSchema, type PredictionCreate } from '@/domain/schemas'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
 import { PREDICTION_SELECT, requireSupabase, unwrap } from './client'
@@ -34,8 +35,8 @@ export const usePredictionsStore = defineStore('predictions', () => {
 
   /** Predictions on games kicking off on `date` (local day). */
   async function listByDate(date: Date): Promise<PredictionWithRelations[]> {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+    const start = startOfDay(date)
+    const end = addDays(start, 1)
     const rows = unwrap<PredictionWithRelations[]>(
       await requireSupabase()
         .from('predictions')
@@ -65,7 +66,7 @@ export const usePredictionsStore = defineStore('predictions', () => {
 
   /** Pending predictions on games that kicked off before `date` (local day), oldest first. */
   async function listPendingBefore(date: Date): Promise<PredictionWithRelations[]> {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const start = startOfDay(date)
     const rows = unwrap<PredictionWithRelations[]>(
       await requireSupabase()
         .from('predictions')

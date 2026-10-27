@@ -1,5 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { betProfit, multipleOdd, multipleStatus, unitsToCurrency } from '../settlement'
+import {
+  betProfit,
+  isPunterBet,
+  multipleOdd,
+  multipleStatus,
+  predictionProfit,
+  stakeFor,
+  unitsToCurrency,
+  type SettleablePrediction,
+} from '../settlement'
+
+const bet = (overrides: Partial<SettleablePrediction> = {}): SettleablePrediction => ({
+  odd: 2,
+  status: 'pending',
+  is_punter: false,
+  stake_units: null,
+  ...overrides,
+})
 
 describe('betProfit', () => {
   it('pays stake × (odd − 1) on a win', () => {
@@ -41,5 +58,29 @@ describe('multiples', () => {
 describe('unitsToCurrency', () => {
   it('converts units with the configured unit value', () => {
     expect(unitsToCurrency(-1.5, 20)).toBe(-30)
+  })
+})
+
+describe('stakeFor and predictionProfit', () => {
+  it('uses the real stake for punter bets', () => {
+    const p = bet({ is_punter: true, stake_units: 2, odd: 1.9, status: 'won' })
+    expect(isPunterBet(p)).toBe(true)
+    expect(stakeFor(p)).toBe(2)
+    expect(predictionProfit(p)).toBeCloseTo(1.8)
+  })
+
+  it('uses a virtual unit for non-punter predictions', () => {
+    expect(stakeFor(bet())).toBe(1)
+    expect(predictionProfit(bet({ status: 'lost' }))).toBe(-1)
+  })
+
+  it('falls back to a virtual unit for a punter flag without a stake', () => {
+    const p = bet({ is_punter: true })
+    expect(isPunterBet(p)).toBe(false)
+    expect(stakeFor(p)).toBe(1)
+  })
+
+  it('is null while pending', () => {
+    expect(predictionProfit(bet())).toBeNull()
   })
 })

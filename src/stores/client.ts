@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { AppError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 
 /** The Supabase client, or a clear error when the app runs without a backend. */
 export function requireSupabase(): SupabaseClient {
   if (!supabase) {
-    throw new Error(
+    throw new AppError(
       'Supabase não está configurado: define VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY.',
     )
   }
@@ -25,7 +26,7 @@ export function escapeLike(value: string): string {
 /** Trims and collapses whitespace in a name typed by hand; rejects empty names. */
 export function cleanName(name: string): string {
   const clean = name.trim().replace(/\s+/g, ' ')
-  if (!clean) throw new Error('O nome não pode estar vazio.')
+  if (!clean) throw new AppError('O nome não pode estar vazio.')
   return clean
 }
 

@@ -50,7 +50,20 @@ The settings screen (`/definicoes`) edits `unit_value` (quick picks 10, 20, 30, 
 
 Code: `src/domain/settlement.ts`.
 
-The today view (`/`) settles predictions with one tap (Ganho / Perdido / Nulo; tapping the active one again returns to pending). A row's profit uses the real stake for punter bets and 1 virtual unit otherwise; the day summary shows count, settled, hit rate (voids excluded) and P/L of punter bets only. Code: `src/domain/daySummary.ts`.
+A prediction's profit uses its real stake when it is a punter bet (punter flag on and a stake recorded) and 1 virtual unit otherwise (`stakeFor`, `predictionProfit`). Hit rate is `won ÷ (won + lost)`, voids and pending excluded (`src/domain/metrics.ts`).
+
+## Today view
+
+Route `/` ("Hoje"), the screen used every evening to settle the day.
+
+- **Day**: selected with previous / next, or a date picker. Today has no query; any other day is `?dia=YYYY-MM-DD` (local date), so back/forward and links work. A malformed `dia` falls back to today and is dropped from the URL. The view follows the date past midnight when left open.
+- **Games**: predictions of the day grouped by game, by kickoff. The game header links to `/eventos/:id`.
+- **Settlement**: Ganho / Perdido / Nulo on each row; tapping the active one returns it to pending and clears `settled_at`. The row updates at once and rolls back with an error message if the save fails. Settled rows show their profit; non-punter profit is virtual and muted.
+- **Day summary**: number of predictions, settled, hit rate, and P/L of punter bets in units and €.
+- **Pendentes de dias anteriores**: count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
+- **Empty day**: a button to `/registo`.
+
+Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
 
 ## Data model
 

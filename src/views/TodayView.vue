@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import PredictionRow from '@/components/PredictionRow.vue'
-import { addDays, daySummary, fromDayKey, groupByEvent, toDayKey } from '@/domain/daySummary'
+import { profitClass } from '@/components/profitClass'
+import { daySummary, groupByEvent } from '@/domain/daySummary'
+import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
 import { formatMoney } from '@/domain/money'
+import { errorMessage } from '@/lib/errors'
 import { usePredictionsStore } from '@/stores/predictions'
 import { useSettingsStore } from '@/stores/settings'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
@@ -21,14 +24,34 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const saving = ref(new Set<string>())
 
-const todayKey = () => toDayKey(new Date())
+/** Today's local midnight; moves on at midnight so a screen left open follows the date. */
+const today = ref(startOfDay(new Date()))
+function checkDate() {
+  const now = startOfDay(new Date())
+  if (now.getTime() !== today.value.getTime()) today.value = now
+}
+let timer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  timer = setInterval(checkDate, 60_000)
+  document.addEventListener('visibilitychange', checkDate)
+})
+onUnmounted(() => {
+  clearInterval(timer)
+  document.removeEventListener('visibilitychange', checkDate)
+})
+
+const todayKey = computed(() => toDayKey(today.value))
 
 /** Selected day from `?dia=YYYY-MM-DD`; today when missing or invalid. */
 const dayKey = computed(() => {
   const raw = route.query.dia
-  return typeof raw === 'string' && fromDayKey(raw) ? raw : todayKey()
+  return typeof raw === 'string' && fromDayKey(raw) ? raw : todayKey.value
 })
 const day = computed(() => fromDayKey(dayKey.value) as Date)
+const isToday = computed(() => dayKey.value === todayKey.value)
+
+/** Earlier pending predictions are counted before the selected day, never past today. */
+const pendingCutoff = computed(() => (day.value < today.value ? day.value : today.value))
 
 const longDate = new Intl.DateTimeFormat('pt-PT', {
   weekday: 'long',
@@ -39,10 +62,9 @@ const time = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digi
 const percent = new Intl.NumberFormat('pt-PT', { style: 'percent', maximumFractionDigits: 0 })
 
 const relativeLabel = computed(() => {
-  const today = fromDayKey(todayKey()) as Date
-  if (dayKey.value === toDayKey(today)) return 'Hoje'
-  if (dayKey.value === toDayKey(addDays(today, -1))) return 'Ontem'
-  if (dayKey.value === toDayKey(addDays(today, 1))) return 'Amanhã'
+  if (isToday.value) return 'Hoje'
+  if (dayKey.value === toDayKey(addDays(today.value, -1))) return 'Ontem'
+  if (dayKey.value === toDayKey(addDays(today.value, 1))) return 'Amanhã'
   return null
 })
 
@@ -56,7 +78,7 @@ const groups = computed(() =>
 const summary = computed(() => daySummary(rows.value))
 
 function goTo(key: string) {
-  router.push({ name: 'today', query: key === todayKey() ? {} : { dia: key } })
+  router.push({ name: 'today', query: key === todayKey.value ? {} : { dia: key } })
 }
 
 function shift(days: number) {
@@ -82,19 +104,17 @@ function jumpToOldestPending() {
   if (oldest) goTo(toDayKey(new Date(oldest.event.kickoff_at)))
 }
 
-function message(e: unknown, fallback: string): string {
-  return e instanceof Error ? e.message : fallback
-}
-
 let request = 0
 async function load() {
   const current = ++request
   loading.value = true
   error.value = null
+  rows.value = []
+  pendingBefore.value = []
   try {
     const [dayRows, pending] = await Promise.all([
       predictions.listByDate(day.value),
-      predictions.listPendingBefore(day.value),
+      predictions.listPendingBefore(pendingCutoff.value),
       settings.ensureLoaded(),
     ])
     if (current !== request) return
@@ -102,15 +122,24 @@ async function load() {
     pendingBefore.value = pending
   } catch (e) {
     if (current !== request) return
-    rows.value = []
-    pendingBefore.value = []
-    error.value = message(e, 'Não foi possível carregar os prognósticos.')
+    error.value = errorMessage(e, 'Não foi possível carregar os prognósticos.')
   } finally {
     if (current === request) loading.value = false
   }
 }
 
-watch(dayKey, load, { immediate: true })
+watch([dayKey, todayKey], load, { immediate: true })
+
+// A malformed `?dia` shows today; drop it from the URL too.
+watch(
+  () => route.query.dia,
+  (raw) => {
+    if (raw != null && !(typeof raw === 'string' && fromDayKey(raw))) {
+      router.replace({ name: 'today', query: {} })
+    }
+  },
+  { immediate: true },
+)
 
 function replace(updated: PredictionWithRelations) {
   rows.value = rows.value.map((row) => (row.id === updated.id ? updated : row))
@@ -126,7 +155,7 @@ async function settle(prediction: PredictionWithRelations, status: BetStatus) {
     replace(await predictions.settle(prediction.id, status))
   } catch (e) {
     replace(previous)
-    error.value = message(e, 'Não foi possível guardar a liquidação.')
+    error.value = errorMessage(e, 'Não foi possível guardar a liquidação.')
   } finally {
     const next = new Set(saving.value)
     next.delete(prediction.id)
@@ -163,11 +192,11 @@ async function settle(prediction: PredictionWithRelations, status: BetStatus) {
         <span aria-hidden="true" class="text-xl">›</span>
       </Button>
     </div>
-    <div v-if="relativeLabel !== 'Hoje'" class="-mt-2 text-center">
+    <div v-if="!isToday" class="-mt-2 text-center">
       <button
         type="button"
         class="min-h-11 rounded-lg px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
-        @click="goTo(todayKey())"
+        @click="goTo(todayKey)"
       >
         Voltar a hoje
       </button>
@@ -209,13 +238,7 @@ async function settle(prediction: PredictionWithRelations, status: BetStatus) {
       </div>
       <div>
         <div class="text-xs text-surface-500">P/L punter</div>
-        <div
-          class="font-semibold tabular-nums"
-          :class="{
-            'text-green-700': summary.punterProfit > 0,
-            'text-red-700': summary.punterProfit < 0,
-          }"
-        >
+        <div class="font-semibold tabular-nums" :class="profitClass(summary.punterProfit)">
           {{ summary.punterBets ? formatMoney(summary.punterProfit, settings.unitValue) : '—' }}
         </div>
       </div>

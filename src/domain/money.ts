@@ -11,6 +11,11 @@ const signed = new Intl.NumberFormat('pt-PT', {
   signDisplay: 'exceptZero',
 })
 
+/** `1.8` → `1,80`: odds and other two-decimal numbers. */
+export function formatDecimal(value: number): string {
+  return plain.format(value)
+}
+
 interface FormatOptions {
   /** Prefix positive amounts with `+` (profit). Off for balances such as the bankroll. */
   signed?: boolean

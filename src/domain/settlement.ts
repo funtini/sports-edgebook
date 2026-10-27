@@ -34,3 +34,28 @@ export function multipleOdd(legs: MultipleLeg[]): number {
 export function unitsToCurrency(units: number, unitValue: number): number {
   return units * unitValue
 }
+
+/** Stake a non-punter prediction is evaluated with. */
+export const VIRTUAL_STAKE_UNITS = 1
+
+export interface SettleablePrediction {
+  odd: number
+  status: BetStatus
+  is_punter: boolean
+  stake_units: number | null
+}
+
+/** A real single bet: punter flag on and a stake recorded. */
+export function isPunterBet(prediction: Pick<SettleablePrediction, 'is_punter' | 'stake_units'>) {
+  return prediction.is_punter && prediction.stake_units != null
+}
+
+/** Punter bets use their real stake; the rest a virtual 1 unit. */
+export function stakeFor(prediction: SettleablePrediction): number {
+  return isPunterBet(prediction) ? (prediction.stake_units as number) : VIRTUAL_STAKE_UNITS
+}
+
+/** Profit in units at the stake from `stakeFor`; null while pending. */
+export function predictionProfit(prediction: SettleablePrediction): number | null {
+  return betProfit(stakeFor(prediction), prediction.odd, prediction.status)
+}

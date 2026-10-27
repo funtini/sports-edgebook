@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { CONFIDENCE_LABELS, type ConfidenceLevel } from '@/domain/confidence'
-import { predictionProfit } from '@/domain/daySummary'
-import { formatMoney, formatUnits } from '@/domain/money'
+import { formatDecimal, formatMoney, formatUnits } from '@/domain/money'
+import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import { valueBand, valueIndex } from '@/domain/value'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
+import { profitClass } from './profitClass'
 
 const props = defineProps<{
   prediction: PredictionWithRelations
@@ -15,10 +16,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{ settle: [status: BetStatus] }>()
 
-const decimal = new Intl.NumberFormat('pt-PT', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
 const line = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
 const outcomes: { status: Exclude<BetStatus, 'pending'>; label: string; active: string }[] = [
@@ -50,10 +47,10 @@ const confidence = computed(() => {
 
 const value = computed(() => {
   const index = valueIndex(props.prediction.probability, props.prediction.odd)
-  return { index: decimal.format(index), ...bandStyles[valueBand(index)] }
+  return { index: formatDecimal(index), ...bandStyles[valueBand(index)] }
 })
 
-const isPunter = computed(() => props.prediction.is_punter && props.prediction.stake_units != null)
+const isPunter = computed(() => isPunterBet(props.prediction))
 
 const profit = computed(() => {
   const units = predictionProfit(props.prediction)
@@ -61,13 +58,10 @@ const profit = computed(() => {
   return isPunter.value ? formatMoney(units, props.unitValue) : formatUnits(units, { signed: true })
 })
 
-const profitTone = computed(() => {
-  const units = predictionProfit(props.prediction) ?? 0
-  if (!isPunter.value) return 'text-surface-400'
-  if (units > 0) return 'text-green-700'
-  if (units < 0) return 'text-red-700'
-  return 'text-surface-600'
-})
+/** Non-punter profit is virtual, so it stays muted whatever its sign. */
+const profitTone = computed(() =>
+  isPunter.value ? profitClass(predictionProfit(props.prediction) ?? 0) : 'text-surface-400',
+)
 
 function toggle(status: Exclude<BetStatus, 'pending'>) {
   emit('settle', props.prediction.status === status ? 'pending' : status)
@@ -89,7 +83,7 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
       </div>
       <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <span class="font-semibold">{{ selection }}</span>
-        <span class="tabular-nums">@ {{ decimal.format(prediction.odd) }}</span>
+        <span class="tabular-nums">@ {{ formatDecimal(prediction.odd) }}</span>
         <span class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700">
           {{ confidence }}
         </span>
