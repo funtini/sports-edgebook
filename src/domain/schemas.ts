@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
 import { sameName, tidyName } from './names'
 
-const id = z.uuid('Identificador inválido')
+export const idSchema = z.uuid('Identificador inválido')
+const id = idSchema
 const optionalText = z.string().trim().min(1).nullish()
 
 /** Odds are decimal and must pay more than the stake back. */
@@ -166,3 +167,8 @@ export const scoreFormSchema = z
   .pipe(eventScoreSchema)
 
 export type ScoreForm = z.input<typeof scoreFormSchema>
+
+/** An event's stored score as the event screen's inputs: the reverse of `scoreFormSchema`. */
+export function toScoreForm(score: EventScore): ScoreForm {
+  return { home: score.home_score?.toString() ?? '', away: score.away_score?.toString() ?? '' }
+}

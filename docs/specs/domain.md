@@ -74,7 +74,7 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 - **Pendentes de dias anteriores**: count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
 
-Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/components/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
+Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/composables/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
 
 ## Event screen
 

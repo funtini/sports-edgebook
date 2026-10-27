@@ -198,6 +198,20 @@ describe('PredictionsView', () => {
     expect(wrapper.find('#game').exists()).toBe(false)
   })
 
+  it('still loads the form when the ?evento game cannot be loaded', async () => {
+    const respond = backend()
+    setup((q) => {
+      if (q.table === 'events') return { error: { message: 'network down' } }
+      if (q.table === 'predictions') return { data: [{ bookmaker: 'Betano' }] }
+      return respond(q)
+    })
+    const wrapper = await render({ eventId: EVENT_ID })
+
+    expect(wrapper.text()).not.toContain('Não foi possível carregar os dados.')
+    expect(wrapper.find('#game').exists()).toBe(true)
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeUndefined()
+  })
+
   it('flips the sign of the line for keyboards without a minus key', async () => {
     setup(backend())
     const wrapper = await render()

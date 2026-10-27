@@ -78,8 +78,19 @@ describe('events store', () => {
   it('rejects a score for one team only', async () => {
     const queries = setup(() => ({}))
     await expect(
-      useEventsStore().setScore('e1', { home_score: 2, away_score: null }),
+      useEventsStore().setScore('0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60', {
+        home_score: 2,
+        away_score: null,
+      }),
     ).rejects.toThrow(/duas equipas/)
+    expect(queries).toHaveLength(0)
+  })
+
+  it('rejects a malformed id when saving the score', async () => {
+    const queries = setup(() => ({}))
+    await expect(useEventsStore().setScore('e1', { home_score: 1, away_score: 0 })).rejects.toThrow(
+      /Identificador inválido/,
+    )
     expect(queries).toHaveLength(0)
   })
 

@@ -5,7 +5,8 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
-import { useSettlement } from '@/components/useSettlement'
+import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useSettlement } from '@/composables/useSettlement'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
 import { formatMoney } from '@/domain/money'
@@ -23,7 +24,8 @@ const rows = ref<PredictionWithRelations[]>([])
 const pendingBefore = ref<PredictionWithRelations[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const { saving, settle } = useSettlement(rows, error)
+const settlement = useSettlement(rows)
+const { saving, settle, error: settleError } = settlement
 
 /** Today's local midnight; moves on at midnight so a screen left open follows the date. */
 const today = ref(startOfDay(new Date()))
@@ -105,9 +107,10 @@ function jumpToOldestPending() {
   if (oldest) goTo(toDayKey(new Date(oldest.event.kickoff_at)))
 }
 
-let request = 0
+const loads = useLatestRequest()
 async function load() {
-  const current = ++request
+  const isLatest = loads.start()
+  settlement.reset()
   loading.value = true
   error.value = null
   rows.value = []
@@ -118,14 +121,14 @@ async function load() {
       predictions.listPendingBefore(pendingCutoff.value),
       settings.ensureLoaded(),
     ])
-    if (current !== request) return
+    if (!isLatest()) return
     rows.value = dayRows
     pendingBefore.value = pending
   } catch (e) {
-    if (current !== request) return
+    if (!isLatest()) return
     error.value = userMessage(e, 'Não foi possível carregar os prognósticos.')
   } finally {
-    if (current === request) loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -223,7 +226,7 @@ watch(
       </div>
     </section>
 
-    <Message v-if="error" severity="error">{{ error }}</Message>
+    <Message v-if="error || settleError" severity="error">{{ error ?? settleError }}</Message>
 
     <p v-if="loading" class="text-center text-surface-500">A carregar…</p>
 

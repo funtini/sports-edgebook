@@ -5,8 +5,9 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import PredictionRow from '@/components/PredictionRow.vue'
-import { useSettlement } from '@/components/useSettlement'
-import { scoreFormSchema } from '@/domain/schemas'
+import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useSettlement } from '@/composables/useSettlement'
+import { scoreFormSchema, toScoreForm, type ScoreForm } from '@/domain/schemas'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
 import { usePredictionsStore } from '@/stores/predictions'
@@ -23,9 +24,10 @@ const event = ref<EventWithTeams | null>(null)
 const rows = ref<PredictionWithRelations[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const { saving, settle } = useSettlement(rows, error)
+const settlement = useSettlement(rows)
+const { saving, settle, error: settleError } = settlement
 
-const score = ref({ home: '', away: '' })
+const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
 const savingScore = ref(false)
 
@@ -43,32 +45,31 @@ const kickoff = computed(() =>
 )
 const hasScore = computed(() => event.value?.home_score != null && event.value.away_score != null)
 
-function fillScore(e: EventWithTeams) {
-  score.value = { home: e.home_score?.toString() ?? '', away: e.away_score?.toString() ?? '' }
-}
-
-let request = 0
+const loads = useLatestRequest()
 async function load() {
-  const current = ++request
+  const isLatest = loads.start()
+  settlement.reset()
   loading.value = true
   error.value = null
+  scoreError.value = null
+  savingScore.value = false
   event.value = null
   rows.value = []
   try {
     const found = await events.getById(props.id)
-    if (current !== request) return
+    if (!isLatest()) return
     if (found) {
       const [list] = await Promise.all([predictions.listByEvent(found.id), settings.ensureLoaded()])
-      if (current !== request) return
+      if (!isLatest()) return
       rows.value = list
-      fillScore(found)
+      score.value = toScoreForm(found)
     }
     event.value = found
   } catch (e) {
-    if (current !== request) return
+    if (!isLatest()) return
     error.value = userMessage(e, 'Não foi possível carregar o jogo.')
   } finally {
-    if (current === request) loading.value = false
+    if (isLatest()) loading.value = false
   }
 }
 
@@ -82,14 +83,19 @@ async function saveScore() {
     scoreError.value = parsed.error.issues[0]?.message ?? 'Resultado inválido'
     return
   }
+  const id = event.value.id
+  // A save that ends after the screen moved to another game must not touch it.
+  const isSameGame = () => event.value?.id === id
   savingScore.value = true
   try {
-    event.value = await events.setScore(event.value.id, parsed.data)
-    fillScore(event.value)
+    const saved = await events.setScore(id, parsed.data)
+    if (!isSameGame()) return
+    event.value = saved
+    score.value = toScoreForm(saved)
   } catch (e) {
-    scoreError.value = userMessage(e, 'Não foi possível guardar o resultado.')
+    if (isSameGame()) scoreError.value = userMessage(e, 'Não foi possível guardar o resultado.')
   } finally {
-    savingScore.value = false
+    if (isSameGame()) savingScore.value = false
   }
 }
 </script>
@@ -98,7 +104,7 @@ async function saveScore() {
   <div class="mx-auto flex max-w-3xl flex-col gap-4">
     <p v-if="loading" class="text-center text-surface-500">A carregar…</p>
 
-    <Message v-else-if="error && !event" severity="error">{{ error }}</Message>
+    <Message v-else-if="error" severity="error">{{ error }}</Message>
 
     <section
       v-else-if="!event"
@@ -175,7 +181,7 @@ async function saveScore() {
             + Registar prognóstico
           </RouterLink>
         </div>
-        <Message v-if="error" severity="error" class="m-4">{{ error }}</Message>
+        <Message v-if="settleError" severity="error" class="m-4">{{ settleError }}</Message>
         <p v-if="!rows.length" class="m-0 p-4 text-surface-600">
           Ainda não tens prognósticos neste jogo.
         </p>

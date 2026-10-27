@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
-import { z } from 'zod'
 import {
   eventCreateSchema,
   eventScoreSchema,
+  idSchema,
   type EventCreate,
   type EventScore,
 } from '@/domain/schemas'
@@ -22,7 +22,7 @@ export const useEventsStore = defineStore('events', () => {
 
   /** Null when there is no such event, including when `id` is not a valid id. */
   async function getById(id: string): Promise<EventWithTeams | null> {
-    if (!z.uuid().safeParse(id).success) return null
+    if (!idSchema.safeParse(id).success) return null
     return unwrap<EventWithTeams | null>(
       await requireSupabase().from('events').select(EVENT_SELECT).eq('id', id).maybeSingle(),
     )
@@ -30,12 +30,13 @@ export const useEventsStore = defineStore('events', () => {
 
   /** Sets the final score, or clears it with both goals null. */
   async function setScore(id: string, score: EventScore): Promise<EventWithTeams> {
+    const eventId = idSchema.parse(id)
     const { home_score, away_score } = eventScoreSchema.parse(score)
     return unwrap<EventWithTeams>(
       await requireSupabase()
         .from('events')
         .update({ home_score, away_score })
-        .eq('id', id)
+        .eq('id', eventId)
         .select(EVENT_SELECT)
         .single(),
     )

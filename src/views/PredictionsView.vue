@@ -148,17 +148,23 @@ async function save() {
   }
 }
 
+/** Picks the `?evento` game unless one was chosen meanwhile; optional, so failures are ignored. */
+async function preselect(eventId: string) {
+  try {
+    const event = await events.getById(eventId)
+    if (event && !game.value && !newGame.value) game.value = toSearchResult(event)
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 onMounted(async () => {
+  if (props.eventId) void preselect(props.eventId)
   try {
     // Settings first: a new user's first load seeds the default markets.
     await settings.ensureLoaded()
-    const [, used, preselected] = await Promise.all([
-      reference.load(),
-      predictions.listBookmakers(),
-      props.eventId ? events.getById(props.eventId) : null,
-    ])
+    const [, used] = await Promise.all([reference.load(), predictions.listBookmakers()])
     bookmakers.value = used
-    if (preselected && !game.value && !newGame.value) game.value = toSearchResult(preselected)
   } catch (e) {
     error.value = userMessage(e, 'Não foi possível carregar os dados.')
   } finally {

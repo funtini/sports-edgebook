@@ -222,6 +222,9 @@ describe('scoreFormSchema', () => {
         'Golos inválidos',
       )
     }
+  })
+})
+
 describe('userSettingsUpdateSchema', () => {
   const parse = (starting_bankroll_units: number | null) =>
     userSettingsUpdateSchema.safeParse({ unit_value: 10, starting_bankroll_units })

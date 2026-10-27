@@ -159,6 +159,46 @@ describe('EventView', () => {
     expect(wrapper.text()).toContain('Não foi possível guardar a liquidação.')
   })
 
+  it('ignores a score save that ends after moving to another game', async () => {
+    const other = 'c4b5a60e-1f2d-4c3b-9a51-0b9f7c1e3d1a'
+    let finishSave: (response: { data: unknown }) => void = () => {}
+    const respond = backend()
+    setup((q) => {
+      if (q.table === 'events' && has(q, 'update')) {
+        return new Promise((resolve) => (finishSave = resolve))
+      }
+      if (q.table === 'events' && argsOf(q, 'eq')?.[1] === other) {
+        return { data: event({ id: other, home_team: { id: 'x', name: 'Sporting' } }) }
+      }
+      return respond(q)
+    })
+    const wrapper = await render()
+
+    await wrapper.get('#home-score').setValue('2')
+    await wrapper.get('#away-score').setValue('1')
+    await wrapper.get('form').trigger('submit')
+    await wrapper.setProps({ id: other })
+    await flushPromises()
+    finishSave({ data: event({ home_score: 2, away_score: 1 }) })
+    await flushPromises()
+
+    expect(wrapper.get('h1').text()).toMatch(/^Sporting\s*vs\s*Porto$/)
+    expect((wrapper.get('#home-score').element as HTMLInputElement).value).toBe('')
+  })
+
+  it('clears a score error when another game loads', async () => {
+    const other = 'c4b5a60e-1f2d-4c3b-9a51-0b9f7c1e3d1a'
+    setup(backend())
+    const wrapper = await render()
+    await wrapper.get('#home-score').setValue('2')
+    await wrapper.get('form').trigger('submit')
+    expect(wrapper.text()).toContain('Indica os golos das duas equipas')
+
+    await wrapper.setProps({ id: other })
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('Indica os golos das duas equipas')
+  })
+
   it('links to the logging form with this game preselected', async () => {
     setup(backend())
     const wrapper = await render()
