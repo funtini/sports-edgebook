@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, numberFormat } from './intl'
+
 /** Default `user_settings.unit_value`; also the fallback before settings load. */
 export const DEFAULT_UNIT_VALUE = 10
 
@@ -9,30 +11,19 @@ export const MONEY_DISPLAYS = ['units', 'euros'] as const
 export type MoneyDisplay = (typeof MONEY_DISPLAYS)[number]
 export const DEFAULT_MONEY_DISPLAY: MoneyDisplay = 'units'
 
-/** Locale used when a caller does not pass one: the app's default language. */
-export const DEFAULT_LOCALE = 'pt-PT'
-
 interface FormatOptions {
   /** Prefix positive amounts with `+` (profit). Off for amounts such as a stake or the bankroll. */
   signed?: boolean
 }
 
-const formatters = new Map<string, Intl.NumberFormat>()
-
-/** `Intl.NumberFormat` is costly to build; keep one per locale, style and sign. */
+/** Two decimals, optionally signed, optionally in euros. */
 function formatter(locale: string, euros: boolean, signed: boolean): Intl.NumberFormat {
-  const key = `${locale}|${euros}|${signed}`
-  let cached = formatters.get(key)
-  if (!cached) {
-    cached = new Intl.NumberFormat(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      signDisplay: signed ? 'exceptZero' : 'auto',
-      ...(euros && { style: 'currency', currency: 'EUR' }),
-    })
-    formatters.set(key, cached)
-  }
-  return cached
+  return numberFormat(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: signed ? 'exceptZero' : 'auto',
+    ...(euros && { style: 'currency', currency: 'EUR' }),
+  })
 }
 
 /** `1.8` → `1,80` (PT) or `1.80` (EN): odds and other two-decimal numbers. */

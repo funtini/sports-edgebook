@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import AppIcon from './AppIcon.vue'
 import InputText from 'primevue/inputtext'
+import { dateTimeFormat } from '@/domain/intl'
 import { LocalEventSource, type EventSearchResult, type EventSource } from '@/domain/eventSource'
 import { suggestNames } from '@/domain/names'
 import { emptyNewGame } from '@/domain/predictionDraft'
@@ -40,23 +41,20 @@ const teamSuggestions = ref<string[]>([])
 const searches = useLatestRequest()
 
 const { t, intlLocale, message } = useLocale()
-const kickoffFormat = computed(
-  () =>
-    new Intl.DateTimeFormat(intlLocale.value, {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    }),
-)
+const KICKOFF: Intl.DateTimeFormatOptions = {
+  weekday: 'short',
+  day: '2-digit',
+  month: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+}
 
 function label(result: EventSearchResult): string {
   return `${result.homeTeam} – ${result.awayTeam}`
 }
 
 function details(result: EventSearchResult): string {
-  const kickoff = kickoffFormat.value.format(new Date(result.kickoffAt))
+  const kickoff = dateTimeFormat(intlLocale.value, KICKOFF).format(new Date(result.kickoffAt))
   return result.leagueName ? `${kickoff} · ${result.leagueName}` : kickoff
 }
 

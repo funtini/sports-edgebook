@@ -228,6 +228,7 @@ const en: Messages = {
   },
   validation: {
     idInvalid: 'Invalid identifier',
+    textEmpty: 'The text cannot be empty',
     oddInvalid: 'Invalid odd',
     oddAboveOne: 'The odd must be greater than 1',
     selectionRequired: 'Enter the selection',

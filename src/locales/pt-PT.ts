@@ -232,6 +232,7 @@ const ptPT = {
   },
   validation: {
     idInvalid: 'Identificador inválido',
+    textEmpty: 'O texto não pode estar vazio',
     oddInvalid: 'Odd inválida',
     oddAboveOne: 'A odd tem de ser maior que 1',
     selectionRequired: 'Indica a seleção',

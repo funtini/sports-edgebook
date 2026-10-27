@@ -13,6 +13,7 @@ import ValueIndex from '@/components/ValueIndex.vue'
 import { useLocale } from '@/composables/useLocale'
 import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
+import { formatPercent } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { toSearchResult, type EventSearchResult } from '@/domain/eventSource'
@@ -44,7 +45,7 @@ const predictions = usePredictionsStore()
 const reference = useReferenceStore()
 const settings = useSettingsStore()
 const toast = useToast()
-const { t, intlLocale, message } = useLocale()
+const { t, intlLocale, message, marketName, storedName } = useLocale()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -69,25 +70,25 @@ const probability = computed(() =>
 const parsedOdd = computed(() => parseDecimal(draft.odd))
 const probabilityLabel = computed(() => {
   if (probability.value == null) return null
-  const percent = new Intl.NumberFormat(intlLocale.value, { style: 'percent' })
   return t('logging.probabilityFair', {
-    probability: percent.format(probability.value),
+    probability: formatPercent(probability.value, intlLocale.value),
     fairOdd: formatDecimal(fairOdd(probability.value), intlLocale.value),
   })
 })
 
+// Suggestions show seeded markets in the active language; `storedName` maps them back on save.
 const completeCategory = (event: AutoCompleteCompleteEvent) =>
   (categorySuggestions.value = suggestNames(
-    reference.markets.map((m) => m.category),
+    reference.markets.map((m) => marketName(m.category)),
     event.query,
   ))
 const completeMarketName = (event: AutoCompleteCompleteEvent) => {
-  const category = draft.category.trim().toLowerCase()
+  const category = draft.category.trim() ? storedName(draft.category).toLowerCase() : ''
   const markets = category
     ? reference.markets.filter((m) => m.category.toLowerCase() === category)
     : reference.markets
   marketNameSuggestions.value = suggestNames(
-    markets.map((m) => m.name),
+    markets.map((m) => marketName(m.name)),
     event.query,
   )
 }
@@ -116,7 +117,11 @@ async function save() {
   const found: FieldErrors = {}
   if (!game.value && !newGame.value) found.game = 'logging.pickGame'
   const gameResult = newGame.value ? newGameFormSchema.safeParse(newGame.value) : null
-  const marketResult = marketFormSchema.safeParse(marketInput(draft))
+  const typedMarket = marketInput(draft)
+  const marketResult = marketFormSchema.safeParse({
+    category: storedName(typedMarket.category),
+    name: storedName(typedMarket.name),
+  })
   const predictionResult = predictionFormSchema.safeParse(predictionInput(draft))
   collect(found, gameResult)
   collect(found, marketResult, { name: 'marketName' })

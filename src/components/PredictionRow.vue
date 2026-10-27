@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useLocale } from '@/composables/useLocale'
+import { numberFormat } from '@/domain/intl'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import { valueBand, valueIndex } from '@/domain/value'
@@ -18,7 +19,6 @@ const props = defineProps<{
 const emit = defineEmits<{ settle: [status: BetStatus] }>()
 
 const { t, intlLocale, marketName } = useLocale()
-const line = computed(() => new Intl.NumberFormat(intlLocale.value, { maximumFractionDigits: 2 }))
 
 const outcomes: { status: Exclude<BetStatus, 'pending'>; active: string }[] = [
   { status: 'won', active: 'border-eb-pos bg-eb-pos text-eb-on-fill' },
@@ -40,7 +40,9 @@ const market = computed(() => {
 
 const selection = computed(() => {
   const { selection, line: value } = props.prediction
-  return value == null ? selection : `${selection} ${line.value.format(value)}`
+  return value == null
+    ? selection
+    : `${selection} ${numberFormat(intlLocale.value, { maximumFractionDigits: 2 }).format(value)}`
 })
 
 const confidence = computed(() => {

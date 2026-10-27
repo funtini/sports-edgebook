@@ -4,9 +4,11 @@
  * storage key and colours in sync with it (a test checks).
  */
 
+import { DEFAULT_LOCALE } from '@/domain/intl'
+
 export const LOCALES = ['pt-PT', 'en'] as const
 export type AppLocale = (typeof LOCALES)[number]
-export const DEFAULT_LOCALE: AppLocale = 'pt-PT'
+export { DEFAULT_LOCALE } from '@/domain/intl'
 
 /** Locale handed to `Intl` and PrimeVue: EN uses British dates (27/10/2026) and the euro. */
 export const INTL_LOCALES: Record<AppLocale, string> = { 'pt-PT': 'pt-PT', en: 'en-GB' }

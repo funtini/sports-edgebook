@@ -9,6 +9,7 @@ import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useLocale } from '@/composables/useLocale'
 import { useSettlement } from '@/composables/useSettlement'
 import { shortDayLabel } from '@/domain/days'
+import { formatTime } from '@/domain/intl'
 import { scoreFormSchema, toScoreForm, type ScoreForm } from '@/domain/schemas'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
@@ -34,15 +35,11 @@ const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
 const savingScore = ref(false)
 
-const time = computed(
-  () => new Intl.DateTimeFormat(intlLocale.value, { hour: '2-digit', minute: '2-digit' }),
-)
-
 /** `ter, 27 out · 20:15` */
 const kickoff = computed(() => {
   if (!event.value) return ''
   const date = new Date(event.value.kickoff_at)
-  return `${shortDayLabel(date, intlLocale.value)} · ${time.value.format(date)}`
+  return `${shortDayLabel(date, intlLocale.value)} · ${formatTime(date, intlLocale.value)}`
 })
 const hasScore = computed(() => event.value?.home_score != null && event.value.away_score != null)
 const settled = computed(() => rows.value.filter((p) => p.status !== 'pending').length)

@@ -1,3 +1,5 @@
+import { sameName } from './names'
+
 export interface MarketDefinition {
   category: string
   name: string
@@ -41,4 +43,17 @@ const SEED_NAME_KEYS: Record<string, string> = {
 export function seedNameKey(name: string): string | null {
   const key = SEED_NAME_KEYS[name]
   return key ? `markets.${key}` : null
+}
+
+/**
+ * Stored name for what the user typed or picked: a seeded name in any language (`Goals`, `golos`)
+ * becomes its stored PT-PT name (`Golos`), so a translated label never creates a duplicate
+ * market. Anything else is returned as typed. `translate` resolves a `markets.*` key in the
+ * active language.
+ */
+export function storedMarketName(label: string, translate: (key: string) => string): string {
+  for (const [name, slug] of Object.entries(SEED_NAME_KEYS)) {
+    if (sameName(label, name) || sameName(label, translate(`markets.${slug}`))) return name
+  }
+  return label
 }

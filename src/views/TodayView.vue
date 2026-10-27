@@ -10,6 +10,7 @@ import { useLocale } from '@/composables/useLocale'
 import { useSettlement } from '@/composables/useSettlement'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '@/domain/days'
+import { formatPercent, formatTime } from '@/domain/intl'
 import { formatMoney } from '@/domain/money'
 import { userMessage } from '@/lib/errors'
 import { usePredictionsStore } from '@/stores/predictions'
@@ -57,13 +58,6 @@ const isToday = computed(() => dayKey.value === todayKey.value)
 
 /** Earlier pending predictions are counted before the selected day, never past today. */
 const pendingCutoff = computed(() => (day.value < today.value ? day.value : today.value))
-
-const time = computed(
-  () => new Intl.DateTimeFormat(intlLocale.value, { hour: '2-digit', minute: '2-digit' }),
-)
-const percent = computed(
-  () => new Intl.NumberFormat(intlLocale.value, { style: 'percent', maximumFractionDigits: 0 }),
-)
 
 const relativeLabel = computed(() => {
   if (isToday.value) return t('today.today')
@@ -233,7 +227,7 @@ watch(
         <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
           <div class="text-xs text-eb-muted">{{ t('today.hitRate') }}</div>
           <div class="mt-0.5 text-lg font-bold">
-            {{ summary.hitRate == null ? '—' : percent.format(summary.hitRate) }}
+            {{ summary.hitRate == null ? '—' : formatPercent(summary.hitRate, intlLocale) }}
           </div>
         </div>
         <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
@@ -281,7 +275,7 @@ watch(
         class="flex min-h-11 items-center gap-2.5 rounded-xl text-eb-text"
       >
         <span class="rounded-lg bg-eb-surface-2 px-2 py-1 text-[13px] font-bold">
-          {{ time.format(new Date(group.event.kickoff_at)) }}
+          {{ formatTime(new Date(group.event.kickoff_at), intlLocale) }}
         </span>
         <span class="min-w-0 flex-1">
           <span class="block text-[15px] font-semibold">

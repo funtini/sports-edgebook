@@ -14,7 +14,7 @@ defineProps<{ locale: AppLocale }>()
       <circle cx="12" cy="10" r="2.6" fill="#da291c" />
       <path d="M10.6 8.6h2.8v2.2a1.4 1.4 0 0 1-2.8 0z" fill="#fff" />
     </template>
-    <template v-else>
+    <template v-else-if="locale === 'en'">
       <rect width="30" height="20" fill="#012169" />
       <path d="M0 0l30 20M30 0L0 20" stroke="#fff" stroke-width="4" />
       <path d="M0 0l30 20M30 0L0 20" stroke="#c8102e" stroke-width="1.6" />

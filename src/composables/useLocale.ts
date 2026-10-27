@@ -1,8 +1,8 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { seedNameKey } from '@/domain/markets'
+import { seedNameKey, storedMarketName } from '@/domain/markets'
 import { setLocale } from '@/i18n'
-import { INTL_LOCALES, type AppLocale } from '@/lib/preferences'
+import { INTL_LOCALES, LOCALES, type AppLocale } from '@/lib/preferences'
 
 /**
  * Active language for a component: `t`, the `Intl` locale for formatters, display helpers and the
@@ -24,9 +24,15 @@ export function useLocale() {
     return key ? t(key) : name
   }
 
-  function toggleLocale(): void {
-    setLocale(locale.value === 'pt-PT' ? 'en' : 'pt-PT')
+  /** Inverse of `marketName`: a typed or picked label as the name to store and match. */
+  function storedName(label: string): string {
+    return storedMarketName(label, (key) => t(key))
   }
 
-  return { t, locale, intlLocale, message, marketName, setLocale, toggleLocale }
+  /** Next language in `LOCALES`, wrapping round. */
+  function toggleLocale(): void {
+    setLocale(LOCALES[(LOCALES.indexOf(locale.value) + 1) % LOCALES.length]!)
+  }
+
+  return { t, locale, intlLocale, message, marketName, storedName, setLocale, toggleLocale }
 }

@@ -5,9 +5,11 @@ import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import { useLocale } from '@/composables/useLocale'
 import { CONFIDENCE_LEVELS } from '@/domain/confidence'
+import { formatPercent, numberFormat } from '@/domain/intl'
 import {
   DEFAULT_MONEY_DISPLAY,
   DEFAULT_UNIT_VALUE,
+  MONEY_DISPLAYS,
   UNIT_VALUE_PRESETS,
   formatDecimal,
   formatMoney,
@@ -30,20 +32,17 @@ const saving = ref(false)
 const saved = ref(false)
 const error = ref<string | null>(null)
 
-const levels = computed(() => {
-  const percent = new Intl.NumberFormat(intlLocale.value, { style: 'percent' })
-  return CONFIDENCE_LEVELS.map((level) => {
+const levels = computed(() =>
+  CONFIDENCE_LEVELS.map((level) => {
     const probability = store.confidenceAnchors[level]
     return {
       level,
       label: t(`confidence.${level}`),
-      probability: percent.format(probability),
+      probability: formatPercent(probability, intlLocale.value),
       fairOdd: formatDecimal(fairOdd(probability), intlLocale.value),
     }
-  })
-})
-
-const displays: MoneyDisplay[] = ['units', 'euros']
+  }),
+)
 
 const money = (units: number, display: MoneyDisplay, signed = true) =>
   formatMoney(units, unitValue.value ?? 0, display, { signed }, intlLocale.value)
@@ -56,18 +55,12 @@ const bankrollInEuros = computed(() =>
 )
 
 /** Preset buttons: `10 €` (PT) or `€10` (EN). */
-const presetLabel = computed(() => {
-  const format = new Intl.NumberFormat(intlLocale.value, {
+const presetLabel = (euros: number) =>
+  numberFormat(intlLocale.value, {
     style: 'currency',
     currency: 'EUR',
     maximumFractionDigits: 0,
-  })
-  return (euros: number) => format.format(euros)
-})
-/** `€` goes after the amount in PT-PT and before it in EN, in the unit value input too. */
-const euroAffix = computed(() =>
-  intlLocale.value === 'pt-PT' ? { suffix: ' €' } : { prefix: '€' },
-)
+  }).format(euros)
 
 // The confirmation only describes what was saved; any edit makes it stale.
 watch(
@@ -130,7 +123,7 @@ async function save() {
           :aria-label="t('settings.display.legend')"
         >
           <button
-            v-for="display in displays"
+            v-for="display in MONEY_DISPLAYS"
             :key="display"
             type="button"
             class="min-h-11 rounded-[9px] text-[15px] font-semibold transition-colors"
@@ -171,7 +164,8 @@ async function save() {
           v-model="unitValue"
           input-id="unit-value"
           :locale="intlLocale"
-          v-bind="euroAffix"
+          mode="currency"
+          currency="EUR"
           :min-fraction-digits="0"
           :max-fraction-digits="2"
           :min="0"

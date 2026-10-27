@@ -7,7 +7,7 @@ import { sameName, tidyName } from './names'
 
 export const idSchema = z.uuid('validation.idInvalid')
 const id = idSchema
-const optionalText = z.string().trim().min(1).nullish()
+const optionalText = z.string().trim().min(1, 'validation.textEmpty').nullish()
 
 /** Odds are decimal and must pay more than the stake back. */
 const odd = z.number('validation.oddInvalid').gt(1, 'validation.oddAboveOne')
@@ -19,7 +19,7 @@ const predictionFields = z.object({
   odd,
   confidence: z
     .number('validation.confidenceRequired')
-    .int()
+    .int('validation.confidenceRange')
     .min(1, 'validation.confidenceRange')
     .max(5, 'validation.confidenceRange'),
   is_punter: z.boolean().default(false),

@@ -4,14 +4,13 @@ import {
   THEME_COLORS,
   THEME_STORAGE_KEY,
   initialTheme,
+  isTheme,
   readStored,
   writeStored,
   type Theme,
 } from '@/lib/preferences'
 
-function prefersDark(): boolean {
-  return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches
-}
+const DARK_QUERY = '(prefers-color-scheme: dark)'
 
 /** Puts the theme on `<html>` (PrimeVue and Tailwind `dark:`) and on the browser chrome. */
 export function applyTheme(theme: Theme): void {
@@ -20,11 +19,22 @@ export function applyTheme(theme: Theme): void {
 }
 
 // One theme for the whole app. `index.html` already applied it before mount; this mirrors it.
-const theme = ref<Theme>(initialTheme(readStored(THEME_STORAGE_KEY), prefersDark()))
+const system = typeof matchMedia === 'function' ? matchMedia(DARK_QUERY) : null
+/** Whether the user picked a theme on this device; until then the theme follows the system. */
+let chosen = isTheme(readStored(THEME_STORAGE_KEY))
+const theme = ref<Theme>(initialTheme(readStored(THEME_STORAGE_KEY), system?.matches ?? false))
+
+// Follows a system light/dark switch live, without a reload, until the user picks a theme.
+system?.addEventListener?.('change', (event) => {
+  if (chosen) return
+  theme.value = event.matches ? 'dark' : 'light'
+  applyTheme(theme.value)
+})
 
 /** Light/dark theme: follows the system until the user picks one, which is remembered. */
 export function useTheme() {
   function setTheme(next: Theme): void {
+    chosen = true
     theme.value = next
     applyTheme(next)
     writeStored(THEME_STORAGE_KEY, next)
