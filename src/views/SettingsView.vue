@@ -3,7 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
-import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS } from '@/domain/confidence'
+import { useLocale } from '@/composables/useLocale'
+import { CONFIDENCE_LEVELS } from '@/domain/confidence'
 import {
   DEFAULT_MONEY_DISPLAY,
   DEFAULT_UNIT_VALUE,
@@ -19,6 +20,7 @@ import { useSettingsStore } from '@/stores/settings'
 
 const store = useSettingsStore()
 const auth = useAuthStore()
+const { t, intlLocale, message } = useLocale()
 
 const unitValue = ref<number | null>(DEFAULT_UNIT_VALUE)
 const bankroll = ref<number | null>(null)
@@ -28,33 +30,43 @@ const saving = ref(false)
 const saved = ref(false)
 const error = ref<string | null>(null)
 
-const percent = new Intl.NumberFormat('pt-PT', { style: 'percent' })
-
-const levels = computed(() =>
-  CONFIDENCE_LEVELS.map((level) => {
+const levels = computed(() => {
+  const percent = new Intl.NumberFormat(intlLocale.value, { style: 'percent' })
+  return CONFIDENCE_LEVELS.map((level) => {
     const probability = store.confidenceAnchors[level]
     return {
       level,
-      label: CONFIDENCE_LABELS[level],
+      label: t(`confidence.${level}`),
       probability: percent.format(probability),
-      fairOdd: formatDecimal(fairOdd(probability)),
+      fairOdd: formatDecimal(fairOdd(probability), intlLocale.value),
     }
-  }),
-)
+  })
+})
 
-const displays: { value: MoneyDisplay; label: string }[] = [
-  { value: 'units', label: 'Unidades' },
-  { value: 'euros', label: 'Euros' },
-]
+const displays: MoneyDisplay[] = ['units', 'euros']
 
-const example = computed(
-  () =>
-    `${formatMoney(1.8, unitValue.value ?? 0, 'units')} unidades = ${formatMoney(1.8, unitValue.value ?? 0, 'euros')}`,
+const money = (units: number, display: MoneyDisplay, signed = true) =>
+  formatMoney(units, unitValue.value ?? 0, display, { signed }, intlLocale.value)
+
+const example = computed(() =>
+  t('settings.unit.example', { units: money(1.8, 'units'), euros: money(1.8, 'euros') }),
 )
 const bankrollInEuros = computed(() =>
-  !bankroll.value
-    ? null
-    : `= ${formatMoney(bankroll.value, unitValue.value ?? 0, 'euros', { signed: false })}`,
+  !bankroll.value ? null : `= ${money(bankroll.value, 'euros', false)}`,
+)
+
+/** Preset buttons: `10 €` (PT) or `€10` (EN). */
+const presetLabel = computed(() => {
+  const format = new Intl.NumberFormat(intlLocale.value, {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+  })
+  return (euros: number) => format.format(euros)
+})
+/** `€` goes after the amount in PT-PT and before it in EN, in the unit value input too. */
+const euroAffix = computed(() =>
+  intlLocale.value === 'pt-PT' ? { suffix: ' €' } : { prefix: '€' },
 )
 
 // The confirmation only describes what was saved; any edit makes it stale.
@@ -73,7 +85,7 @@ onMounted(async () => {
     bankroll.value = row.starting_bankroll_units
     moneyDisplay.value = store.moneyDisplay
   } catch (e) {
-    error.value = userMessage(e, 'Não foi possível carregar as definições.')
+    error.value = userMessage(e, 'settings.loadFailed')
   } finally {
     loading.value = false
   }
@@ -95,7 +107,7 @@ async function save() {
     moneyDisplay.value = store.moneyDisplay
     saved.value = true
   } catch (e) {
-    error.value = userMessage(e, 'Não foi possível guardar as definições.')
+    error.value = userMessage(e, 'settings.saveFailed')
   } finally {
     saving.value = false
   }
@@ -104,78 +116,80 @@ async function save() {
 
 <template>
   <div class="mx-auto flex max-w-2xl flex-col gap-4">
-    <h1 class="m-0 text-[22px] font-bold tracking-tight">Definições</h1>
+    <h1 class="m-0 text-[22px] font-bold tracking-tight">{{ t('settings.title') }}</h1>
 
     <form
       class="flex flex-col gap-6 rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5"
       @submit.prevent="save"
     >
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-[17px] font-bold">Mostrar valores em</legend>
+        <legend class="mb-1 p-0 text-[17px] font-bold">{{ t('settings.display.legend') }}</legend>
         <div
           class="grid grid-cols-2 gap-1 rounded-xl border border-eb-border bg-eb-surface-2 p-1"
           role="group"
-          aria-label="Mostrar valores em"
+          :aria-label="t('settings.display.legend')"
         >
           <button
             v-for="display in displays"
-            :key="display.value"
+            :key="display"
             type="button"
             class="min-h-11 rounded-[9px] text-[15px] font-semibold transition-colors"
             :class="
-              moneyDisplay === display.value
+              moneyDisplay === display
                 ? 'bg-eb-surface text-eb-text shadow-sm'
                 : 'text-eb-muted hover:text-eb-text'
             "
-            :aria-pressed="moneyDisplay === display.value"
-            @click="moneyDisplay = display.value"
+            :aria-pressed="moneyDisplay === display"
+            @click="moneyDisplay = display"
           >
-            {{ display.label }}
+            {{ t(`settings.display.${display}`) }}
           </button>
         </div>
         <p class="m-0 text-sm text-eb-muted">
-          Tudo é registado em unidades. Em euros, cada valor é unidades × valor da unidade.
+          {{ t('settings.display.help') }}
         </p>
       </fieldset>
 
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-[17px] font-bold">Valor da unidade</legend>
+        <legend class="mb-1 p-0 text-[17px] font-bold">{{ t('settings.unit.legend') }}</legend>
         <div class="flex flex-wrap gap-2">
           <Button
             v-for="preset in UNIT_VALUE_PRESETS"
             :key="preset"
             type="button"
-            :label="`${preset} €`"
+            :label="presetLabel(preset)"
             :outlined="unitValue !== preset"
             :aria-pressed="unitValue === preset"
             class="min-h-11 min-w-16"
             @click="unitValue = preset"
           />
         </div>
-        <label for="unit-value" class="text-[13px] font-semibold text-eb-muted">Outro valor</label>
+        <label for="unit-value" class="text-[13px] font-semibold text-eb-muted">{{
+          t('settings.unit.other')
+        }}</label>
         <InputNumber
           v-model="unitValue"
           input-id="unit-value"
-          locale="pt-PT"
-          suffix=" €"
+          :locale="intlLocale"
+          v-bind="euroAffix"
           :min-fraction-digits="0"
           :max-fraction-digits="2"
           :min="0"
           input-class="min-h-11 w-full"
           fluid
         />
-        <p class="m-0 text-sm text-eb-muted tabular-nums">Exemplo: {{ example }}</p>
+        <p class="m-0 text-sm text-eb-muted tabular-nums">{{ example }}</p>
       </fieldset>
 
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-[17px] font-bold">Banca inicial</legend>
+        <legend class="mb-1 p-0 text-[17px] font-bold">{{ t('settings.bankroll.legend') }}</legend>
         <label for="bankroll" class="text-sm text-eb-muted">
-          Em unidades (opcional). Vazio ou 0 = sem banca inicial.
+          {{ t('settings.bankroll.help') }}
         </label>
         <InputNumber
           v-model="bankroll"
           input-id="bankroll"
-          locale="pt-PT"
+          :locale="intlLocale"
           suffix=" u"
           :min-fraction-digits="0"
           :max-fraction-digits="2"
@@ -188,11 +202,11 @@ async function save() {
         </p>
       </fieldset>
 
-      <Message v-if="error" severity="error">{{ error }}</Message>
-      <Message v-if="saved" severity="success">Definições guardadas.</Message>
+      <Message v-if="error" severity="error">{{ message(error) }}</Message>
+      <Message v-if="saved" severity="success">{{ t('settings.saved') }}</Message>
       <Button
         type="submit"
-        label="Guardar"
+        :label="t('common.save')"
         :loading="saving"
         :disabled="loading"
         class="min-h-11"
@@ -200,18 +214,20 @@ async function save() {
     </form>
 
     <section class="rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5">
-      <h2 class="m-0 text-[17px] font-bold">Níveis de confiança</h2>
+      <h2 class="m-0 text-[17px] font-bold">{{ t('settings.levels.title') }}</h2>
       <p class="mt-1 text-sm text-eb-muted">
-        Probabilidade que cada nível representa. A edição chega com a calibração (Fase 4).
+        {{ t('settings.levels.help') }}
       </p>
       <div class="mt-3 overflow-x-auto">
         <table class="w-full border-collapse text-left">
           <thead>
             <tr class="border-b border-eb-border text-sm text-eb-muted">
-              <th class="py-2 pr-3 font-medium">Nível</th>
-              <th class="py-2 pr-3 font-medium">Etiqueta</th>
-              <th class="py-2 pr-3 text-right font-medium">Probabilidade</th>
-              <th class="py-2 text-right font-medium">Odd justa</th>
+              <th class="py-2 pr-3 font-medium">{{ t('settings.levels.level') }}</th>
+              <th class="py-2 pr-3 font-medium">{{ t('settings.levels.label') }}</th>
+              <th class="py-2 pr-3 text-right font-medium">
+                {{ t('settings.levels.probability') }}
+              </th>
+              <th class="py-2 text-right font-medium">{{ t('settings.levels.fairOdd') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -235,12 +251,12 @@ async function save() {
       class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5"
     >
       <div>
-        <h2 class="m-0 text-[17px] font-bold">Conta</h2>
+        <h2 class="m-0 text-[17px] font-bold">{{ t('settings.account.title') }}</h2>
         <p class="mt-1 mb-0 text-sm break-all text-eb-muted">{{ auth.session.user.email }}</p>
       </div>
       <Button
         type="button"
-        label="Sair"
+        :label="t('settings.account.signOut')"
         severity="secondary"
         outlined
         class="min-h-11"

@@ -2,18 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import { UserError, userMessage } from '../errors'
 
-const FALLBACK = 'Não foi possível guardar.'
+const FALLBACK = 'settings.saveFailed'
 
 describe('userMessage', () => {
   it('shows the first validation message', () => {
-    const result = z.number('Odd inválida').safeParse('x')
-    expect(userMessage(result.error, FALLBACK)).toBe('Odd inválida')
+    const result = z.number('validation.oddInvalid').safeParse('x')
+    expect(userMessage(result.error, FALLBACK)).toBe('validation.oddInvalid')
   })
 
   it('shows messages written for the user', () => {
-    expect(userMessage(new UserError('O nome não pode estar vazio.'), FALLBACK)).toBe(
-      'O nome não pode estar vazio.',
-    )
+    expect(userMessage(new UserError('errors.emptyName'), FALLBACK)).toBe('errors.emptyName')
   })
 
   it('hides database and network errors behind the fallback', () => {

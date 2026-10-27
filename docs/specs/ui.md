@@ -2,7 +2,7 @@
 
 The approved design for the Phase 1 screens. Design canvas (owner only): [Edgebook design](https://claude.ai/artifact/FSQPYVsrXWufBYNVNXj1tD). This file is the reference; don't depend on opening the canvas.
 
-All user-facing text is PT-PT. Mobile-first for logging screens, desktop-first for the dashboard. Touch targets ≥ 44px; no horizontal scroll at 390px.
+All user-facing text goes through vue-i18n, PT-PT by default (see [Languages](#languages)). Mobile-first for logging screens, desktop-first for the dashboard. Touch targets ≥ 44px; no horizontal scroll at 390px.
 
 ## Design tokens
 
@@ -31,7 +31,7 @@ Type: Inter 400/500/600/700, `tabular-nums` on numbers. Radius: 16px cards, 10�
 
 ## Header and navigation
 
-- **Header** (all sizes, 64px, sticky): logo mark + "Edgebook" on the left (links to Hoje); on the right the settings gear (`/definicoes`). The right side leaves room for the language and theme buttons (#20).
+- **Header** (all sizes, 64px, sticky): logo mark + "Edgebook" on the left (links to Hoje); on the right, three 44px buttons: language (flag of the active language), theme (moon in light, sun in dark) and the settings gear (`/definicoes`). Language and theme also show before sign-in; the gear only after. Fits on one line at 390px.
 - **Phone (< 640px)**: bottom tab bar with Hoje, Registo, Múltiplas, Dashboard (icon + 11px label, active in `accent-text`). The header holds no nav links.
 - **Desktop (≥ 640px)**: the same links in the header; the tab bar is hidden.
 
@@ -56,3 +56,18 @@ Amounts follow the money display setting (units or euros, see [domain.md](domain
 - **Evento**: "‹ Hoje", game card (league, date · time, teams with the score in the middle, Resultado inputs + "Guardar resultado"), "Prognósticos" list, dashed "+ Registar prognóstico", "Análise do jogo · Em breve" placeholder.
 - **Registo**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour.
 - **Definições**, **Login**, **404**: cards on `surface` with the same type scale.
+
+## Languages
+
+- **PT-PT** is the default and the source of truth; **EN** is the second language. The first visit starts in EN when `navigator.language` starts with `en`, otherwise PT-PT. The header toggle switches live (no reload); the choice is kept per device in `localStorage` (`edgebook.locale`) and set on `<html lang>`.
+- **Strings**: every UI string is a key in `src/locales/pt-PT.ts`; `src/locales/en.ts` is typed from it and a test checks both have the same keys. Group keys by screen or component (`today.*`, `event.*`, `logging.*`, `settings.*`, `predictionRow.*`...), shared ones under `common.*`. Components use `useLocale()` (`src/composables/useLocale.ts`) for `t`, the `Intl` locale and the helpers below.
+- **Errors**: Zod issue messages in `src/domain/schemas.ts`, `UserError` messages and `userMessage` fallbacks are keys (`validation.*`, `errors.*`, `<screen>.loadFailed`...). Views keep the key and show it with `message()`, which translates keys and shows any other text (e.g. a Supabase auth error) as is.
+- **Numbers and dates** follow the language: `src/domain` formatters take the locale as a parameter (default `pt-PT`); EN uses `en-GB` for `Intl` (27/10/2026, `+€36.20`). PrimeVue day/month names and button labels follow too (`src/i18n/primevue.ts`).
+- **User data is never translated**: league, team and market names typed by the user, selections, bookmakers and notes show as stored. Two display-only exceptions with stored values unchanged: confidence labels (`confidence.1`–`5`) and the seeded market names and categories (`markets.*`, mapped in `seedNameKey`). The market autocomplete on Registo suggests stored names, so choosing one never creates a translated duplicate.
+
+## Theme
+
+- Light and dark. Default follows `prefers-color-scheme`; the header toggle's choice is kept per device in `localStorage` (`edgebook.theme`) and wins from then on.
+- The class `app-dark` on `<html>` switches the `--eb-*` tokens, PrimeVue's dark scheme and Tailwind's `dark:` variant (`@custom-variant dark` in `main.css`; views shouldn't need it).
+- An inline script in `index.html` applies the theme before the app loads, so there is no flash of the wrong one; `src/lib/preferences.ts` mirrors it and a test runs the script to keep them in sync.
+- `<meta name="theme-color">` follows the theme with the header surface: `#ffffff` light, `#151920` dark.

@@ -6,6 +6,7 @@ import AppIcon from '@/components/AppIcon.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useLocale } from '@/composables/useLocale'
 import { useSettlement } from '@/composables/useSettlement'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '@/domain/days'
@@ -19,6 +20,7 @@ const route = useRoute()
 const router = useRouter()
 const predictions = usePredictionsStore()
 const settings = useSettingsStore()
+const { t, intlLocale, message } = useLocale()
 
 const rows = ref<PredictionWithRelations[]>([])
 const pendingBefore = ref<PredictionWithRelations[]>([])
@@ -56,19 +58,23 @@ const isToday = computed(() => dayKey.value === todayKey.value)
 /** Earlier pending predictions are counted before the selected day, never past today. */
 const pendingCutoff = computed(() => (day.value < today.value ? day.value : today.value))
 
-const time = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' })
-const percent = new Intl.NumberFormat('pt-PT', { style: 'percent', maximumFractionDigits: 0 })
+const time = computed(
+  () => new Intl.DateTimeFormat(intlLocale.value, { hour: '2-digit', minute: '2-digit' }),
+)
+const percent = computed(
+  () => new Intl.NumberFormat(intlLocale.value, { style: 'percent', maximumFractionDigits: 0 }),
+)
 
 const relativeLabel = computed(() => {
-  if (isToday.value) return 'Hoje'
-  if (dayKey.value === toDayKey(addDays(today.value, -1))) return 'Ontem'
-  if (dayKey.value === toDayKey(addDays(today.value, 1))) return 'Amanhã'
+  if (isToday.value) return t('today.today')
+  if (dayKey.value === toDayKey(addDays(today.value, -1))) return t('today.yesterday')
+  if (dayKey.value === toDayKey(addDays(today.value, 1))) return t('today.tomorrow')
   return null
 })
 
 /** `Hoje · ter, 27 out`, or just `qua, 4 nov` away from today and its neighbours. */
 const dayLabel = computed(() => {
-  const date = shortDayLabel(day.value)
+  const date = shortDayLabel(day.value, intlLocale.value)
   return relativeLabel.value ? `${relativeLabel.value} · ${date}` : date
 })
 
@@ -82,11 +88,13 @@ const groups = computed(() =>
 const summary = computed(() => daySummary(rows.value))
 
 const money = (units: number, signed = true) =>
-  formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed })
+  formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed }, intlLocale.value)
 
 const staked = computed(() => {
   const amount = money(summary.value.punterStaked, false)
-  return settings.moneyDisplay === 'euros' ? `${amount} apostados` : `${amount} unidades apostadas`
+  return t(settings.moneyDisplay === 'euros' ? 'today.stakedEuros' : 'today.stakedUnits', {
+    amount,
+  })
 })
 
 function goTo(key: string) {
@@ -135,7 +143,7 @@ async function load() {
     pendingBefore.value = pending
   } catch (e) {
     if (!isLatest()) return
-    error.value = userMessage(e, 'Não foi possível carregar os prognósticos.')
+    error.value = userMessage(e, 'today.loadFailed')
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -160,7 +168,7 @@ watch(
     <div class="flex items-center gap-2">
       <button
         type="button"
-        aria-label="Dia anterior"
+        :aria-label="t('today.previousDay')"
         class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2"
         @click="shift(-1)"
       >
@@ -174,7 +182,7 @@ watch(
         <input
           type="date"
           :value="dayKey"
-          aria-label="Escolher dia"
+          :aria-label="t('today.pickDay')"
           class="absolute inset-0 cursor-pointer opacity-0"
           @click="openPicker"
           @change="pick"
@@ -182,7 +190,7 @@ watch(
       </label>
       <button
         type="button"
-        aria-label="Dia seguinte"
+        :aria-label="t('today.nextDay')"
         class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2"
         @click="shift(1)"
       >
@@ -195,18 +203,18 @@ watch(
         class="min-h-11 rounded-xl px-3 text-sm font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
         @click="goTo(todayKey)"
       >
-        Voltar a hoje
+        {{ t('common.backToToday') }}
       </button>
     </div>
 
     <section
       v-if="summary.total"
       class="rounded-2xl border border-eb-border bg-eb-surface p-4"
-      aria-label="Resumo do dia"
+      :aria-label="t('today.summary')"
     >
       <div class="flex items-baseline justify-between gap-3 text-[13px] text-eb-muted">
-        <span class="font-semibold">Lucro punter</span>
-        <span>{{ summary.settled }} de {{ summary.total }} liquidados</span>
+        <span class="font-semibold">{{ t('today.punterProfit') }}</span>
+        <span>{{ t('today.settledOf', { settled: summary.settled, total: summary.total }) }}</span>
       </div>
       <div class="mt-1 flex flex-wrap items-baseline gap-x-2.5">
         <span
@@ -219,17 +227,17 @@ watch(
       </div>
       <div class="mt-3.5 grid grid-cols-3 gap-2">
         <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
-          <div class="text-xs text-eb-muted">Prognósticos</div>
+          <div class="text-xs text-eb-muted">{{ t('common.predictions') }}</div>
           <div class="mt-0.5 text-lg font-bold">{{ summary.total }}</div>
         </div>
         <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
-          <div class="text-xs text-eb-muted">Taxa de acerto</div>
+          <div class="text-xs text-eb-muted">{{ t('today.hitRate') }}</div>
           <div class="mt-0.5 text-lg font-bold">
             {{ summary.hitRate == null ? '—' : percent.format(summary.hitRate) }}
           </div>
         </div>
         <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
-          <div class="text-xs text-eb-muted">Em aberto</div>
+          <div class="text-xs text-eb-muted">{{ t('today.open') }}</div>
           <div class="mt-0.5 text-lg font-bold">{{ summary.total - summary.settled }}</div>
         </div>
       </div>
@@ -243,26 +251,27 @@ watch(
     >
       <AppIcon name="clock" class="size-[18px] shrink-0" />
       <span class="flex-1">
-        {{ pendingBefore.length }}
-        {{ pendingBefore.length === 1 ? 'pendente' : 'pendentes' }} de dias anteriores
+        {{ t('today.pendingBefore', pendingBefore.length) }}
       </span>
-      <span>Ver</span>
+      <span>{{ t('today.see') }}</span>
     </button>
 
-    <Message v-if="error || settleError" severity="error">{{ error ?? settleError }}</Message>
+    <Message v-if="error || settleError" severity="error">
+      {{ message(error ?? settleError ?? '') }}
+    </Message>
 
-    <p v-if="loading" class="text-center text-eb-muted">A carregar…</p>
+    <p v-if="loading" class="text-center text-eb-muted">{{ t('common.loading') }}</p>
 
     <section
       v-else-if="!groups.length && !error"
       class="flex flex-col items-center gap-3 rounded-2xl border border-eb-border bg-eb-surface p-8 text-center"
     >
-      <p class="m-0 text-eb-muted">Sem prognósticos neste dia.</p>
+      <p class="m-0 text-eb-muted">{{ t('today.empty') }}</p>
       <RouterLink
         :to="{ name: 'predictions' }"
         class="inline-flex min-h-11 items-center rounded-xl bg-eb-accent px-4 font-semibold text-eb-on-accent"
       >
-        Registar prognóstico
+        {{ t('common.newPrediction') }}
       </RouterLink>
     </section>
 

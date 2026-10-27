@@ -49,7 +49,7 @@ describe('useSettlement', () => {
 
     await settle(prediction, 'lost')
     expect(rows.value[0]!.status).toBe('pending')
-    expect(error.value).toBe('Não foi possível guardar a liquidação.')
+    expect(error.value).toBe('settlement.saveFailed')
   })
 
   it('ignores a save that fails after the rows were reset for another day or game', async () => {

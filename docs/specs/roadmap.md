@@ -5,7 +5,7 @@ Each phase ends with a gate that must hold before moving on.
 | Phase | Deliverables | Gate |
 | --- | --- | --- |
 | 0 · Foundation | Repo, CLAUDE.md, CI, Supabase schema, magic-link login, deploy to Cloudflare Pages | Login works in production and an agent PR passes CI with a preview |
-| 1 · Logging (MVP) | Fast logging with autocomplete, value index, punter flag and stake, today view, one-tap settlement, event screen | Owner uses the app as the only log for 2 weeks |
+| 1 · Logging (MVP) | Fast logging with autocomplete, value index, punter flag and stake, today view, one-tap settlement, event screen, PT/EN language and light/dark theme | Owner uses the app as the only log for 2 weeks |
 | 2 · Dashboard v1 | KPIs, P/L curve, breakdowns, punter vs multiples, unit/currency toggle | One week of metrics matches a manual calculation |
 | 3 · Multiples generator | Six modes, target odd, probability and EV, save simulated or placed | Unit tests cover every mode and settlement rule |
 | 4 · Calibration and insights | Calibration per level, CLV, drawdown, calendar, small-sample warnings | ~300 settled predictions |

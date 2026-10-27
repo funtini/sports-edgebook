@@ -27,7 +27,20 @@ export function fromDayKey(key: string): Date | null {
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
-/** `ter, 27 out`: short PT-PT day label (Intl's pt-PT short weekday is the full name). */
-export function shortDayLabel(date: Date): string {
-  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+const shortFormats = new Map<string, Intl.DateTimeFormat>()
+
+/**
+ * Short day label: PT-PT `ter, 27 out` (built by hand, Intl's pt-PT short weekday is the full
+ * name); other locales from Intl, e.g. en-GB `Tue 27 Oct`.
+ */
+export function shortDayLabel(date: Date, locale: string = 'pt-PT'): string {
+  if (locale === 'pt-PT') {
+    return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+  }
+  let format = shortFormats.get(locale)
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' })
+    shortFormats.set(locale, format)
+  }
+  return format.format(date)
 }

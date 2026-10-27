@@ -3,17 +3,27 @@ import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import Toast from 'primevue/toast'
 import AppIcon, { type IconName } from '@/components/AppIcon.vue'
+import LanguageFlag from '@/components/LanguageFlag.vue'
+import { useLocale } from '@/composables/useLocale'
+import { useTheme } from '@/composables/useTheme'
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabase'
 
 const auth = useAuthStore()
 const showNav = computed(() => auth.session !== null || !supabase)
+const { t, locale, toggleLocale } = useLocale()
+const { theme, toggleTheme } = useTheme()
 
-const links: { to: { name: string }; label: string; icon: IconName }[] = [
-  { to: { name: 'today' }, label: 'Hoje', icon: 'calendar' },
-  { to: { name: 'predictions' }, label: 'Registo', icon: 'plus-circle' },
-  { to: { name: 'multiples' }, label: 'Múltiplas', icon: 'layers' },
-  { to: { name: 'dashboard' }, label: 'Dashboard', icon: 'chart' },
+/** The theme button names what it switches to. */
+const themeLabel = computed(() =>
+  t(theme.value === 'dark' ? 'app.theme.toLight' : 'app.theme.toDark'),
+)
+
+const links: { to: { name: string }; key: string; icon: IconName }[] = [
+  { to: { name: 'today' }, key: 'app.nav.today', icon: 'calendar' },
+  { to: { name: 'predictions' }, key: 'app.nav.predictions', icon: 'plus-circle' },
+  { to: { name: 'multiples' }, key: 'app.nav.multiples', icon: 'layers' },
+  { to: { name: 'dashboard' }, key: 'app.nav.dashboard', icon: 'chart' },
 ]
 </script>
 
@@ -28,32 +38,53 @@ const links: { to: { name: string }; label: string; icon: IconName }[] = [
           <span class="flex size-7 items-center justify-center rounded-lg bg-eb-accent">
             <AppIcon name="logo" class="size-4 text-eb-on-accent" stroke-width="2.5" />
           </span>
-          <span class="text-[17px] font-bold tracking-tight">Edgebook</span>
+          <span class="text-[17px] font-bold tracking-tight">{{ t('app.brand') }}</span>
         </RouterLink>
 
         <!-- Desktop nav; on phones the same links live in the bottom tab bar. -->
         <nav
           v-if="showNav"
-          aria-label="Principal"
+          :aria-label="t('app.mainNav')"
           class="hidden min-w-0 flex-1 items-center gap-1 sm:flex"
         >
           <RouterLink
             v-for="link in links"
-            :key="link.label"
+            :key="link.key"
             :to="link.to"
             class="flex min-h-11 items-center rounded-xl px-3 font-medium whitespace-nowrap text-eb-muted hover:bg-eb-surface-2 hover:text-eb-text"
             exact-active-class="!bg-eb-accent-soft !text-eb-accent-text"
           >
-            {{ link.label }}
+            {{ t(link.key) }}
           </RouterLink>
         </nav>
 
-        <!-- Right side: #20 adds the language and theme buttons before the gear. -->
-        <div v-if="showNav" class="ml-auto flex shrink-0 items-center gap-0.5 sm:ml-0">
+        <!-- Right side: language and theme (also before sign-in), then settings. -->
+        <div class="ml-auto flex shrink-0 items-center gap-0.5" :class="{ 'sm:ml-0': showNav }">
+          <button
+            type="button"
+            :aria-label="t('app.language.toggle')"
+            :title="t(`app.language.${locale}`)"
+            class="flex size-11 items-center justify-center rounded-xl hover:bg-eb-surface-2"
+            data-action="language"
+            @click="toggleLocale"
+          >
+            <LanguageFlag :locale="locale" class="h-[15px] w-[22px] text-eb-text" />
+          </button>
+          <button
+            type="button"
+            :aria-label="themeLabel"
+            :title="themeLabel"
+            class="flex size-11 items-center justify-center rounded-xl text-eb-text hover:bg-eb-surface-2"
+            data-action="theme"
+            @click="toggleTheme"
+          >
+            <AppIcon :name="theme === 'dark' ? 'sun' : 'moon'" class="size-5" />
+          </button>
           <RouterLink
+            v-if="showNav"
             :to="{ name: 'settings' }"
-            aria-label="Definições"
-            title="Definições"
+            :aria-label="t('app.nav.settings')"
+            :title="t('app.nav.settings')"
             class="flex size-11 items-center justify-center rounded-xl text-eb-text hover:bg-eb-surface-2"
             exact-active-class="!bg-eb-accent-soft !text-eb-accent-text"
           >
@@ -69,18 +100,18 @@ const links: { to: { name: string }; label: string; icon: IconName }[] = [
 
     <nav
       v-if="showNav"
-      aria-label="Principal"
+      :aria-label="t('app.mainNav')"
       class="fixed inset-x-0 bottom-0 z-10 grid grid-cols-4 border-t border-eb-border bg-eb-surface pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
       <RouterLink
         v-for="link in links"
-        :key="link.label"
+        :key="link.key"
         :to="link.to"
         class="flex h-[68px] flex-col items-center justify-center gap-1 text-[11px] font-semibold text-eb-muted no-underline"
         exact-active-class="!text-eb-accent-text"
       >
         <AppIcon :name="link.icon" class="size-[22px]" />
-        {{ link.label }}
+        {{ t(link.key) }}
       </RouterLink>
     </nav>
 

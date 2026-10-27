@@ -1,6 +1,6 @@
 # Sports Edgebook
 
-Personal betting journal: log predictions (odd, confidence, punter flag), generate multiples, and analyse performance (hit rate, yield, value) by market, league, team and odds band. Single user, Portuguese (PT-PT) UI.
+Personal betting journal: log predictions (odd, confidence, punter flag), generate multiples, and analyse performance (hit rate, yield, value) by market, league, team and odds band. Single user; UI in PT-PT (default) and EN via vue-i18n.
 
 Specs live in `docs/specs/`. Read the spec for the area you touch before changing it; if your change alters behaviour described there, update the spec in the same PR.
 
@@ -35,7 +35,7 @@ CI runs all of the above on every PR. Run them before pushing.
 
 ## Conventions
 
-- Code, identifiers, DB tables and commits in English. All user-facing text in Portuguese (PT-PT).
+- Code, identifiers, DB tables and commits in English. All user-facing text goes through vue-i18n (`src/locales/`), PT-PT is the default and EN must have the same keys; never hardcode UI strings or locales.
 - Money is stored and computed in **units**; convert to currency only for display with `unit_value` from `user_settings`.
 - A prediction stores the `probability` of its confidence level at logging time; never recompute past rows from current anchors.
 - Every table has `user_id` + RLS policy `user_id = auth.uid()`. New tables must do the same.

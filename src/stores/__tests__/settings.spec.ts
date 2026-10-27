@@ -102,12 +102,12 @@ describe('settings store', () => {
     const queries = setup(() => ({ data: row }))
     await expect(
       useSettingsStore().update({ unit_value: 0, starting_bankroll_units: null }),
-    ).rejects.toThrow(/maior que 0/)
+    ).rejects.toThrow(/validation.unitValuePositive/)
     expect(queries).toHaveLength(0)
   })
 
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
-    await expect(useSettingsStore().load()).rejects.toThrow(/Supabase não está configurado/)
+    await expect(useSettingsStore().load()).rejects.toThrow(/errors.supabaseNotConfigured/)
   })
 })

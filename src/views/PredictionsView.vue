@@ -10,7 +10,8 @@ import AppIcon from '@/components/AppIcon.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import PunterFields from '@/components/PunterFields.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
-import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
+import { useLocale } from '@/composables/useLocale'
+import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
@@ -43,6 +44,7 @@ const predictions = usePredictionsStore()
 const reference = useReferenceStore()
 const settings = useSettingsStore()
 const toast = useToast()
+const { t, intlLocale, message } = useLocale()
 
 const loading = ref(true)
 const saving = ref(false)
@@ -65,7 +67,14 @@ const probability = computed(() =>
   draft.confidence == null ? null : probabilityFor(draft.confidence, settings.confidenceAnchors),
 )
 const parsedOdd = computed(() => parseDecimal(draft.odd))
-const percent = new Intl.NumberFormat('pt-PT', { style: 'percent' })
+const probabilityLabel = computed(() => {
+  if (probability.value == null) return null
+  const percent = new Intl.NumberFormat(intlLocale.value, { style: 'percent' })
+  return t('logging.probabilityFair', {
+    probability: percent.format(probability.value),
+    fairOdd: formatDecimal(fairOdd(probability.value), intlLocale.value),
+  })
+})
 
 const completeCategory = (event: AutoCompleteCompleteEvent) =>
   (categorySuggestions.value = suggestNames(
@@ -105,7 +114,7 @@ function collect(
 async function save() {
   error.value = null
   const found: FieldErrors = {}
-  if (!game.value && !newGame.value) found.game = 'Escolhe o jogo ou cria um novo'
+  if (!game.value && !newGame.value) found.game = 'logging.pickGame'
   const gameResult = newGame.value ? newGameFormSchema.safeParse(newGame.value) : null
   const marketResult = marketFormSchema.safeParse(marketInput(draft))
   const predictionResult = predictionFormSchema.safeParse(predictionInput(draft))
@@ -134,7 +143,7 @@ async function save() {
       newGame.value = null
     }
     const eventId = game.value?.eventId
-    if (!eventId) throw new UserError('Este jogo ainda não está guardado.')
+    if (!eventId) throw new UserError('logging.gameNotSaved')
     const market = await reference.ensureMarket(marketResult.data.category, marketResult.data.name)
     await predictions.create({ ...predictionResult.data, event_id: eventId, market_id: market.id })
 
@@ -142,11 +151,11 @@ async function save() {
     if (usedBookmaker && !bookmakers.value.includes(usedBookmaker)) {
       bookmakers.value.push(usedBookmaker)
     }
-    toast.add({ severity: 'success', summary: 'Prognóstico guardado', life: 2500 })
+    toast.add({ severity: 'success', summary: t('logging.saved'), life: 2500 })
     keptEventId.value = eventId
     resetPrediction()
   } catch (e) {
-    error.value = userMessage(e, 'Não foi possível guardar o prognóstico.')
+    error.value = userMessage(e, 'logging.saveFailed')
   } finally {
     saving.value = false
   }
@@ -170,7 +179,7 @@ onMounted(async () => {
     const [, used] = await Promise.all([reference.load(), predictions.listBookmakers()])
     bookmakers.value = used
   } catch (e) {
-    error.value = userMessage(e, 'Não foi possível carregar os dados.')
+    error.value = userMessage(e, 'logging.loadFailed')
   } finally {
     loading.value = false
   }
@@ -179,19 +188,21 @@ onMounted(async () => {
 
 <template>
   <div class="mx-auto flex max-w-xl flex-col gap-4">
-    <h1 class="m-0 text-[22px] font-bold tracking-tight">Novo prognóstico</h1>
+    <h1 class="m-0 text-[22px] font-bold tracking-tight">{{ t('logging.title') }}</h1>
 
     <form class="flex flex-col gap-[18px]" novalidate @submit.prevent="save">
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="sr-only">Jogo</legend>
+        <legend class="sr-only">{{ t('logging.game') }}</legend>
         <GamePicker v-model:game="game" v-model:new-game="newGame" :errors="errors" :kept="kept" />
       </fieldset>
 
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="sr-only">Prognóstico</legend>
+        <legend class="sr-only">{{ t('logging.prediction') }}</legend>
         <div class="grid grid-cols-2 gap-3">
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="category" class="text-[13px] font-semibold text-eb-muted">Mercado</label>
+            <label for="category" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.market')
+            }}</label>
             <AutoComplete
               v-model="draft.category"
               input-id="category"
@@ -202,10 +213,12 @@ onMounted(async () => {
               fluid
               @complete="completeCategory"
             />
-            <small v-if="errors.category" class="text-eb-neg">{{ errors.category }}</small>
+            <small v-if="errors.category" class="text-eb-neg">{{ message(errors.category) }}</small>
           </div>
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="market-name" class="text-[13px] font-semibold text-eb-muted">Tipo</label>
+            <label for="market-name" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.type')
+            }}</label>
             <AutoComplete
               v-model="draft.marketName"
               input-id="market-name"
@@ -216,13 +229,17 @@ onMounted(async () => {
               fluid
               @complete="completeMarketName"
             />
-            <small v-if="errors.marketName" class="text-eb-neg">{{ errors.marketName }}</small>
+            <small v-if="errors.marketName" class="text-eb-neg">{{
+              message(errors.marketName)
+            }}</small>
           </div>
         </div>
 
         <div class="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="selection" class="text-[13px] font-semibold text-eb-muted">Aposta</label>
+            <label for="selection" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.selection')
+            }}</label>
             <InputText
               id="selection"
               v-model="draft.selection"
@@ -232,13 +249,15 @@ onMounted(async () => {
             />
           </div>
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="line" class="text-[13px] font-semibold text-eb-muted">Linha</label>
+            <label for="line" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.line')
+            }}</label>
             <div class="flex gap-1">
               <InputText
                 id="line"
                 v-model="draft.line"
                 inputmode="decimal"
-                placeholder="2,5"
+                :placeholder="t('logging.linePlaceholder')"
                 autocomplete="off"
                 class="min-h-12 w-full min-w-0"
                 :invalid="!!errors.line"
@@ -246,7 +265,7 @@ onMounted(async () => {
               <Button
                 type="button"
                 label="±"
-                aria-label="Trocar o sinal da linha"
+                :aria-label="t('logging.toggleSign')"
                 severity="secondary"
                 outlined
                 class="min-h-12 min-w-12 shrink-0"
@@ -255,23 +274,27 @@ onMounted(async () => {
             </div>
           </div>
           <small v-if="errors.selection" class="col-span-2 text-eb-neg">
-            {{ errors.selection }}
+            {{ message(errors.selection) }}
           </small>
-          <small v-if="errors.line" class="col-span-2 text-eb-neg">{{ errors.line }}</small>
+          <small v-if="errors.line" class="col-span-2 text-eb-neg">{{
+            message(errors.line)
+          }}</small>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="odd" class="text-[13px] font-semibold text-eb-muted">Odd</label>
+          <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
+            t('logging.odd')
+          }}</label>
           <InputText
             id="odd"
             v-model="draft.odd"
             inputmode="decimal"
-            placeholder="1,85"
+            :placeholder="t('logging.oddPlaceholder')"
             autocomplete="off"
             class="min-h-12 w-full text-xl font-bold tabular-nums"
             :invalid="!!errors.odd"
           />
-          <small v-if="errors.odd" class="text-eb-neg">{{ errors.odd }}</small>
+          <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
         </div>
       </fieldset>
 
@@ -279,10 +302,8 @@ onMounted(async () => {
         <legend
           class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
         >
-          <span>Confiança</span>
-          <span v-if="probability != null" class="tabular-nums">
-            {{ percent.format(probability) }} · odd justa {{ formatDecimal(fairOdd(probability)) }}
-          </span>
+          <span>{{ t('logging.confidence') }}</span>
+          <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
         </legend>
         <div class="grid grid-cols-5 gap-2">
           <button
@@ -300,11 +321,11 @@ onMounted(async () => {
           >
             <span class="text-xl leading-none font-bold">{{ level }}</span>
             <span class="text-center text-[11px] leading-tight font-semibold">
-              {{ CONFIDENCE_LABELS[level] }}
+              {{ t(`confidence.${level}`) }}
             </span>
           </button>
         </div>
-        <small v-if="errors.confidence" class="text-eb-neg">{{ errors.confidence }}</small>
+        <small v-if="errors.confidence" class="text-eb-neg">{{ message(errors.confidence) }}</small>
         <ValueIndex :odd="parsedOdd" :probability="probability" />
       </fieldset>
 
@@ -326,18 +347,20 @@ onMounted(async () => {
           @click="showNotes = true"
         >
           <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-          Adicionar notas
+          {{ t('logging.addNotes') }}
         </button>
         <template v-else>
-          <label for="notes" class="text-[13px] font-semibold text-eb-muted">Notas</label>
+          <label for="notes" class="text-[13px] font-semibold text-eb-muted">{{
+            t('logging.notes')
+          }}</label>
           <Textarea id="notes" v-model="draft.notes" rows="3" auto-resize class="w-full" />
         </template>
       </div>
 
-      <Message v-if="error" severity="error">{{ error }}</Message>
+      <Message v-if="error" severity="error">{{ message(error) }}</Message>
       <Button
         type="submit"
-        label="Guardar prognóstico"
+        :label="t('logging.submit')"
         :loading="saving"
         :disabled="loading"
         class="min-h-[52px] !rounded-[14px] !text-base !font-bold"

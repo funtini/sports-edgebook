@@ -1,27 +1,29 @@
 import { z } from 'zod'
+
+// Issue messages are vue-i18n keys (`src/locales/`); the UI translates them when shown.
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
 import { MONEY_DISPLAYS } from './money'
 import { sameName, tidyName } from './names'
 
-export const idSchema = z.uuid('Identificador inválido')
+export const idSchema = z.uuid('validation.idInvalid')
 const id = idSchema
 const optionalText = z.string().trim().min(1).nullish()
 
 /** Odds are decimal and must pay more than the stake back. */
-const odd = z.number('Odd inválida').gt(1, 'A odd tem de ser maior que 1')
+const odd = z.number('validation.oddInvalid').gt(1, 'validation.oddAboveOne')
 
 /** What the user fills in for a prediction; the game and market ids come from elsewhere. */
 const predictionFields = z.object({
-  selection: z.string().trim().min(1, 'Indica a seleção'),
-  line: z.number('Linha inválida').nullish(),
+  selection: z.string().trim().min(1, 'validation.selectionRequired'),
+  line: z.number('validation.lineInvalid').nullish(),
   odd,
   confidence: z
-    .number('Escolhe a confiança')
+    .number('validation.confidenceRequired')
     .int()
-    .min(1, 'A confiança vai de 1 a 5')
-    .max(5, 'A confiança vai de 1 a 5'),
+    .min(1, 'validation.confidenceRange')
+    .max(5, 'validation.confidenceRange'),
   is_punter: z.boolean().default(false),
-  stake_units: z.number('Stake inválido').positive('O stake tem de ser maior que 0').nullish(),
+  stake_units: z.number('validation.stakeInvalid').positive('validation.stakePositive').nullish(),
   bookmaker: optionalText,
   closing_odd: odd.nullish(),
   notes: optionalText,
@@ -30,7 +32,7 @@ const predictionFields = z.object({
 const punterHasStake = (p: { is_punter: boolean; stake_units?: number | null }) =>
   !p.is_punter || p.stake_units != null
 const punterStakeIssue = {
-  message: 'Indica o stake (unidades) de uma aposta punter',
+  message: 'validation.punterStakeRequired',
   path: ['stake_units'],
 }
 
@@ -48,13 +50,13 @@ export type PredictionCreateParsed = z.output<typeof predictionCreateSchema>
 
 export const eventCreateSchema = z
   .object({
-    kickoff_at: z.iso.datetime({ offset: true, message: 'Data/hora inválida' }),
+    kickoff_at: z.iso.datetime({ offset: true, message: 'validation.kickoffInvalid' }),
     league_id: id.nullish(),
     home_team_id: id,
     away_team_id: id,
   })
   .refine((e) => e.home_team_id !== e.away_team_id, {
-    message: 'A equipa da casa e a de fora têm de ser diferentes',
+    message: 'validation.teamsDifferent',
     path: ['away_team_id'],
   })
 
@@ -66,8 +68,8 @@ const typedName = (message: string) =>
 
 /** Market typed in the logging form; created on save if new. */
 export const marketFormSchema = z.object({
-  category: typedName('Indica o mercado'),
-  name: typedName('Indica o tipo'),
+  category: typedName('validation.marketRequired'),
+  name: typedName('validation.typeRequired'),
 })
 
 export type MarketForm = z.input<typeof marketFormSchema>
@@ -78,19 +80,19 @@ const fieldsValid = (payload: { issues: readonly unknown[] }) => payload.issues.
 /** "Novo jogo" in the logging form, before its league and teams exist. */
 export const newGameFormSchema = z
   .object({
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Indica a data do jogo'),
-    time: z.string().regex(/^\d{2}:\d{2}$/, 'Indica a hora do jogo'),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'validation.gameDateRequired'),
+    time: z.string().regex(/^\d{2}:\d{2}$/, 'validation.gameTimeRequired'),
     league: z.string().transform((name) => tidyName(name) || null),
-    home: typedName('Indica a equipa da casa'),
-    away: typedName('Indica a equipa de fora'),
+    home: typedName('validation.homeRequired'),
+    away: typedName('validation.awayRequired'),
   })
   .refine((g) => !Number.isNaN(Date.parse(`${g.date}T${g.time}`)), {
-    message: 'Data/hora inválida',
+    message: 'validation.kickoffInvalid',
     path: ['date'],
     when: fieldsValid,
   })
   .refine((g) => !sameName(g.home, g.away), {
-    message: 'A equipa da casa e a de fora têm de ser diferentes',
+    message: 'validation.teamsDifferent',
     path: ['away'],
     when: fieldsValid,
   })
@@ -123,14 +125,14 @@ const NUMERIC_10_2_MAX = 99_999_999.99
 /** Fields editable on the settings screen. */
 export const userSettingsUpdateSchema = z.object({
   unit_value: z
-    .number('Indica o valor da unidade')
-    .positive('O valor da unidade tem de ser maior que 0')
-    .max(NUMERIC_10_2_MAX, 'Valor demasiado alto'),
+    .number('validation.unitValueRequired')
+    .positive('validation.unitValuePositive')
+    .max(NUMERIC_10_2_MAX, 'validation.valueTooHigh'),
   /** Empty or 0 both mean "no starting bankroll" and are saved as `null`. */
   starting_bankroll_units: z
     .number()
-    .min(0, 'A banca inicial não pode ser negativa')
-    .max(NUMERIC_10_2_MAX, 'Valor demasiado alto')
+    .min(0, 'validation.bankrollNegative')
+    .max(NUMERIC_10_2_MAX, 'validation.valueTooHigh')
     .nullable()
     .transform((units) => (units === 0 ? null : units)),
   /** Left as it is when omitted. */
@@ -141,16 +143,16 @@ export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>
 
 /** Goals of one team; `smallint` in the database, capped well below its range. */
 const goals = z
-  .number('Golos inválidos')
-  .int('Golos inválidos')
-  .min(0, 'Golos inválidos')
-  .max(99, 'Golos inválidos')
+  .number('validation.goalsInvalid')
+  .int('validation.goalsInvalid')
+  .min(0, 'validation.goalsInvalid')
+  .max(99, 'validation.goalsInvalid')
 
 /** Final score of an event: both teams' goals, or neither (cleared). */
 export const eventScoreSchema = z
   .object({ home_score: goals.nullable(), away_score: goals.nullable() })
   .refine((s) => (s.home_score == null) === (s.away_score == null), {
-    message: 'Indica os golos das duas equipas',
+    message: 'validation.bothGoalsRequired',
     path: ['away_score'],
   })
 
@@ -160,7 +162,7 @@ export type EventScore = z.input<typeof eventScoreSchema>
 const typedGoals = z
   .string()
   .trim()
-  .regex(/^\d{0,2}$/, 'Golos inválidos')
+  .regex(/^\d{0,2}$/, 'validation.goalsInvalid')
   .transform((s) => (s === '' ? null : Number(s)))
 
 /** The event screen's result inputs; empty in both clears the score. */

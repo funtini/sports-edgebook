@@ -52,13 +52,11 @@ describe('reference store', () => {
 
   it('rejects empty names', async () => {
     setup(() => ({}))
-    await expect(useReferenceStore().ensureLeague('   ')).rejects.toThrow(
-      'O nome não pode estar vazio.',
-    )
+    await expect(useReferenceStore().ensureLeague('   ')).rejects.toThrow('errors.emptyName')
   })
 
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
-    await expect(useReferenceStore().load()).rejects.toThrow(/Supabase não está configurado/)
+    await expect(useReferenceStore().load()).rejects.toThrow(/errors.supabaseNotConfigured/)
   })
 })

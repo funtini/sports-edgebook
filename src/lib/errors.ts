@@ -1,13 +1,13 @@
 import { z } from 'zod'
 
-/** An error whose message is written for the user (PT-PT) and can be shown as is. */
+/** An error whose message is a translation key (`src/locales/`) written for the user. */
 export class UserError extends Error {
   override name = 'UserError'
 }
 
 /**
- * Message to show for `e`: validation and `UserError` messages as they are; anything else
- * (database, network) is in English or too technical, so it gets `fallback`.
+ * Translation key of the message to show for `e`: validation and `UserError` messages as they
+ * are; anything else (database, network) is too technical, so it gets `fallback` (also a key).
  */
 export function userMessage(e: unknown, fallback: string): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? fallback

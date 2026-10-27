@@ -4,6 +4,7 @@ import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocompl
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { parseDecimal } from '@/domain/decimal'
+import { useLocale } from '@/composables/useLocale'
 import { DEFAULT_UNIT_VALUE, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { suggestNames } from '@/domain/names'
 
@@ -23,13 +24,16 @@ const isPunter = defineModel<boolean>('isPunter', { required: true })
 const stake = defineModel<string>('stake', { required: true })
 const bookmaker = defineModel<string>('bookmaker', { required: true })
 
+const { t, intlLocale, message } = useLocale()
 const suggestions = ref<string[]>([])
 
 /** The stake is typed in units; in euros mode its euro value shows beside it. */
 const stakeHint = computed(() => {
   const units = parseDecimal(stake.value)
-  if (props.moneyDisplay !== 'euros' || units == null || !(units > 0)) return 'unidades'
-  return `unidades · ${formatMoney(units, props.unitValue, 'euros', { signed: false })}`
+  const label = t('punter.units')
+  if (props.moneyDisplay !== 'euros' || units == null || !(units > 0)) return label
+  const euros = formatMoney(units, props.unitValue, 'euros', { signed: false }, intlLocale.value)
+  return `${label} · ${euros}`
 })
 
 function toggle(on: boolean) {
@@ -47,15 +51,17 @@ function complete(event: AutoCompleteCompleteEvent) {
   <div class="flex flex-col gap-3.5 rounded-2xl border border-eb-border bg-eb-surface px-4 py-3.5">
     <label class="flex min-h-11 cursor-pointer items-center justify-between gap-3">
       <span class="flex flex-col">
-        <span class="text-[15px] font-semibold">Aposta real (punter)</span>
-        <span class="text-[13px] text-eb-muted">Conta para o lucro real</span>
+        <span class="text-[15px] font-semibold">{{ t('punter.title') }}</span>
+        <span class="text-[13px] text-eb-muted">{{ t('punter.hint') }}</span>
       </span>
       <ToggleSwitch :model-value="isPunter" input-id="is-punter" @update:model-value="toggle" />
     </label>
 
     <template v-if="isPunter">
       <div class="flex flex-col gap-1.5">
-        <label for="stake" class="text-[13px] font-semibold text-eb-muted">Valor apostado</label>
+        <label for="stake" class="text-[13px] font-semibold text-eb-muted">
+          {{ t('punter.stake') }}
+        </label>
         <div class="flex items-center gap-3">
           <InputText
             id="stake"
@@ -70,11 +76,13 @@ function complete(event: AutoCompleteCompleteEvent) {
             {{ stakeHint }}
           </span>
         </div>
-        <small v-if="stakeError" id="stake-error" class="text-eb-neg">{{ stakeError }}</small>
+        <small v-if="stakeError" id="stake-error" class="text-eb-neg">{{
+          message(stakeError)
+        }}</small>
       </div>
       <div class="flex flex-col gap-1.5">
         <label for="bookmaker" class="text-[13px] font-semibold text-eb-muted">
-          Casa de apostas
+          {{ t('punter.bookmaker') }}
         </label>
         <AutoComplete
           v-model="bookmaker"
