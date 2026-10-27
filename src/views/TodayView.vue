@@ -8,7 +8,7 @@ import { profitClass } from '@/components/profitClass'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
 import { formatMoney } from '@/domain/money'
-import { errorMessage } from '@/lib/errors'
+import { userMessage } from '@/lib/errors'
 import { usePredictionsStore } from '@/stores/predictions'
 import { useSettingsStore } from '@/stores/settings'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
@@ -122,7 +122,7 @@ async function load() {
     pendingBefore.value = pending
   } catch (e) {
     if (current !== request) return
-    error.value = errorMessage(e, 'Não foi possível carregar os prognósticos.')
+    error.value = userMessage(e, 'Não foi possível carregar os prognósticos.')
   } finally {
     if (current === request) loading.value = false
   }
@@ -155,7 +155,7 @@ async function settle(prediction: PredictionWithRelations, status: BetStatus) {
     replace(await predictions.settle(prediction.id, status))
   } catch (e) {
     replace(previous)
-    error.value = errorMessage(e, 'Não foi possível guardar a liquidação.')
+    error.value = userMessage(e, 'Não foi possível guardar a liquidação.')
   } finally {
     const next = new Set(saving.value)
     next.delete(prediction.id)

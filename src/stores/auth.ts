@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { Session } from '@supabase/supabase-js'
-import { AppError } from '@/lib/errors'
+import { UserError } from '@/lib/errors'
 import { supabase } from '@/lib/supabase'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -24,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function sendMagicLink(email: string) {
-    if (!supabase) throw new AppError('Supabase não está configurado')
+    if (!supabase) throw new UserError('Supabase não está configurado')
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin },

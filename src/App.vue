@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import Toast from 'primevue/toast'
 import { useAuthStore } from '@/stores/auth'
 import { supabase } from '@/lib/supabase'
 
@@ -45,5 +46,6 @@ const links = [
     <main class="mx-auto max-w-6xl px-5 py-6">
       <RouterView />
     </main>
+    <Toast position="bottom-center" />
   </div>
 </template>

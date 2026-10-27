@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
+import { sameName, tidyName } from './names'
 
 const id = z.uuid('Identificador inválido')
 const optionalText = z.string().trim().min(1).nullish()
@@ -7,28 +8,38 @@ const optionalText = z.string().trim().min(1).nullish()
 /** Odds are decimal and must pay more than the stake back. */
 const odd = z.number('Odd inválida').gt(1, 'A odd tem de ser maior que 1')
 
-export const predictionCreateSchema = z
-  .object({
-    event_id: id,
-    market_id: id,
-    selection: z.string().trim().min(1, 'Indica a seleção'),
-    line: z.number().nullish(),
-    odd,
-    confidence: z
-      .number()
-      .int()
-      .min(1, 'A confiança vai de 1 a 5')
-      .max(5, 'A confiança vai de 1 a 5'),
-    is_punter: z.boolean().default(false),
-    stake_units: z.number().positive('O stake tem de ser maior que 0').nullish(),
-    bookmaker: optionalText,
-    closing_odd: odd.nullish(),
-    notes: optionalText,
-  })
-  .refine((p) => !p.is_punter || p.stake_units != null, {
-    message: 'Indica o stake (unidades) de uma aposta punter',
-    path: ['stake_units'],
-  })
+/** What the user fills in for a prediction; the game and market ids come from elsewhere. */
+const predictionFields = z.object({
+  selection: z.string().trim().min(1, 'Indica a seleção'),
+  line: z.number('Linha inválida').nullish(),
+  odd,
+  confidence: z
+    .number('Escolhe a confiança')
+    .int()
+    .min(1, 'A confiança vai de 1 a 5')
+    .max(5, 'A confiança vai de 1 a 5'),
+  is_punter: z.boolean().default(false),
+  stake_units: z.number('Stake inválido').positive('O stake tem de ser maior que 0').nullish(),
+  bookmaker: optionalText,
+  closing_odd: odd.nullish(),
+  notes: optionalText,
+})
+
+const punterHasStake = (p: { is_punter: boolean; stake_units?: number | null }) =>
+  !p.is_punter || p.stake_units != null
+const punterStakeIssue = {
+  message: 'Indica o stake (unidades) de uma aposta punter',
+  path: ['stake_units'],
+}
+
+/** The logging form's prediction fields, validated before the game and market exist. */
+export const predictionFormSchema = predictionFields.refine(punterHasStake, punterStakeIssue)
+
+export type PredictionForm = z.input<typeof predictionFormSchema>
+
+export const predictionCreateSchema = predictionFields
+  .extend({ event_id: id, market_id: id })
+  .refine(punterHasStake, punterStakeIssue)
 
 export type PredictionCreate = z.input<typeof predictionCreateSchema>
 export type PredictionCreateParsed = z.output<typeof predictionCreateSchema>
@@ -46,6 +57,48 @@ export const eventCreateSchema = z
   })
 
 export type EventCreate = z.input<typeof eventCreateSchema>
+
+/** A name typed by hand: tidied, and required. */
+const typedName = (message: string) =>
+  z.string().transform(tidyName).pipe(z.string().min(1, message))
+
+/** Market typed in the logging form; created on save if new. */
+export const marketFormSchema = z.object({
+  category: typedName('Indica o mercado'),
+  name: typedName('Indica o tipo'),
+})
+
+export type MarketForm = z.input<typeof marketFormSchema>
+
+/** Cross-field checks run only once each field is valid on its own. */
+const fieldsValid = (payload: { issues: readonly unknown[] }) => payload.issues.length === 0
+
+/** "Novo jogo" in the logging form, before its league and teams exist. */
+export const newGameFormSchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Indica a data do jogo'),
+    time: z.string().regex(/^\d{2}:\d{2}$/, 'Indica a hora do jogo'),
+    league: z.string().transform((name) => tidyName(name) || null),
+    home: typedName('Indica a equipa da casa'),
+    away: typedName('Indica a equipa de fora'),
+  })
+  .refine((g) => !Number.isNaN(Date.parse(`${g.date}T${g.time}`)), {
+    message: 'Data/hora inválida',
+    path: ['date'],
+    when: fieldsValid,
+  })
+  .refine((g) => !sameName(g.home, g.away), {
+    message: 'A equipa da casa e a de fora têm de ser diferentes',
+    path: ['away'],
+    when: fieldsValid,
+  })
+  // Date and time are the user's local time; stored as UTC.
+  .transform(({ date, time, ...game }) => ({
+    ...game,
+    kickoff_at: new Date(`${date}T${time}`).toISOString(),
+  }))
+
+export type NewGameForm = z.input<typeof newGameFormSchema>
 
 /** `user_settings.confidence_anchors` (jsonb with keys "1".."5") parsed into typed anchors. */
 export const confidenceAnchorsSchema = z

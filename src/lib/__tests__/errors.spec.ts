@@ -1,25 +1,26 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { AppError, errorMessage } from '../errors'
+import { UserError, userMessage } from '../errors'
 
-describe('errorMessage', () => {
-  it('shows the first validation issue', () => {
-    const result = z.number().min(1, 'Tem de ser pelo menos 1').safeParse(0)
-    expect(errorMessage(result.error, 'Falhou')).toBe('Tem de ser pelo menos 1')
+const FALLBACK = 'Não foi possível guardar.'
+
+describe('userMessage', () => {
+  it('shows the first validation message', () => {
+    const result = z.number('Odd inválida').safeParse('x')
+    expect(userMessage(result.error, FALLBACK)).toBe('Odd inválida')
   })
 
   it('shows messages written for the user', () => {
-    expect(errorMessage(new AppError('O nome não pode estar vazio.'), 'Falhou')).toBe(
+    expect(userMessage(new UserError('O nome não pode estar vazio.'), FALLBACK)).toBe(
       'O nome não pode estar vazio.',
     )
   })
 
-  it('replaces anything else with the fallback and logs it', () => {
-    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const raw = new Error('permission denied for table predictions')
-    expect(errorMessage(raw, 'Falhou')).toBe('Falhou')
-    expect(errorMessage({ code: '42501' }, 'Falhou')).toBe('Falhou')
-    expect(log).toHaveBeenCalledWith(raw)
-    log.mockRestore()
+  it('hides database and network errors behind the fallback', () => {
+    expect(userMessage(new Error('permission denied for table predictions'), FALLBACK)).toBe(
+      FALLBACK,
+    )
+    expect(userMessage({ code: '23505', message: 'duplicate key value' }, FALLBACK)).toBe(FALLBACK)
+    expect(userMessage(new TypeError('Failed to fetch'), FALLBACK)).toBe(FALLBACK)
   })
 })
