@@ -6,7 +6,7 @@ Log predictions with odds and confidence, generate multiples, and track hit rate
 
 ## Run locally
 
-Requires Node 22.18+ or 24.12+.
+Requires Node 24 (see `.nvmrc`; `nvm use` picks it up).
 
 ```sh
 npm ci
