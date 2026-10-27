@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { probabilityFor, type ConfidenceLevel } from '@/domain/confidence'
+import { addDays, startOfDay } from '@/domain/days'
 import { predictionCreateSchema, type PredictionCreate } from '@/domain/schemas'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
 import { PREDICTION_SELECT, requireSupabase, unwrap } from './client'
@@ -34,8 +35,8 @@ export const usePredictionsStore = defineStore('predictions', () => {
 
   /** Predictions on games kicking off on `date` (local day). */
   async function listByDate(date: Date): Promise<PredictionWithRelations[]> {
-    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
-    const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
+    const start = startOfDay(date)
+    const end = addDays(start, 1)
     const rows = unwrap<PredictionWithRelations[]>(
       await requireSupabase()
         .from('predictions')
@@ -59,6 +60,19 @@ export const usePredictionsStore = defineStore('predictions', () => {
   async function listPending(): Promise<PredictionWithRelations[]> {
     const rows = unwrap<PredictionWithRelations[]>(
       await requireSupabase().from('predictions').select(PREDICTION_SELECT).eq('status', 'pending'),
+    )
+    return rows.sort(byKickoff)
+  }
+
+  /** Pending predictions on games that kicked off before `date` (local day), oldest first. */
+  async function listPendingBefore(date: Date): Promise<PredictionWithRelations[]> {
+    const start = startOfDay(date)
+    const rows = unwrap<PredictionWithRelations[]>(
+      await requireSupabase()
+        .from('predictions')
+        .select(PREDICTION_SELECT)
+        .eq('status', 'pending')
+        .lt('event.kickoff_at', start.toISOString()),
     )
     return rows.sort(byKickoff)
   }
@@ -93,5 +107,14 @@ export const usePredictionsStore = defineStore('predictions', () => {
     unwrap(await requireSupabase().from('predictions').delete().eq('id', id))
   }
 
-  return { create, listByDate, listByEvent, listPending, listBookmakers, settle, remove }
+  return {
+    create,
+    listByDate,
+    listByEvent,
+    listPending,
+    listPendingBefore,
+    listBookmakers,
+    settle,
+    remove,
+  }
 })

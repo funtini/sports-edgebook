@@ -4,7 +4,7 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS } from '@/domain/confidence'
-import { DEFAULT_UNIT_VALUE, UNIT_VALUE_PRESETS, formatMoney } from '@/domain/money'
+import { DEFAULT_UNIT_VALUE, UNIT_VALUE_PRESETS, formatDecimal, formatMoney } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { userMessage } from '@/lib/errors'
 import { useSettingsStore } from '@/stores/settings'
@@ -19,7 +19,6 @@ const saved = ref(false)
 const error = ref<string | null>(null)
 
 const percent = new Intl.NumberFormat('pt-PT', { style: 'percent' })
-const odd = new Intl.NumberFormat('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 const levels = computed(() =>
   CONFIDENCE_LEVELS.map((level) => {
@@ -28,7 +27,7 @@ const levels = computed(() =>
       level,
       label: CONFIDENCE_LABELS[level],
       probability: percent.format(probability),
-      fairOdd: odd.format(fairOdd(probability)),
+      fairOdd: formatDecimal(fairOdd(probability)),
     }
   }),
 )

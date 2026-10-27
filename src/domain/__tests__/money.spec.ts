@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatEuros, formatMoney, formatUnits } from '../money'
+import { formatDecimal, formatEuros, formatMoney, formatUnits } from '../money'
 
 describe('money', () => {
+  it('formats plain two-decimal numbers such as odds', () => {
+    expect(formatDecimal(1.8)).toBe('1,80')
+  })
+
   it('shows signed units and euros side by side', () => {
     expect(formatMoney(1.8, 20)).toBe('+1,80 u · +36,00 €')
     expect(formatMoney(-1, 10)).toBe('-1,00 u · -10,00 €')
