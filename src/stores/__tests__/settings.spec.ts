@@ -67,6 +67,30 @@ describe('settings store', () => {
     expect(queries).toHaveLength(1)
   })
 
+  it('saves the unit value and bankroll for the loaded user', async () => {
+    const queries = setup((q) =>
+      has(q, 'update')
+        ? { data: { ...row, unit_value: 30, starting_bankroll_units: 50 } }
+        : { data: row },
+    )
+    const store = useSettingsStore()
+    await store.update({ unit_value: 30, starting_bankroll_units: 50 })
+
+    const update = queries[1]!
+    expect(argsOf(update, 'update')).toEqual([{ unit_value: 30, starting_bankroll_units: 50 }])
+    expect(argsOf(update, 'eq')).toEqual(['user_id', 'u'])
+    expect(store.unitValue).toBe(30)
+    expect(store.settings?.starting_bankroll_units).toBe(50)
+  })
+
+  it('rejects an invalid unit value without querying', async () => {
+    const queries = setup(() => ({ data: row }))
+    await expect(
+      useSettingsStore().update({ unit_value: 0, starting_bankroll_units: null }),
+    ).rejects.toThrow(/maior que 0/)
+    expect(queries).toHaveLength(0)
+  })
+
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
     await expect(useSettingsStore().load()).rejects.toThrow(/Supabase não está configurado/)

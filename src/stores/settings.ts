@@ -2,11 +2,14 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
 import { DEFAULT_MARKETS } from '@/domain/markets'
-import { confidenceAnchorsSchema } from '@/domain/schemas'
+import { DEFAULT_UNIT_VALUE } from '@/domain/money'
+import {
+  confidenceAnchorsSchema,
+  userSettingsUpdateSchema,
+  type UserSettingsUpdate,
+} from '@/domain/schemas'
 import type { UserSettingsRow } from '@/types/db'
 import { requireSupabase, unwrap } from './client'
-
-const DEFAULT_UNIT_VALUE = 10
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<UserSettingsRow | null>(null)
@@ -47,5 +50,21 @@ export const useSettingsStore = defineStore('settings', () => {
     return loading
   }
 
-  return { settings, unitValue, confidenceAnchors, load, ensureLoaded }
+  /** Validates and saves the fields edited on the settings screen. */
+  async function update(input: UserSettingsUpdate): Promise<UserSettingsRow> {
+    const patch = userSettingsUpdateSchema.parse(input)
+    const { user_id } = await ensureLoaded()
+    const row = unwrap<UserSettingsRow>(
+      await requireSupabase()
+        .from('user_settings')
+        .update(patch)
+        .eq('user_id', user_id)
+        .select()
+        .single(),
+    )
+    settings.value = row
+    return row
+  }
+
+  return { settings, unitValue, confidenceAnchors, load, ensureLoaded, update }
 })

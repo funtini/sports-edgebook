@@ -61,3 +61,21 @@ export const confidenceAnchorsSchema = z
     4: raw['4'],
     5: raw['5'],
   }))
+
+/** Max value of a `numeric(10, 2)` column. */
+const NUMERIC_10_2_MAX = 99_999_999.99
+
+/** Fields editable on the settings screen. */
+export const userSettingsUpdateSchema = z.object({
+  unit_value: z
+    .number('Indica o valor da unidade')
+    .positive('O valor da unidade tem de ser maior que 0')
+    .max(NUMERIC_10_2_MAX, 'Valor demasiado alto'),
+  starting_bankroll_units: z
+    .number()
+    .positive('A banca inicial tem de ser maior que 0')
+    .max(NUMERIC_10_2_MAX, 'Valor demasiado alto')
+    .nullable(),
+})
+
+export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>
