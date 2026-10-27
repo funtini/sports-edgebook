@@ -9,6 +9,16 @@ const router = createRouter({
       path: '/registo',
       name: 'predictions',
       component: () => import('@/views/PredictionsView.vue'),
+      // `?evento=<id>` preselects that game, e.g. from the event screen.
+      props: (route) => ({
+        eventId: typeof route.query.evento === 'string' ? route.query.evento : undefined,
+      }),
+    },
+    {
+      path: '/eventos/:id',
+      name: 'event',
+      component: () => import('@/views/EventView.vue'),
+      props: true,
     },
     { path: '/multiplas', name: 'multiples', component: () => import('@/views/MultiplesView.vue') },
     { path: '/dashboard', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },

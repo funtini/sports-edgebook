@@ -5,13 +5,14 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
+import { useSettlement } from '@/components/useSettlement'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
 import { formatMoney } from '@/domain/money'
 import { userMessage } from '@/lib/errors'
 import { usePredictionsStore } from '@/stores/predictions'
 import { useSettingsStore } from '@/stores/settings'
-import type { BetStatus, PredictionWithRelations } from '@/types/db'
+import type { PredictionWithRelations } from '@/types/db'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,7 +23,7 @@ const rows = ref<PredictionWithRelations[]>([])
 const pendingBefore = ref<PredictionWithRelations[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const saving = ref(new Set<string>())
+const { saving, settle } = useSettlement(rows, error)
 
 /** Today's local midnight; moves on at midnight so a screen left open follows the date. */
 const today = ref(startOfDay(new Date()))
@@ -140,28 +141,6 @@ watch(
   },
   { immediate: true },
 )
-
-function replace(updated: PredictionWithRelations) {
-  rows.value = rows.value.map((row) => (row.id === updated.id ? updated : row))
-}
-
-/** Optimistic: shows the new status at once and rolls back if the save fails. */
-async function settle(prediction: PredictionWithRelations, status: BetStatus) {
-  const previous = prediction
-  replace({ ...prediction, status })
-  saving.value = new Set(saving.value).add(prediction.id)
-  error.value = null
-  try {
-    replace(await predictions.settle(prediction.id, status))
-  } catch (e) {
-    replace(previous)
-    error.value = userMessage(e, 'Não foi possível guardar a liquidação.')
-  } finally {
-    const next = new Set(saving.value)
-    next.delete(prediction.id)
-    saving.value = next
-  }
-}
 </script>
 
 <template>
@@ -268,7 +247,7 @@ async function settle(prediction: PredictionWithRelations, status: BetStatus) {
       class="rounded-xl border border-surface-200 bg-surface-0"
     >
       <RouterLink
-        :to="`/eventos/${group.eventId}`"
+        :to="{ name: 'event', params: { id: group.eventId } }"
         class="flex min-h-11 flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-t-xl border-b border-surface-200 px-4 py-2.5 text-surface-900 hover:bg-surface-50"
       >
         <span class="font-semibold tabular-nums">

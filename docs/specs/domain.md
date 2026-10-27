@@ -14,7 +14,7 @@ Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues
 
 ### Logging form (`/registo`)
 
-1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`).
+1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
 2. **Mercado** (category) + **Tipo** (name), autocompleted from the user's markets; a new pair is created on save.
 3. **Aposta** (selection) and optional **Linha**; **Odd** with a decimal keyboard, comma or dot. Linha has a ± button because the iOS decimal keypad has no minus key (handicap lines are often negative).
 4. **Confiança**: five buttons with the level labels. The **Índice de valor** shows live (value index, fair odd, band colour) once odd and confidence are set.
@@ -74,7 +74,18 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 - **Pendentes de dias anteriores**: count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
 
-Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
+Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/components/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
+
+## Event screen
+
+Route `/eventos/:id`, one game. Phase 6 adds the Game Analyser below (see [future-integrations.md](future-integrations.md)); the layout reserves an empty container for it.
+
+- **Header**: league, kickoff date and time, home vs away; the final score replaces "vs" once set.
+- **Resultado**: home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 5 fills it from the API. Saving the score does not settle predictions.
+- **Os teus prognósticos neste jogo**: the game's predictions in logging order, with the same row and one-tap settlement as the today view. "+ Registar prognóstico" opens `/registo?evento=<id>`.
+- **Unknown or malformed id**: "Jogo não encontrado" with a link back to today.
+
+Code: `src/views/EventView.vue`, `eventScoreSchema` / `scoreFormSchema` in `src/domain/schemas.ts`, `setScore` in `src/stores/events.ts`.
 
 ## Data model
 

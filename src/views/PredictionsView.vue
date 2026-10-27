@@ -27,6 +27,11 @@ import { usePredictionsStore } from '@/stores/predictions'
 import { useReferenceStore } from '@/stores/reference'
 import { useSettingsStore } from '@/stores/settings'
 
+const props = defineProps<{
+  /** Game to preselect, from `?evento=<id>`; ignored when it does not exist. */
+  eventId?: string
+}>()
+
 type ErrorKey = 'game' | keyof NewGameForm | 'category' | 'marketName' | keyof PredictionForm
 type FieldErrors = Partial<Record<ErrorKey, string>>
 
@@ -147,8 +152,13 @@ onMounted(async () => {
   try {
     // Settings first: a new user's first load seeds the default markets.
     await settings.ensureLoaded()
-    const [, used] = await Promise.all([reference.load(), predictions.listBookmakers()])
+    const [, used, preselected] = await Promise.all([
+      reference.load(),
+      predictions.listBookmakers(),
+      props.eventId ? events.getById(props.eventId) : null,
+    ])
     bookmakers.value = used
+    if (preselected && !game.value && !newGame.value) game.value = toSearchResult(preselected)
   } catch (e) {
     error.value = userMessage(e, 'Não foi possível carregar os dados.')
   } finally {
