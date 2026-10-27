@@ -17,8 +17,8 @@ export type Theme = (typeof THEMES)[number]
 /** Class PrimeVue (`darkModeSelector`) and Tailwind's `dark:` variant key off, on `<html>`. */
 export const DARK_CLASS = 'app-dark'
 
-/** `<meta name="theme-color">` per theme: primary-500 (emerald) and surface-950. */
-export const THEME_COLORS: Record<Theme, string> = { light: '#10b981', dark: '#09090b' }
+/** `<meta name="theme-color">` per theme: the header surface, so the browser chrome blends in. */
+export const THEME_COLORS: Record<Theme, string> = { light: '#ffffff', dark: '#151920' }
 
 export const LOCALE_STORAGE_KEY = 'edgebook.locale'
 export const THEME_STORAGE_KEY = 'edgebook.theme'
