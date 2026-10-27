@@ -15,7 +15,7 @@ Specs live in `docs/specs/`. Read the spec for the area you touch before changin
 ## Commands
 
 ```sh
-npm ci                 # install (use npm 11 if npm 10 fails with "edgesOut")
+npm ci                 # install (Node 24, npm 11; install scripts allowed in package.json "allowScripts")
 npm run dev            # local dev server
 npm run lint:check     # oxlint + eslint, no fixes
 npm run format:check   # prettier
