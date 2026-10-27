@@ -7,6 +7,7 @@ import { LocalEventSource, type EventSearchResult, type EventSource } from '@/do
 import { suggestNames } from '@/domain/names'
 import { emptyNewGame } from '@/domain/predictionDraft'
 import type { NewGameForm } from '@/domain/schemas'
+import { useLatestRequest } from '@/composables/useLatestRequest'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
 import { useReferenceStore } from '@/stores/reference'
@@ -34,8 +35,7 @@ const results = ref<EventSearchResult[]>([])
 const searchError = ref<string | null>(null)
 const leagueSuggestions = ref<string[]>([])
 const teamSuggestions = ref<string[]>([])
-/** Only the latest search may write results: a slow earlier one must not overwrite them. */
-let latestSearch = 0
+const searches = useLatestRequest()
 
 const kickoffFormat = new Intl.DateTimeFormat('pt-PT', {
   weekday: 'short',
@@ -55,13 +55,13 @@ function details(result: EventSearchResult): string {
 }
 
 async function search(event: AutoCompleteCompleteEvent) {
-  const request = ++latestSearch
+  const isLatest = searches.start()
   searchError.value = null
   try {
     const found = await source.search(event.query)
-    if (request === latestSearch) results.value = found
+    if (isLatest()) results.value = found
   } catch (e) {
-    if (request !== latestSearch) return
+    if (!isLatest()) return
     results.value = []
     searchError.value = userMessage(e, 'Não foi possível procurar jogos.')
   }

@@ -27,6 +27,11 @@ import { usePredictionsStore } from '@/stores/predictions'
 import { useReferenceStore } from '@/stores/reference'
 import { useSettingsStore } from '@/stores/settings'
 
+const props = defineProps<{
+  /** Game to preselect, from `?evento=<id>`; ignored when it does not exist. */
+  eventId?: string
+}>()
+
 type ErrorKey = 'game' | keyof NewGameForm | 'category' | 'marketName' | keyof PredictionForm
 type FieldErrors = Partial<Record<ErrorKey, string>>
 
@@ -143,7 +148,18 @@ async function save() {
   }
 }
 
+/** Picks the `?evento` game unless one was chosen meanwhile; optional, so failures are ignored. */
+async function preselect(eventId: string) {
+  try {
+    const event = await events.getById(eventId)
+    if (event && !game.value && !newGame.value) game.value = toSearchResult(event)
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 onMounted(async () => {
+  if (props.eventId) void preselect(props.eventId)
   try {
     // Settings first: a new user's first load seeds the default markets.
     await settings.ensureLoaded()

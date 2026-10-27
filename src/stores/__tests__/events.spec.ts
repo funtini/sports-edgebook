@@ -61,8 +61,43 @@ describe('events store', () => {
     expect(queries).toHaveLength(0)
   })
 
+  it('treats a malformed id as no event without querying', async () => {
+    const queries = setup(() => ({}))
+    expect(await useEventsStore().getById('not-a-uuid')).toBeNull()
+    expect(queries).toHaveLength(0)
+  })
+
+  it('saves the final score', async () => {
+    const id = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
+    const queries = setup(() => ({ data: { id, home_score: 2, away_score: 1 } }))
+    await useEventsStore().setScore(id, { home_score: 2, away_score: 1 })
+    expect(argsOf(queries[0]!, 'update')).toEqual([{ home_score: 2, away_score: 1 }])
+    expect(argsOf(queries[0]!, 'eq')).toEqual(['id', id])
+  })
+
+  it('rejects a score for one team only', async () => {
+    const queries = setup(() => ({}))
+    await expect(
+      useEventsStore().setScore('0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60', {
+        home_score: 2,
+        away_score: null,
+      }),
+    ).rejects.toThrow(/duas equipas/)
+    expect(queries).toHaveLength(0)
+  })
+
+  it('rejects a malformed id when saving the score', async () => {
+    const queries = setup(() => ({}))
+    await expect(useEventsStore().setScore('e1', { home_score: 1, away_score: 0 })).rejects.toThrow(
+      /Identificador inválido/,
+    )
+    expect(queries).toHaveLength(0)
+  })
+
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
-    await expect(useEventsStore().getById('e1')).rejects.toThrow(/Supabase não está configurado/)
+    await expect(useEventsStore().getById('0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60')).rejects.toThrow(
+      /Supabase não está configurado/,
+    )
   })
 })

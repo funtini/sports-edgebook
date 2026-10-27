@@ -6,7 +6,10 @@ export interface Query {
   ops: [method: string, args: unknown[]][]
 }
 
-export type Responder = (query: Query) => { data?: unknown; error?: unknown }
+type Response = { data?: unknown; error?: unknown }
+
+/** Answers a query; a promise holds the answer back until it resolves. */
+export type Responder = (query: Query) => Response | Promise<Response>
 
 /** Minimal stand-in for the Supabase client: records each query and answers it with `respond`. */
 export function fakeSupabase(respond: Responder) {
@@ -21,10 +24,9 @@ export function fakeSupabase(respond: Responder) {
           get(_target, method: string) {
             if (method === 'then') {
               return (resolve: (v: unknown) => unknown, reject: (e: unknown) => unknown) =>
-                Promise.resolve({ data: null, error: null, ...respond(query) }).then(
-                  resolve,
-                  reject,
-                )
+                Promise.resolve(respond(query))
+                  .then((response) => ({ data: null, error: null, ...response }))
+                  .then(resolve, reject)
             }
             return (...args: unknown[]) => {
               query.ops.push([method, args])

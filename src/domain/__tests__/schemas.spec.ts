@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   confidenceAnchorsSchema,
   eventCreateSchema,
+  eventScoreSchema,
   marketFormSchema,
   newGameFormSchema,
   predictionCreateSchema,
   predictionFormSchema,
+  scoreFormSchema,
   userSettingsUpdateSchema,
 } from '../schemas'
 
@@ -172,6 +174,54 @@ describe('newGameFormSchema', () => {
       away: 'sporting cp',
     })
     expect(issuePaths(result)).toEqual(['away'])
+  })
+})
+
+describe('eventScoreSchema', () => {
+  it('accepts a full score or no score', () => {
+    expect(eventScoreSchema.safeParse({ home_score: 2, away_score: 0 }).success).toBe(true)
+    expect(eventScoreSchema.safeParse({ home_score: null, away_score: null }).success).toBe(true)
+  })
+
+  it('rejects a score for one team only', () => {
+    expect(issuePaths(eventScoreSchema.safeParse({ home_score: 1, away_score: null }))).toEqual([
+      'away_score',
+    ])
+  })
+
+  it('rejects negative, fractional and huge goal counts', () => {
+    for (const home_score of [-1, 1.5, 100]) {
+      expect(eventScoreSchema.safeParse({ home_score, away_score: 0 }).success).toBe(false)
+    }
+  })
+})
+
+describe('scoreFormSchema', () => {
+  it('parses typed goals, with spaces trimmed', () => {
+    expect(scoreFormSchema.parse({ home: ' 3', away: '0 ' })).toEqual({
+      home_score: 3,
+      away_score: 0,
+    })
+  })
+
+  it('clears the score when both inputs are empty', () => {
+    expect(scoreFormSchema.parse({ home: '', away: '' })).toEqual({
+      home_score: null,
+      away_score: null,
+    })
+  })
+
+  it('asks for both teams when only one is filled in', () => {
+    const result = scoreFormSchema.safeParse({ home: '1', away: '' })
+    expect(result.error?.issues[0]?.message).toBe('Indica os golos das duas equipas')
+  })
+
+  it('rejects anything but whole numbers', () => {
+    for (const home of ['-1', '1,5', 'a', '100']) {
+      expect(scoreFormSchema.safeParse({ home, away: '0' }).error?.issues[0]?.message).toBe(
+        'Golos inválidos',
+      )
+    }
   })
 })
 

@@ -52,6 +52,7 @@ function backend(options: { failPrediction?: () => boolean } = {}): Responder {
         return {
           data: {
             id: EVENT_ID,
+            kickoff_at: '2026-10-27T20:00:00Z',
             ...insert,
             source: 'manual',
             external_id: null,
@@ -80,8 +81,9 @@ function setup(respond: Responder) {
 const inserted = (queries: Query[], table: string) =>
   queries.filter((q) => q.table === table && has(q, 'insert'))
 
-async function render() {
+async function render(props: { eventId?: string } = {}) {
   const wrapper = mount(PredictionsView, {
+    props,
     global: { plugins: [PrimeVue, ToastService], stubs: { Toast: true } },
     attachTo: document.body,
   })
@@ -186,6 +188,28 @@ describe('PredictionsView', () => {
     expect(inserted(queries, 'events')).toHaveLength(1)
     expect(inserted(queries, 'predictions')).toHaveLength(2)
     expect(wrapper.text()).toContain('Mesmo jogo')
+  })
+
+  it('preselects the game from ?evento', async () => {
+    setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+
+    expect(wrapper.text()).toContain('Benfica – Porto')
+    expect(wrapper.find('#game').exists()).toBe(false)
+  })
+
+  it('still loads the form when the ?evento game cannot be loaded', async () => {
+    const respond = backend()
+    setup((q) => {
+      if (q.table === 'events') return { error: { message: 'network down' } }
+      if (q.table === 'predictions') return { data: [{ bookmaker: 'Betano' }] }
+      return respond(q)
+    })
+    const wrapper = await render({ eventId: EVENT_ID })
+
+    expect(wrapper.text()).not.toContain('Não foi possível carregar os dados.')
+    expect(wrapper.find('#game').exists()).toBe(true)
+    expect(wrapper.get('fieldset').attributes('disabled')).toBeUndefined()
   })
 
   it('flips the sign of the line for keyboards without a minus key', async () => {

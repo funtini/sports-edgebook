@@ -2,7 +2,8 @@ import { z } from 'zod'
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
 import { sameName, tidyName } from './names'
 
-const id = z.uuid('Identificador inválido')
+export const idSchema = z.uuid('Identificador inválido')
+const id = idSchema
 const optionalText = z.string().trim().min(1).nullish()
 
 /** Odds are decimal and must pay more than the stake back. */
@@ -134,3 +135,40 @@ export const userSettingsUpdateSchema = z.object({
 })
 
 export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>
+
+/** Goals of one team; `smallint` in the database, capped well below its range. */
+const goals = z
+  .number('Golos inválidos')
+  .int('Golos inválidos')
+  .min(0, 'Golos inválidos')
+  .max(99, 'Golos inválidos')
+
+/** Final score of an event: both teams' goals, or neither (cleared). */
+export const eventScoreSchema = z
+  .object({ home_score: goals.nullable(), away_score: goals.nullable() })
+  .refine((s) => (s.home_score == null) === (s.away_score == null), {
+    message: 'Indica os golos das duas equipas',
+    path: ['away_score'],
+  })
+
+export type EventScore = z.input<typeof eventScoreSchema>
+
+/** One team's goals as typed on the event screen: empty, or up to two digits. */
+const typedGoals = z
+  .string()
+  .trim()
+  .regex(/^\d{0,2}$/, 'Golos inválidos')
+  .transform((s) => (s === '' ? null : Number(s)))
+
+/** The event screen's result inputs; empty in both clears the score. */
+export const scoreFormSchema = z
+  .object({ home: typedGoals, away: typedGoals })
+  .transform(({ home, away }) => ({ home_score: home, away_score: away }))
+  .pipe(eventScoreSchema)
+
+export type ScoreForm = z.input<typeof scoreFormSchema>
+
+/** An event's stored score as the event screen's inputs: the reverse of `scoreFormSchema`. */
+export function toScoreForm(score: EventScore): ScoreForm {
+  return { home: score.home_score?.toString() ?? '', away: score.away_score?.toString() ?? '' }
+}
