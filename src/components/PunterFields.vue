@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
+import { suggestNames } from '@/domain/names'
 
 const props = defineProps<{
   /** Bookmakers used before, for autocomplete. */
@@ -24,8 +25,7 @@ function toggle(on: boolean) {
 }
 
 function complete(event: AutoCompleteCompleteEvent) {
-  const q = event.query.trim().toLowerCase()
-  suggestions.value = props.bookmakers.filter((b) => b.toLowerCase().includes(q))
+  suggestions.value = suggestNames(props.bookmakers, event.query)
 }
 </script>
 

@@ -76,7 +76,10 @@ export const usePredictionsStore = defineStore('predictions', () => {
     )
   }
 
-  /** Bookmakers used before, for autocomplete; most used first. */
+  /**
+   * Bookmakers used before, for autocomplete; most used first.
+   * TODO: read a distinct-bookmakers view; PostgREST caps this select at 1000 rows.
+   */
   async function listBookmakers(): Promise<string[]> {
     const rows = unwrap<{ bookmaker: string }[]>(
       await requireSupabase().from('predictions').select('bookmaker').not('bookmaker', 'is', null),
