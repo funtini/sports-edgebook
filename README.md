@@ -35,5 +35,5 @@ Cloudflare Workers (static assets) builds from this repo on every push: `main` g
 | --- | --- |
 | Build command | `npm run build-only` |
 | Deploy command | `npx wrangler deploy` |
-| Non-production branch deploy command | `npx wrangler versions upload` |
+| Preview command (non-production branches) | `npx wrangler preview` |
 | Build variable | `NODE_VERSION` = `24` |
