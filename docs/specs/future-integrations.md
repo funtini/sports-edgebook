@@ -19,5 +19,5 @@ Event screen enriched with: structured stats from the API (unavailable players, 
 1. `source` + `external_id` on `leagues`, `teams`, `events`.
 2. `team_aliases` to match manual names with API names.
 3. Reference-odd columns on `predictions`.
-4. Game search behind an `EventSource` interface: local search in the MVP, API-backed later, same UI.
+4. Game search behind an `EventSource` interface: local search in the MVP, API-backed later, same UI. Code: `src/domain/eventSource.ts` (`LocalEventSource` searches team names and aliases through the events store, upcoming games first).
 5. An event screen exists from phase 1 (predictions for that game); the analyser fills it later.
