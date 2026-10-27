@@ -12,6 +12,17 @@ A prediction is one pick on one event: event (kickoff, league, home team, away t
 
 Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues, teams and markets from history; "duplicate" to add another market for the same game.
 
+### Logging form (`/registo`)
+
+1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`).
+2. **Mercado** (category) + **Tipo** (name), autocompleted from the user's markets; a new pair is created on save.
+3. **Aposta** (selection) and optional **Linha**; **Odd** with a decimal keyboard, comma or dot.
+4. **Confiança**: five buttons with the level labels. The **Índice de valor** shows live (value index, fair odd, band colour) once odd and confidence are set.
+5. **Punter**: when on, **Stake (u)** (starts at 1) and **Casa de apostas** (autocompleted from bookmakers used before).
+6. **Notas**, collapsed by default.
+
+Errors show inline, from `predictionCreateSchema`. Saving shows "Prognóstico guardado" and clears the form except the game, so the next market for the same game is one tap away; "Outro jogo" clears it.
+
 ## Confidence levels
 
 | Level | Label (UI) | Probability | Fair odd |

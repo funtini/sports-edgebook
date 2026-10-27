@@ -111,6 +111,14 @@ describe('predictions store', () => {
     ])
   })
 
+  it('lists bookmakers used before, most used first', async () => {
+    const queries = setup(() => ({
+      data: [{ bookmaker: 'Betclic' }, { bookmaker: 'Betano' }, { bookmaker: 'Betano' }],
+    }))
+    expect(await usePredictionsStore().listBookmakers()).toEqual(['Betano', 'Betclic'])
+    expect(argsOf(queries[0]!, 'not')).toEqual(['bookmaker', 'is', null])
+  })
+
   it('surfaces database errors', async () => {
     setup(() => ({ error: new Error('permission denied') }))
     await expect(usePredictionsStore().remove('p')).rejects.toThrow('permission denied')

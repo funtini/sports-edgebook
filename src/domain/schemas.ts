@@ -12,15 +12,15 @@ export const predictionCreateSchema = z
     event_id: id,
     market_id: id,
     selection: z.string().trim().min(1, 'Indica a seleção'),
-    line: z.number().nullish(),
+    line: z.number('Linha inválida').nullish(),
     odd,
     confidence: z
-      .number()
+      .number('Escolhe a confiança')
       .int()
       .min(1, 'A confiança vai de 1 a 5')
       .max(5, 'A confiança vai de 1 a 5'),
     is_punter: z.boolean().default(false),
-    stake_units: z.number().positive('O stake tem de ser maior que 0').nullish(),
+    stake_units: z.number('Stake inválido').positive('O stake tem de ser maior que 0').nullish(),
     bookmaker: optionalText,
     closing_odd: odd.nullish(),
     notes: optionalText,
