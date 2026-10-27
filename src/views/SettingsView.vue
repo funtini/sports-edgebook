@@ -4,7 +4,14 @@ import Button from 'primevue/button'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
 import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS } from '@/domain/confidence'
-import { DEFAULT_UNIT_VALUE, UNIT_VALUE_PRESETS, formatDecimal, formatMoney } from '@/domain/money'
+import {
+  DEFAULT_MONEY_DISPLAY,
+  DEFAULT_UNIT_VALUE,
+  UNIT_VALUE_PRESETS,
+  formatDecimal,
+  formatMoney,
+  type MoneyDisplay,
+} from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { userMessage } from '@/lib/errors'
 import { useAuthStore } from '@/stores/auth'
@@ -15,6 +22,7 @@ const auth = useAuthStore()
 
 const unitValue = ref<number | null>(DEFAULT_UNIT_VALUE)
 const bankroll = ref<number | null>(null)
+const moneyDisplay = ref<MoneyDisplay>(DEFAULT_MONEY_DISPLAY)
 const loading = ref(true)
 const saving = ref(false)
 const saved = ref(false)
@@ -34,14 +42,24 @@ const levels = computed(() =>
   }),
 )
 
-const example = computed(() => formatMoney(1.8, unitValue.value ?? 0))
+const displays: { value: MoneyDisplay; label: string }[] = [
+  { value: 'units', label: 'Unidades' },
+  { value: 'euros', label: 'Euros' },
+]
+
+const example = computed(
+  () =>
+    `${formatMoney(1.8, unitValue.value ?? 0, 'units')} unidades = ${formatMoney(1.8, unitValue.value ?? 0, 'euros')}`,
+)
 const bankrollInEuros = computed(() =>
-  !bankroll.value ? null : formatMoney(bankroll.value, unitValue.value ?? 0, { signed: false }),
+  !bankroll.value
+    ? null
+    : `= ${formatMoney(bankroll.value, unitValue.value ?? 0, 'euros', { signed: false })}`,
 )
 
 // The confirmation only describes what was saved; any edit makes it stale.
 watch(
-  [unitValue, bankroll],
+  [unitValue, bankroll, moneyDisplay],
   () => {
     saved.value = false
   },
@@ -53,6 +71,7 @@ onMounted(async () => {
     const row = await store.ensureLoaded()
     unitValue.value = row.unit_value
     bankroll.value = row.starting_bankroll_units
+    moneyDisplay.value = store.moneyDisplay
   } catch (e) {
     error.value = userMessage(e, 'Não foi possível carregar as definições.')
   } finally {
@@ -68,10 +87,12 @@ async function save() {
     const row = await store.update({
       unit_value: unitValue.value as number,
       starting_bankroll_units: bankroll.value,
+      money_display: moneyDisplay.value,
     })
     // Shows what was stored (0 becomes empty) before confirming.
     unitValue.value = row.unit_value
     bankroll.value = row.starting_bankroll_units
+    moneyDisplay.value = store.moneyDisplay
     saved.value = true
   } catch (e) {
     error.value = userMessage(e, 'Não foi possível guardar as definições.')
@@ -82,18 +103,43 @@ async function save() {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-2xl flex-col gap-5">
-    <h1 class="m-0 text-2xl font-semibold">Definições</h1>
+  <div class="mx-auto flex max-w-2xl flex-col gap-4">
+    <h1 class="m-0 text-[22px] font-bold tracking-tight">Definições</h1>
 
     <form
-      class="flex flex-col gap-5 rounded-xl border border-surface-200 bg-surface-0 p-5"
+      class="flex flex-col gap-6 rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5"
       @submit.prevent="save"
     >
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-lg font-semibold">Valor da unidade</legend>
-        <p class="m-0 text-sm text-surface-600">
-          Tudo é registado em unidades; o valor em euros serve só para mostrar.
+        <legend class="mb-1 p-0 text-[17px] font-bold">Mostrar valores em</legend>
+        <div
+          class="grid grid-cols-2 gap-1 rounded-xl border border-eb-border bg-eb-surface-2 p-1"
+          role="group"
+          aria-label="Mostrar valores em"
+        >
+          <button
+            v-for="display in displays"
+            :key="display.value"
+            type="button"
+            class="min-h-11 rounded-[9px] text-[15px] font-semibold transition-colors"
+            :class="
+              moneyDisplay === display.value
+                ? 'bg-eb-surface text-eb-text shadow-sm'
+                : 'text-eb-muted hover:text-eb-text'
+            "
+            :aria-pressed="moneyDisplay === display.value"
+            @click="moneyDisplay = display.value"
+          >
+            {{ display.label }}
+          </button>
+        </div>
+        <p class="m-0 text-sm text-eb-muted">
+          Tudo é registado em unidades. Em euros, cada valor é unidades × valor da unidade.
         </p>
+      </fieldset>
+
+      <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
+        <legend class="mb-1 p-0 text-[17px] font-bold">Valor da unidade</legend>
         <div class="flex flex-wrap gap-2">
           <Button
             v-for="preset in UNIT_VALUE_PRESETS"
@@ -106,7 +152,7 @@ async function save() {
             @click="unitValue = preset"
           />
         </div>
-        <label for="unit-value" class="text-sm font-medium">Outro valor</label>
+        <label for="unit-value" class="text-[13px] font-semibold text-eb-muted">Outro valor</label>
         <InputNumber
           v-model="unitValue"
           input-id="unit-value"
@@ -118,12 +164,12 @@ async function save() {
           input-class="min-h-11 w-full"
           fluid
         />
-        <p class="m-0 text-sm text-surface-500">Exemplo: {{ example }}</p>
+        <p class="m-0 text-sm text-eb-muted tabular-nums">Exemplo: {{ example }}</p>
       </fieldset>
 
       <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-lg font-semibold">Banca inicial</legend>
-        <label for="bankroll" class="text-sm text-surface-600">
+        <legend class="mb-1 p-0 text-[17px] font-bold">Banca inicial</legend>
+        <label for="bankroll" class="text-sm text-eb-muted">
           Em unidades (opcional). Vazio ou 0 = sem banca inicial.
         </label>
         <InputNumber
@@ -137,7 +183,9 @@ async function save() {
           input-class="min-h-11 w-full"
           fluid
         />
-        <p v-if="bankrollInEuros" class="m-0 text-sm text-surface-500">{{ bankrollInEuros }}</p>
+        <p v-if="bankrollInEuros" class="m-0 text-sm text-eb-muted tabular-nums">
+          {{ bankrollInEuros }}
+        </p>
       </fieldset>
 
       <Message v-if="error" severity="error">{{ error }}</Message>
@@ -151,15 +199,15 @@ async function save() {
       />
     </form>
 
-    <section class="rounded-xl border border-surface-200 bg-surface-0 p-5">
-      <h2 class="m-0 text-lg font-semibold">Níveis de confiança</h2>
-      <p class="mt-1 text-sm text-surface-600">
+    <section class="rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5">
+      <h2 class="m-0 text-[17px] font-bold">Níveis de confiança</h2>
+      <p class="mt-1 text-sm text-eb-muted">
         Probabilidade que cada nível representa. A edição chega com a calibração (Fase 4).
       </p>
       <div class="mt-3 overflow-x-auto">
         <table class="w-full border-collapse text-left">
           <thead>
-            <tr class="border-b border-surface-200 text-sm text-surface-500">
+            <tr class="border-b border-eb-border text-sm text-eb-muted">
               <th class="py-2 pr-3 font-medium">Nível</th>
               <th class="py-2 pr-3 font-medium">Etiqueta</th>
               <th class="py-2 pr-3 text-right font-medium">Probabilidade</th>
@@ -170,7 +218,7 @@ async function save() {
             <tr
               v-for="row in levels"
               :key="row.level"
-              class="border-b border-surface-100 last:border-0"
+              class="border-b border-eb-border last:border-0"
             >
               <td class="py-2.5 pr-3">{{ row.level }}</td>
               <td class="py-2.5 pr-3">{{ row.label }}</td>
@@ -184,11 +232,11 @@ async function save() {
 
     <section
       v-if="auth.session"
-      class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-surface-200 bg-surface-0 p-5"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-eb-border bg-eb-surface p-4 sm:p-5"
     >
       <div>
-        <h2 class="m-0 text-lg font-semibold">Conta</h2>
-        <p class="mt-1 mb-0 text-sm text-surface-600">{{ auth.session.user.email }}</p>
+        <h2 class="m-0 text-[17px] font-bold">Conta</h2>
+        <p class="mt-1 mb-0 text-sm break-all text-eb-muted">{{ auth.session.user.email }}</p>
       </div>
       <Button
         type="button"

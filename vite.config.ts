@@ -23,9 +23,9 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        // Aura tokens: primary-500 (emerald) and surface-50 (page background).
-        theme_color: '#10b981',
-        background_color: '#f8fafc',
+        // Design tokens (docs/specs/ui.md): accent and page background, light.
+        theme_color: '#047857',
+        background_color: '#f5f6f8',
         icons: [
           { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },

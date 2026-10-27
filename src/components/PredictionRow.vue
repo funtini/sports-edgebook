@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { CONFIDENCE_LABELS, type ConfidenceLevel } from '@/domain/confidence'
-import { formatDecimal, formatMoney, formatUnits } from '@/domain/money'
+import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import { valueBand, valueIndex } from '@/domain/value'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
-import { profitClass } from './profitClass'
+import { VALUE_BAND_STYLES, valueRowLabel } from './valueBands'
 
 const props = defineProps<{
   prediction: PredictionWithRelations
   unitValue: number
+  moneyDisplay: MoneyDisplay
   /** Disables the settlement buttons while a save is in flight. */
   busy?: boolean
 }>()
@@ -19,15 +20,16 @@ const emit = defineEmits<{ settle: [status: BetStatus] }>()
 const line = new Intl.NumberFormat('pt-PT', { maximumFractionDigits: 2 })
 
 const outcomes: { status: Exclude<BetStatus, 'pending'>; label: string; active: string }[] = [
-  { status: 'won', label: 'Ganho', active: 'border-green-600 bg-green-600 text-white' },
-  { status: 'lost', label: 'Perdido', active: 'border-red-600 bg-red-600 text-white' },
-  { status: 'void', label: 'Nulo', active: 'border-surface-500 bg-surface-500 text-white' },
+  { status: 'won', label: 'Ganho', active: 'border-eb-pos bg-eb-pos text-eb-on-fill' },
+  { status: 'lost', label: 'Perdido', active: 'border-eb-neg bg-eb-neg text-eb-on-fill' },
+  { status: 'void', label: 'Nulo', active: 'border-eb-muted bg-eb-muted text-eb-on-fill' },
 ]
 
-const bandStyles = {
-  favourable: { dot: 'bg-green-500', label: 'favorável' },
-  neutral: { dot: 'bg-surface-400', label: 'neutro' },
-  unfavourable: { dot: 'bg-red-500', label: 'desfavorável' },
+const results: Record<BetStatus, { label: string; classes: string }> = {
+  pending: { label: 'Por resolver', classes: 'bg-eb-surface-2 text-eb-muted' },
+  won: { label: 'Lucro', classes: 'bg-eb-pos-soft text-eb-pos' },
+  lost: { label: 'Prejuízo', classes: 'bg-eb-neg-soft text-eb-neg' },
+  void: { label: 'Nulo', classes: 'bg-eb-surface-2 text-eb-muted' },
 }
 
 const market = computed(() => {
@@ -47,21 +49,34 @@ const confidence = computed(() => {
 
 const value = computed(() => {
   const index = valueIndex(props.prediction.probability, props.prediction.odd)
-  return { index: formatDecimal(index), ...bandStyles[valueBand(index)] }
+  const band = valueBand(index)
+  return { band, label: valueRowLabel(band, index), ...VALUE_BAND_STYLES[band] }
 })
 
 const isPunter = computed(() => isPunterBet(props.prediction))
 
-const profit = computed(() => {
-  const units = predictionProfit(props.prediction)
-  if (units == null) return null
-  return isPunter.value ? formatMoney(units, props.unitValue) : formatUnits(units, { signed: true })
-})
+const money = (units: number, signed: boolean) =>
+  formatMoney(units, props.unitValue, props.moneyDisplay, { signed })
 
-/** Non-punter profit is virtual, so it stays muted whatever its sign. */
-const profitTone = computed(() =>
-  isPunter.value ? profitClass(predictionProfit(props.prediction) ?? 0) : 'text-surface-400',
+const stake = computed(() =>
+  isPunter.value
+    ? {
+        label: 'Apostado',
+        amount: money(props.prediction.stake_units ?? 0, false),
+        classes: 'bg-eb-info-soft text-eb-info',
+      }
+    : { label: 'Sem aposta', amount: '—', classes: 'bg-eb-surface-2 text-eb-muted' },
 )
+
+const result = computed(() => {
+  const units = predictionProfit(props.prediction)
+  return {
+    ...results[props.prediction.status],
+    amount: units == null ? '—' : money(units, true),
+    // Non-punter profit is on 1 virtual unit.
+    virtual: units != null && !isPunter.value,
+  }
+})
 
 function toggle(status: Exclude<BetStatus, 'pending'>) {
   emit('settle', props.prediction.status === status ? 'pending' : status)
@@ -69,48 +84,55 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-    <div class="flex min-w-0 flex-col gap-1">
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span class="text-sm text-surface-500">{{ market }}</span>
-        <span
-          v-if="isPunter"
-          class="rounded bg-primary-100 px-1.5 text-xs font-bold text-primary-700"
-          :title="`Punter: ${formatUnits(prediction.stake_units ?? 0)}`"
-        >
-          P · {{ formatUnits(prediction.stake_units ?? 0) }}
-        </span>
+  <div class="flex flex-col p-3.5 tabular-nums">
+    <div class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="text-xs text-eb-muted">{{ market }}</div>
+        <div class="text-[15px] font-semibold break-words">{{ selection }}</div>
       </div>
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span class="font-semibold">{{ selection }}</span>
-        <span class="tabular-nums">@ {{ formatDecimal(prediction.odd) }}</span>
-        <span class="rounded-full bg-surface-100 px-2 py-0.5 text-xs text-surface-700">
-          {{ confidence }}
-        </span>
-        <span
-          class="inline-flex items-center gap-1 text-xs text-surface-500"
-          :title="`Índice de valor ${value.index} (${value.label})`"
-        >
-          <span class="inline-block size-2.5 rounded-full" :class="value.dot" aria-hidden="true" />
-          <span class="sr-only">Índice de valor {{ value.index }}, {{ value.label }}</span>
-          <span aria-hidden="true">{{ value.index }}</span>
-        </span>
-      </div>
-      <div v-if="profit" class="text-sm tabular-nums" :class="profitTone">
-        {{ profit }}<span v-if="!isPunter"> (virtual)</span>
+      <div class="text-lg font-bold">
+        <span class="sr-only">Odd </span>{{ formatDecimal(prediction.odd) }}
       </div>
     </div>
 
-    <div class="grid shrink-0 grid-cols-3 gap-2" role="group" aria-label="Liquidar">
+    <div class="mt-2.5 grid grid-cols-2 gap-1.5">
+      <div class="min-w-0 rounded-[10px] px-2.5 py-2" :class="stake.classes" data-box="stake">
+        <div class="text-[11px] font-semibold">{{ stake.label }}</div>
+        <div class="mt-0.5 truncate text-base font-bold">{{ stake.amount }}</div>
+      </div>
+      <div class="min-w-0 rounded-[10px] px-2.5 py-2" :class="result.classes" data-box="result">
+        <div class="flex justify-between gap-1 text-[11px] font-semibold">
+          <span>{{ result.label }}</span>
+          <span v-if="result.virtual" class="text-eb-muted">virtual</span>
+        </div>
+        <div class="mt-0.5 truncate text-base font-bold">{{ result.amount }}</div>
+      </div>
+    </div>
+
+    <div class="mt-2 flex flex-wrap items-center gap-2">
+      <span class="rounded-full bg-eb-surface-2 px-2 py-0.5 text-xs font-semibold">
+        {{ confidence }}
+      </span>
+      <span
+        class="inline-flex items-center gap-1.5 text-xs font-semibold"
+        :class="value.text"
+        :data-band="value.band"
+      >
+        <span class="inline-block size-2 rounded-full" :class="value.fill" aria-hidden="true" />
+        <span class="sr-only">Índice de valor: </span>{{ value.label }}
+      </span>
+    </div>
+
+    <div class="mt-2.5 grid grid-cols-3 gap-1.5" role="group" aria-label="Liquidar">
       <button
         v-for="outcome in outcomes"
         :key="outcome.status"
         type="button"
-        class="min-h-11 min-w-20 rounded-lg border px-3 text-sm font-medium transition-colors disabled:opacity-60"
+        class="min-h-11 rounded-[10px] border text-sm font-semibold transition-colors disabled:opacity-60"
         :class="
           prediction.status === outcome.status
             ? outcome.active
-            : 'border-surface-300 bg-surface-0 text-surface-700 hover:bg-surface-100'
+            : 'border-eb-border bg-transparent text-eb-text hover:bg-eb-surface-2'
         "
         :aria-pressed="prediction.status === outcome.status"
         :disabled="busy"

@@ -25,6 +25,7 @@ describe('daySummary', () => {
       hitRate: 2 / 3,
       punterProfit: 0,
       punterBets: 3,
+      punterStaked: 6,
     })
   })
 
@@ -35,6 +36,7 @@ describe('daySummary', () => {
       hitRate: null,
       punterProfit: 0,
       punterBets: 0,
+      punterStaked: 0,
     })
   })
 })

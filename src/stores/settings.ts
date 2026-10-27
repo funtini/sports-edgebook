@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
 import { DEFAULT_MARKETS } from '@/domain/markets'
-import { DEFAULT_UNIT_VALUE } from '@/domain/money'
+import { DEFAULT_MONEY_DISPLAY, DEFAULT_UNIT_VALUE, type MoneyDisplay } from '@/domain/money'
 import {
   confidenceAnchorsSchema,
   userSettingsUpdateSchema,
@@ -16,6 +16,9 @@ export const useSettingsStore = defineStore('settings', () => {
   let loading: Promise<UserSettingsRow> | null = null
 
   const unitValue = computed(() => settings.value?.unit_value ?? DEFAULT_UNIT_VALUE)
+  const moneyDisplay = computed<MoneyDisplay>(() =>
+    settings.value?.money_display === 'euros' ? 'euros' : DEFAULT_MONEY_DISPLAY,
+  )
 
   const confidenceAnchors = computed<ConfidenceAnchors>(() => {
     const parsed = confidenceAnchorsSchema.safeParse(settings.value?.confidence_anchors)
@@ -66,5 +69,5 @@ export const useSettingsStore = defineStore('settings', () => {
     return row
   }
 
-  return { settings, unitValue, confidenceAnchors, load, ensureLoaded, update }
+  return { settings, unitValue, moneyDisplay, confidenceAnchors, load, ensureLoaded, update }
 })

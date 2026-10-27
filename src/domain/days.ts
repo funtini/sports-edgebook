@@ -23,3 +23,11 @@ export function fromDayKey(key: string): Date | null {
   const date = new Date(y, m - 1, d)
   return date.getMonth() === m - 1 && date.getDate() === d ? date : null
 }
+
+const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+/** `ter, 27 out`: short PT-PT day label (Intl's pt-PT short weekday is the full name). */
+export function shortDayLabel(date: Date): string {
+  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+}

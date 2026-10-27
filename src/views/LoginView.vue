@@ -26,16 +26,23 @@ async function submit() {
 </script>
 
 <template>
-  <section class="mx-auto max-w-sm rounded-xl border border-surface-200 bg-surface-0 p-6">
-    <h1 class="m-0 text-2xl font-semibold">Entrar</h1>
-    <p class="mt-2 text-surface-600">Recebes um link de acesso por email.</p>
+  <section class="mx-auto mt-6 max-w-sm rounded-2xl border border-eb-border bg-eb-surface p-6">
+    <h1 class="m-0 text-[22px] font-bold tracking-tight">Entrar</h1>
+    <p class="mt-2 text-eb-muted">Recebes um link de acesso por email.</p>
     <Message v-if="sent" severity="success" class="mt-4">
       Link enviado. Abre o email neste dispositivo.
     </Message>
     <form v-else class="mt-4 flex flex-col gap-3" @submit.prevent="submit">
-      <label for="email" class="text-sm font-medium">Email</label>
-      <InputText id="email" v-model="email" type="email" autocomplete="email" required />
-      <Button type="submit" label="Enviar link" :loading="sending" />
+      <label for="email" class="text-[13px] font-semibold text-eb-muted">Email</label>
+      <InputText
+        id="email"
+        v-model="email"
+        type="email"
+        autocomplete="email"
+        required
+        class="min-h-12"
+      />
+      <Button type="submit" label="Enviar link" :loading="sending" class="min-h-12 !font-bold" />
       <Message v-if="error" severity="error">{{ error }}</Message>
     </form>
   </section>

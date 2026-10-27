@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, fromDayKey, startOfDay, toDayKey } from '../days'
+import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '../days'
 
 describe('days', () => {
   it('takes the local midnight', () => {
@@ -20,5 +20,10 @@ describe('days', () => {
   it('adds days across month ends', () => {
     expect(toDayKey(addDays(new Date(2026, 9, 31), 1))).toBe('2026-11-01')
     expect(toDayKey(addDays(new Date(2026, 10, 1), -1))).toBe('2026-10-31')
+  })
+
+  it('labels a day in short PT-PT', () => {
+    expect(shortDayLabel(new Date(2026, 9, 27))).toBe('ter, 27 out')
+    expect(shortDayLabel(new Date(2026, 0, 3))).toBe('sáb, 3 jan')
   })
 })

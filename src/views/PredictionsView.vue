@@ -6,11 +6,14 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
+import AppIcon from '@/components/AppIcon.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import PunterFields from '@/components/PunterFields.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
 import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
+import { formatDecimal } from '@/domain/money'
+import { fairOdd } from '@/domain/value'
 import { toSearchResult, type EventSearchResult } from '@/domain/eventSource'
 import { suggestNames } from '@/domain/names'
 import { emptyPredictionDraft, marketInput, predictionInput } from '@/domain/predictionDraft'
@@ -62,6 +65,7 @@ const probability = computed(() =>
   draft.confidence == null ? null : probabilityFor(draft.confidence, settings.confidenceAnchors),
 )
 const parsedOdd = computed(() => parseDecimal(draft.odd))
+const percent = new Intl.NumberFormat('pt-PT', { style: 'percent' })
 
 const completeCategory = (event: AutoCompleteCompleteEvent) =>
   (categorySuggestions.value = suggestNames(
@@ -174,65 +178,61 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-xl flex-col gap-5">
-    <h1 class="m-0 text-2xl font-semibold">Registo</h1>
+  <div class="mx-auto flex max-w-xl flex-col gap-4">
+    <h1 class="m-0 text-[22px] font-bold tracking-tight">Novo prognóstico</h1>
 
-    <form
-      class="flex flex-col gap-6 rounded-xl border border-surface-200 bg-surface-0 p-4 sm:p-5"
-      novalidate
-      @submit.prevent="save"
-    >
+    <form class="flex flex-col gap-[18px]" novalidate @submit.prevent="save">
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-lg font-semibold">Jogo</legend>
+        <legend class="sr-only">Jogo</legend>
         <GamePicker v-model:game="game" v-model:new-game="newGame" :errors="errors" :kept="kept" />
       </fieldset>
 
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-lg font-semibold">Prognóstico</legend>
+        <legend class="sr-only">Prognóstico</legend>
         <div class="grid grid-cols-2 gap-3">
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="category" class="text-sm font-medium">Mercado</label>
+            <label for="category" class="text-[13px] font-semibold text-eb-muted">Mercado</label>
             <AutoComplete
               v-model="draft.category"
               input-id="category"
               :suggestions="categorySuggestions"
-              input-class="min-h-11 w-full"
+              input-class="min-h-12 w-full"
               :invalid="!!errors.category"
               dropdown
               fluid
               @complete="completeCategory"
             />
-            <small v-if="errors.category" class="text-red-600">{{ errors.category }}</small>
+            <small v-if="errors.category" class="text-eb-neg">{{ errors.category }}</small>
           </div>
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="market-name" class="text-sm font-medium">Tipo</label>
+            <label for="market-name" class="text-[13px] font-semibold text-eb-muted">Tipo</label>
             <AutoComplete
               v-model="draft.marketName"
               input-id="market-name"
               :suggestions="marketNameSuggestions"
-              input-class="min-h-11 w-full"
+              input-class="min-h-12 w-full"
               :invalid="!!errors.marketName"
               dropdown
               fluid
               @complete="completeMarketName"
             />
-            <small v-if="errors.marketName" class="text-red-600">{{ errors.marketName }}</small>
+            <small v-if="errors.marketName" class="text-eb-neg">{{ errors.marketName }}</small>
           </div>
         </div>
 
         <div class="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="selection" class="text-sm font-medium">Aposta</label>
+            <label for="selection" class="text-[13px] font-semibold text-eb-muted">Aposta</label>
             <InputText
               id="selection"
               v-model="draft.selection"
               autocomplete="off"
-              class="min-h-11 w-full"
+              class="min-h-12 w-full"
               :invalid="!!errors.selection"
             />
           </div>
           <div class="flex min-w-0 flex-col gap-1">
-            <label for="line" class="text-sm font-medium">Linha</label>
+            <label for="line" class="text-[13px] font-semibold text-eb-muted">Linha</label>
             <div class="flex gap-1">
               <InputText
                 id="line"
@@ -240,7 +240,7 @@ onMounted(async () => {
                 inputmode="decimal"
                 placeholder="2,5"
                 autocomplete="off"
-                class="min-h-11 w-full min-w-0"
+                class="min-h-12 w-full min-w-0"
                 :invalid="!!errors.line"
               />
               <Button
@@ -249,53 +249,62 @@ onMounted(async () => {
                 aria-label="Trocar o sinal da linha"
                 severity="secondary"
                 outlined
-                class="min-h-11 min-w-11 shrink-0"
+                class="min-h-12 min-w-12 shrink-0"
                 @click="draft.line = toggleSign(draft.line)"
               />
             </div>
           </div>
-          <small v-if="errors.selection" class="col-span-2 text-red-600">
+          <small v-if="errors.selection" class="col-span-2 text-eb-neg">
             {{ errors.selection }}
           </small>
-          <small v-if="errors.line" class="col-span-2 text-red-600">{{ errors.line }}</small>
+          <small v-if="errors.line" class="col-span-2 text-eb-neg">{{ errors.line }}</small>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label for="odd" class="text-sm font-medium">Odd</label>
+          <label for="odd" class="text-[13px] font-semibold text-eb-muted">Odd</label>
           <InputText
             id="odd"
             v-model="draft.odd"
             inputmode="decimal"
             placeholder="1,85"
             autocomplete="off"
-            class="min-h-11 w-full text-lg"
+            class="min-h-12 w-full text-xl font-bold tabular-nums"
             :invalid="!!errors.odd"
           />
-          <small v-if="errors.odd" class="text-red-600">{{ errors.odd }}</small>
+          <small v-if="errors.odd" class="text-eb-neg">{{ errors.odd }}</small>
         </div>
       </fieldset>
 
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="mb-1 p-0 text-lg font-semibold">Confiança</legend>
+        <legend
+          class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
+        >
+          <span>Confiança</span>
+          <span v-if="probability != null" class="tabular-nums">
+            {{ percent.format(probability) }} · odd justa {{ formatDecimal(fairOdd(probability)) }}
+          </span>
+        </legend>
         <div class="grid grid-cols-5 gap-2">
           <button
             v-for="level in CONFIDENCE_LEVELS"
             :key="level"
             type="button"
-            class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-1 py-2 transition-colors"
+            class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
             :class="
               draft.confidence === level
-                ? 'border-primary bg-primary text-primary-contrast'
-                : 'border-surface-300 bg-surface-0 text-surface-700 hover:bg-surface-100'
+                ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
+                : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
             "
             :aria-pressed="draft.confidence === level"
             @click="draft.confidence = level"
           >
-            <span class="text-xl font-semibold">{{ level }}</span>
-            <span class="text-center text-xs leading-tight">{{ CONFIDENCE_LABELS[level] }}</span>
+            <span class="text-xl leading-none font-bold">{{ level }}</span>
+            <span class="text-center text-[11px] leading-tight font-semibold">
+              {{ CONFIDENCE_LABELS[level] }}
+            </span>
           </button>
         </div>
-        <small v-if="errors.confidence" class="text-red-600">{{ errors.confidence }}</small>
+        <small v-if="errors.confidence" class="text-eb-neg">{{ errors.confidence }}</small>
         <ValueIndex :odd="parsedOdd" :probability="probability" />
       </fieldset>
 
@@ -305,19 +314,22 @@ onMounted(async () => {
         v-model:bookmaker="draft.bookmaker"
         :bookmakers="bookmakers"
         :stake-error="errors.stake_units"
+        :unit-value="settings.unitValue"
+        :money-display="settings.moneyDisplay"
       />
 
       <div class="flex flex-col gap-1">
-        <Button
+        <button
           v-if="!showNotes"
           type="button"
-          label="Adicionar notas"
-          text
-          class="min-h-11 self-start"
+          class="flex min-h-11 items-center gap-1.5 self-start text-[15px] font-semibold text-eb-accent-text"
           @click="showNotes = true"
-        />
+        >
+          <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+          Adicionar notas
+        </button>
         <template v-else>
-          <label for="notes" class="text-sm font-medium">Notas</label>
+          <label for="notes" class="text-[13px] font-semibold text-eb-muted">Notas</label>
           <Textarea id="notes" v-model="draft.notes" rows="3" auto-resize class="w-full" />
         </template>
       </div>
@@ -325,10 +337,10 @@ onMounted(async () => {
       <Message v-if="error" severity="error">{{ error }}</Message>
       <Button
         type="submit"
-        label="Guardar"
+        label="Guardar prognóstico"
         :loading="saving"
         :disabled="loading"
-        class="min-h-12"
+        class="min-h-[52px] !rounded-[14px] !text-base !font-bold"
       />
     </form>
   </div>

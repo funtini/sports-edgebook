@@ -1,13 +1,90 @@
 @import 'tailwindcss';
 @import 'tailwindcss-primeui';
 
-body {
-  margin: 0;
-  font-family: Inter, system-ui, sans-serif;
-  background: var(--p-surface-50);
-  color: var(--p-text-color);
+/*
+ * Design tokens (docs/specs/ui.md). Light on :root, dark under .app-dark, the class PrimeVue
+ * already uses for its own dark scheme. Use them through the `eb-*` Tailwind colours below
+ * (`bg-eb-surface`, `text-eb-muted`...), never fixed palette shades that break in dark.
+ */
+:root {
+  --eb-bg: #f5f6f8;
+  --eb-surface: #ffffff;
+  --eb-surface-2: #eef0f3;
+  --eb-border: #e1e4e9;
+  --eb-text: #12151a;
+  --eb-muted: #5a6370;
+  --eb-accent: #047857;
+  --eb-on-accent: #ffffff;
+  --eb-accent-soft: #e3f4ec;
+  --eb-accent-text: #065f46;
+  --eb-pos: #047857;
+  --eb-pos-soft: #e6f4ed;
+  --eb-neg: #c0262d;
+  --eb-neg-soft: #fcebec;
+  --eb-info: #1d4fb8;
+  --eb-info-soft: #e8f0fd;
+  --eb-purple: #6d28d9;
+  --eb-purple-soft: #f1ebfd;
+  --eb-amber: #9a5800;
+  --eb-amber-soft: #fbf0dc;
+  /* Text on a filled pos / neg / muted button. */
+  --eb-on-fill: #ffffff;
 }
 
-.app-dark body {
-  background: var(--p-surface-950);
+.app-dark {
+  --eb-bg: #0d1015;
+  --eb-surface: #151920;
+  --eb-surface-2: #1e232c;
+  --eb-border: #2a313c;
+  --eb-text: #e9ecf0;
+  --eb-muted: #9aa4b1;
+  --eb-accent: #34d399;
+  --eb-on-accent: #06281c;
+  --eb-accent-soft: #123326;
+  --eb-accent-text: #6ee7b7;
+  --eb-pos: #34d399;
+  --eb-pos-soft: #10261d;
+  --eb-neg: #f87171;
+  --eb-neg-soft: #2a1416;
+  --eb-info: #8fbcff;
+  --eb-info-soft: #16243b;
+  --eb-purple: #c4b5fd;
+  --eb-purple-soft: #221a38;
+  --eb-amber: #f0b44c;
+  --eb-amber-soft: #2b2111;
+  --eb-on-fill: #0d1015;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: Inter, system-ui, sans-serif;
+  --color-eb-bg: var(--eb-bg);
+  --color-eb-surface: var(--eb-surface);
+  --color-eb-surface-2: var(--eb-surface-2);
+  --color-eb-border: var(--eb-border);
+  --color-eb-text: var(--eb-text);
+  --color-eb-muted: var(--eb-muted);
+  --color-eb-accent: var(--eb-accent);
+  --color-eb-on-accent: var(--eb-on-accent);
+  --color-eb-accent-soft: var(--eb-accent-soft);
+  --color-eb-accent-text: var(--eb-accent-text);
+  --color-eb-pos: var(--eb-pos);
+  --color-eb-pos-soft: var(--eb-pos-soft);
+  --color-eb-neg: var(--eb-neg);
+  --color-eb-neg-soft: var(--eb-neg-soft);
+  --color-eb-info: var(--eb-info);
+  --color-eb-info-soft: var(--eb-info-soft);
+  --color-eb-purple: var(--eb-purple);
+  --color-eb-purple-soft: var(--eb-purple-soft);
+  --color-eb-amber: var(--eb-amber);
+  --color-eb-amber-soft: var(--eb-amber-soft);
+  --color-eb-on-fill: var(--eb-on-fill);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--eb-bg);
+  color: var(--eb-text);
+  -webkit-font-smoothing: antialiased;
 }

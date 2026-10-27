@@ -14,13 +14,31 @@ describe('value', () => {
     expect(valueBand(index)).toBe('favourable')
   })
 
-  it('flags a level 4 pick at 1.25 as unfavourable', () => {
-    expect(valueBand(valueIndex(DEFAULT_CONFIDENCE_ANCHORS[4], 1.25))).toBe('unfavourable')
+  it('flags a level 4 pick at 1.25 as reduced value', () => {
+    expect(valueBand(valueIndex(DEFAULT_CONFIDENCE_ANCHORS[4], 1.25))).toBe('reduced')
   })
 
-  it('treats values near 1 as neutral', () => {
-    expect(valueBand(1)).toBe('neutral')
+  it('splits the index into five bands at the documented boundaries', () => {
+    expect(valueBand(1.37)).toBe('banger')
+    expect(valueBand(1.36)).toBe('banger')
+    expect(valueBand(1.35)).toBe('favourable')
+    expect(valueBand(1.06)).toBe('favourable')
     expect(valueBand(1.05)).toBe('neutral')
+    expect(valueBand(1)).toBe('neutral')
     expect(valueBand(0.95)).toBe('neutral')
+    expect(valueBand(0.94)).toBe('reduced')
+    expect(valueBand(0.85)).toBe('reduced')
+    expect(valueBand(0.84)).toBe('no_value')
+    expect(valueBand(0.5)).toBe('no_value')
+  })
+
+  it('judges the index as shown, rounded to 2 decimals', () => {
+    // Level 2 (55%) at 1.92 → 1.056, shown as 1,06.
+    expect(valueBand(valueIndex(0.55, 1.92))).toBe('favourable')
+    expect(valueBand(1.0549)).toBe('neutral')
+    expect(valueBand(1.3549)).toBe('favourable')
+    expect(valueBand(1.355)).toBe('banger')
+    expect(valueBand(0.9449)).toBe('reduced')
+    expect(valueBand(0.8449)).toBe('no_value')
   })
 })

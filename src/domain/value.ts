@@ -1,4 +1,13 @@
-export type ValueBand = 'favourable' | 'neutral' | 'unfavourable'
+export type ValueBand = 'banger' | 'favourable' | 'neutral' | 'reduced' | 'no_value'
+
+/** Best to worst; the order the bands are listed in. */
+export const VALUE_BANDS: readonly ValueBand[] = [
+  'banger',
+  'favourable',
+  'neutral',
+  'reduced',
+  'no_value',
+]
 
 /** Odd that pays exactly break-even for a given probability. */
 export function fairOdd(probability: number): number {
@@ -11,8 +20,12 @@ export function valueIndex(probability: number, odd: number): number {
   return probability * odd
 }
 
+/** Band of a value index, judged on the index rounded to 2 decimals (as it is shown). */
 export function valueBand(index: number): ValueBand {
-  if (index > 1.05) return 'favourable'
-  if (index < 0.95) return 'unfavourable'
-  return 'neutral'
+  const shown = Math.round(index * 100) / 100
+  if (shown > 1.35) return 'banger'
+  if (shown >= 1.06) return 'favourable'
+  if (shown >= 0.95) return 'neutral'
+  if (shown >= 0.85) return 'reduced'
+  return 'no_value'
 }

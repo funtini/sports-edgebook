@@ -1,5 +1,5 @@
 import { hitRate } from './metrics'
-import { isPunterBet, predictionProfit, type SettleablePrediction } from './settlement'
+import { isPunterBet, predictionProfit, stakeFor, type SettleablePrediction } from './settlement'
 
 export interface DaySummary {
   total: number
@@ -9,6 +9,8 @@ export interface DaySummary {
   punterProfit: number
   /** Number of punter bets, settled or not. */
   punterBets: number
+  /** Units staked on punter bets, settled or not. */
+  punterStaked: number
 }
 
 export function daySummary(predictions: SettleablePrediction[]): DaySummary {
@@ -19,6 +21,7 @@ export function daySummary(predictions: SettleablePrediction[]): DaySummary {
     hitRate: hitRate(predictions.map((p) => p.status)),
     punterProfit: punter.reduce((sum, p) => sum + (predictionProfit(p) ?? 0), 0),
     punterBets: punter.length,
+    punterStaked: punter.reduce((sum, p) => sum + stakeFor(p), 0),
   }
 }
 

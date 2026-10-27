@@ -248,4 +248,15 @@ describe('userSettingsUpdateSchema', () => {
     const result = userSettingsUpdateSchema.safeParse({ unit_value: 0, starting_bankroll_units: 0 })
     expect(result.error?.issues[0]?.message).toBe('O valor da unidade tem de ser maior que 0')
   })
+
+  it('accepts units or euros as the money display, and leaves it out when omitted', () => {
+    const base = { unit_value: 10, starting_bankroll_units: null }
+    expect(userSettingsUpdateSchema.parse({ ...base, money_display: 'euros' }).money_display).toBe(
+      'euros',
+    )
+    expect(userSettingsUpdateSchema.parse(base)).not.toHaveProperty('money_display')
+    expect(userSettingsUpdateSchema.safeParse({ ...base, money_display: 'usd' }).success).toBe(
+      false,
+    )
+  })
 })

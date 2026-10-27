@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Button from 'primevue/button'
+import AppIcon from './AppIcon.vue'
 import InputText from 'primevue/inputtext'
 import { LocalEventSource, type EventSearchResult, type EventSource } from '@/domain/eventSource'
 import { suggestNames } from '@/domain/names'
@@ -96,25 +97,26 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
 </script>
 
 <template>
-  <div
-    v-if="game"
-    class="flex items-center justify-between gap-3 rounded-lg border border-primary-200 bg-primary-50 px-4 py-3"
-  >
-    <div class="flex min-w-0 flex-col">
-      <span v-if="kept" class="text-xs font-semibold tracking-wide text-primary-700 uppercase">
+  <div v-if="game" class="rounded-2xl border-[1.5px] border-eb-accent bg-eb-surface p-3.5">
+    <div class="flex items-center justify-between gap-3">
+      <span
+        v-if="kept"
+        class="inline-flex items-center gap-1.5 rounded-full bg-eb-accent-soft px-2.5 py-1 text-xs font-bold text-eb-accent-text"
+      >
+        <AppIcon name="check" class="size-3.5" stroke-width="2.5" />
         Mesmo jogo
       </span>
-      <span class="truncate font-medium">{{ label(game) }}</span>
-      <span class="text-sm text-surface-600">{{ details(game) }}</span>
+      <span v-else class="text-xs font-semibold text-eb-muted">Jogo</span>
+      <button
+        type="button"
+        class="min-h-11 shrink-0 px-1 text-sm font-semibold text-eb-accent-text"
+        @click="clear"
+      >
+        Outro jogo
+      </button>
     </div>
-    <Button
-      type="button"
-      label="Outro jogo"
-      severity="secondary"
-      outlined
-      class="min-h-11 shrink-0"
-      @click="clear"
-    />
+    <div class="text-[17px] font-bold break-words">{{ label(game) }}</div>
+    <div class="mt-0.5 text-[13px] text-eb-muted">{{ details(game) }}</div>
   </div>
 
   <template v-else-if="!newGame">
@@ -125,7 +127,7 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
       :suggestions="results"
       :option-label="label"
       placeholder="Procurar equipa (ex.: Benfica)"
-      input-class="min-h-11 w-full"
+      input-class="min-h-12 w-full"
       :invalid="!!(errors.game || searchError)"
       fluid
       @complete="search"
@@ -134,14 +136,14 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
       <template #option="{ option }">
         <div class="flex flex-col">
           <span class="font-medium">{{ label(option) }}</span>
-          <span class="text-sm text-surface-500">{{ details(option) }}</span>
+          <span class="text-sm text-eb-muted">{{ details(option) }}</span>
         </div>
       </template>
       <template #empty>
-        <span class="text-sm text-surface-500">Nenhum jogo encontrado.</span>
+        <span class="text-sm text-eb-muted">Nenhum jogo encontrado.</span>
       </template>
     </AutoComplete>
-    <small v-if="searchError || errors.game" class="text-red-600">
+    <small v-if="searchError || errors.game" class="text-eb-neg">
       {{ searchError ?? errors.game }}
     </small>
     <Button
@@ -156,65 +158,67 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
   <div v-else class="flex flex-col gap-3">
     <div class="grid grid-cols-2 gap-3">
       <div class="flex min-w-0 flex-col gap-1">
-        <label for="new-date" class="text-sm font-medium">Data</label>
+        <label for="new-date" class="text-[13px] font-semibold text-eb-muted">Data</label>
         <InputText
           id="new-date"
           v-model="newGame.date"
           type="date"
-          class="min-h-11 w-full"
+          class="min-h-12 w-full"
           :invalid="!!errors.date"
         />
       </div>
       <div class="flex min-w-0 flex-col gap-1">
-        <label for="new-time" class="text-sm font-medium">Hora</label>
+        <label for="new-time" class="text-[13px] font-semibold text-eb-muted">Hora</label>
         <InputText
           id="new-time"
           v-model="newGame.time"
           type="time"
-          class="min-h-11 w-full"
+          class="min-h-12 w-full"
           :invalid="!!errors.time"
         />
       </div>
-      <small v-if="errors.date || errors.time" class="col-span-2 text-red-600">
+      <small v-if="errors.date || errors.time" class="col-span-2 text-eb-neg">
         {{ errors.date ?? errors.time }}
       </small>
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-league" class="text-sm font-medium">Liga (opcional)</label>
+      <label for="new-league" class="text-[13px] font-semibold text-eb-muted"
+        >Liga (opcional)</label
+      >
       <AutoComplete
         v-model="newGame.league"
         input-id="new-league"
         :suggestions="leagueSuggestions"
-        input-class="min-h-11 w-full"
+        input-class="min-h-12 w-full"
         fluid
         @complete="completeLeague"
       />
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-home" class="text-sm font-medium">Equipa da casa</label>
+      <label for="new-home" class="text-[13px] font-semibold text-eb-muted">Equipa da casa</label>
       <AutoComplete
         v-model="newGame.home"
         input-id="new-home"
         :suggestions="teamSuggestions"
-        input-class="min-h-11 w-full"
+        input-class="min-h-12 w-full"
         :invalid="!!errors.home"
         fluid
         @complete="completeTeam"
       />
-      <small v-if="errors.home" class="text-red-600">{{ errors.home }}</small>
+      <small v-if="errors.home" class="text-eb-neg">{{ errors.home }}</small>
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-away" class="text-sm font-medium">Equipa de fora</label>
+      <label for="new-away" class="text-[13px] font-semibold text-eb-muted">Equipa de fora</label>
       <AutoComplete
         v-model="newGame.away"
         input-id="new-away"
         :suggestions="teamSuggestions"
-        input-class="min-h-11 w-full"
+        input-class="min-h-12 w-full"
         :invalid="!!errors.away"
         fluid
         @complete="completeTeam"
       />
-      <small v-if="errors.away" class="text-red-600">{{ errors.away }}</small>
+      <small v-if="errors.away" class="text-eb-neg">{{ errors.away }}</small>
     </div>
     <Button
       type="button"

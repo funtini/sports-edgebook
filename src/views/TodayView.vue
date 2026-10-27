@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
-import Button from 'primevue/button'
 import Message from 'primevue/message'
+import AppIcon from '@/components/AppIcon.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useSettlement } from '@/composables/useSettlement'
 import { daySummary, groupByEvent } from '@/domain/daySummary'
-import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
+import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '@/domain/days'
 import { formatMoney } from '@/domain/money'
 import { userMessage } from '@/lib/errors'
 import { usePredictionsStore } from '@/stores/predictions'
@@ -56,11 +56,6 @@ const isToday = computed(() => dayKey.value === todayKey.value)
 /** Earlier pending predictions are counted before the selected day, never past today. */
 const pendingCutoff = computed(() => (day.value < today.value ? day.value : today.value))
 
-const longDate = new Intl.DateTimeFormat('pt-PT', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-})
 const time = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' })
 const percent = new Intl.NumberFormat('pt-PT', { style: 'percent', maximumFractionDigits: 0 })
 
@@ -71,6 +66,12 @@ const relativeLabel = computed(() => {
   return null
 })
 
+/** `Hoje · ter, 27 out`, or just `qua, 4 nov` away from today and its neighbours. */
+const dayLabel = computed(() => {
+  const date = shortDayLabel(day.value)
+  return relativeLabel.value ? `${relativeLabel.value} · ${date}` : date
+})
+
 const groups = computed(() =>
   groupByEvent(rows.value).map((group) => ({
     ...group,
@@ -79,6 +80,14 @@ const groups = computed(() =>
 )
 
 const summary = computed(() => daySummary(rows.value))
+
+const money = (units: number, signed = true) =>
+  formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed })
+
+const staked = computed(() => {
+  const amount = money(summary.value.punterStaked, false)
+  return settings.moneyDisplay === 'euros' ? `${amount} apostados` : `${amount} unidades apostadas`
+})
 
 function goTo(key: string) {
   router.push({ name: 'today', query: key === todayKey.value ? {} : { dia: key } })
@@ -147,20 +156,21 @@ watch(
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-4">
+  <div class="mx-auto flex max-w-3xl flex-col gap-3 tabular-nums">
     <div class="flex items-center gap-2">
-      <Button text rounded aria-label="Dia anterior" class="size-11 shrink-0" @click="shift(-1)">
-        <span aria-hidden="true" class="text-xl">‹</span>
-      </Button>
-      <label
-        class="relative flex min-h-11 flex-1 cursor-pointer flex-col items-center justify-center"
+      <button
+        type="button"
+        aria-label="Dia anterior"
+        class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2"
+        @click="shift(-1)"
       >
-        <span class="text-lg font-semibold leading-tight first-letter:uppercase">
-          {{ relativeLabel ?? longDate.format(day) }}
-        </span>
-        <span v-if="relativeLabel" class="text-sm text-surface-600">
-          {{ longDate.format(day) }}
-        </span>
+        <AppIcon name="chevron-left" class="size-[18px]" />
+      </button>
+      <label
+        class="relative flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-eb-border bg-eb-surface px-2 text-[15px] font-semibold hover:bg-eb-surface-2"
+      >
+        <AppIcon name="calendar" class="size-4 shrink-0" />
+        <span class="truncate">{{ dayLabel }}</span>
         <input
           type="date"
           :value="dayKey"
@@ -170,105 +180,119 @@ watch(
           @change="pick"
         />
       </label>
-      <Button text rounded aria-label="Dia seguinte" class="size-11 shrink-0" @click="shift(1)">
-        <span aria-hidden="true" class="text-xl">›</span>
-      </Button>
-    </div>
-    <div v-if="!isToday" class="-mt-2 text-center">
       <button
         type="button"
-        class="min-h-11 rounded-lg px-3 text-sm font-medium text-primary-700 hover:bg-primary-50"
+        aria-label="Dia seguinte"
+        class="flex size-11 shrink-0 items-center justify-center rounded-xl border border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2"
+        @click="shift(1)"
+      >
+        <AppIcon name="chevron-right" class="size-[18px]" />
+      </button>
+    </div>
+    <div v-if="!isToday" class="-my-1 text-center">
+      <button
+        type="button"
+        class="min-h-11 rounded-xl px-3 text-sm font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
         @click="goTo(todayKey)"
       >
         Voltar a hoje
       </button>
     </div>
 
-    <button
-      v-if="pendingBefore.length"
-      type="button"
-      class="flex min-h-11 items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-left text-amber-900"
-      @click="jumpToOldestPending"
-    >
-      <span>
-        <strong>Pendentes de dias anteriores:</strong>
-        {{ pendingBefore.length }}
-      </span>
-      <span class="text-sm font-medium underline">Ver o mais antigo</span>
-    </button>
-
     <section
       v-if="summary.total"
-      class="grid grid-cols-2 gap-3 rounded-xl border border-surface-200 bg-surface-0 p-4 sm:grid-cols-4"
+      class="rounded-2xl border border-eb-border bg-eb-surface p-4"
       aria-label="Resumo do dia"
     >
-      <div>
-        <div class="text-xs text-surface-500">Prognósticos</div>
-        <div class="text-lg font-semibold tabular-nums">{{ summary.total }}</div>
+      <div class="flex items-baseline justify-between gap-3 text-[13px] text-eb-muted">
+        <span class="font-semibold">Lucro punter</span>
+        <span>{{ summary.settled }} de {{ summary.total }} liquidados</span>
       </div>
-      <div>
-        <div class="text-xs text-surface-500">Liquidados</div>
-        <div class="text-lg font-semibold tabular-nums">
-          {{ summary.settled }}/{{ summary.total }}
+      <div class="mt-1 flex flex-wrap items-baseline gap-x-2.5">
+        <span
+          class="text-[32px] font-bold tracking-tight"
+          :class="summary.punterBets ? profitClass(summary.punterProfit) : 'text-eb-muted'"
+        >
+          {{ summary.punterBets ? money(summary.punterProfit) : '—' }}
+        </span>
+        <span v-if="summary.punterBets" class="text-[13px] text-eb-muted">{{ staked }}</span>
+      </div>
+      <div class="mt-3.5 grid grid-cols-3 gap-2">
+        <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
+          <div class="text-xs text-eb-muted">Prognósticos</div>
+          <div class="mt-0.5 text-lg font-bold">{{ summary.total }}</div>
         </div>
-      </div>
-      <div>
-        <div class="text-xs text-surface-500">Taxa de acerto</div>
-        <div class="text-lg font-semibold tabular-nums">
-          {{ summary.hitRate == null ? '—' : percent.format(summary.hitRate) }}
+        <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
+          <div class="text-xs text-eb-muted">Taxa de acerto</div>
+          <div class="mt-0.5 text-lg font-bold">
+            {{ summary.hitRate == null ? '—' : percent.format(summary.hitRate) }}
+          </div>
         </div>
-      </div>
-      <div>
-        <div class="text-xs text-surface-500">P/L punter</div>
-        <div class="font-semibold tabular-nums" :class="profitClass(summary.punterProfit)">
-          {{ summary.punterBets ? formatMoney(summary.punterProfit, settings.unitValue) : '—' }}
+        <div class="min-w-0 rounded-xl bg-eb-surface-2 p-2.5">
+          <div class="text-xs text-eb-muted">Em aberto</div>
+          <div class="mt-0.5 text-lg font-bold">{{ summary.total - summary.settled }}</div>
         </div>
       </div>
     </section>
 
+    <button
+      v-if="pendingBefore.length"
+      type="button"
+      class="flex min-h-12 items-center gap-2.5 rounded-xl bg-eb-amber-soft px-3.5 text-left text-sm font-semibold text-eb-amber"
+      @click="jumpToOldestPending"
+    >
+      <AppIcon name="clock" class="size-[18px] shrink-0" />
+      <span class="flex-1">
+        {{ pendingBefore.length }}
+        {{ pendingBefore.length === 1 ? 'pendente' : 'pendentes' }} de dias anteriores
+      </span>
+      <span>Ver</span>
+    </button>
+
     <Message v-if="error || settleError" severity="error">{{ error ?? settleError }}</Message>
 
-    <p v-if="loading" class="text-center text-surface-500">A carregar…</p>
+    <p v-if="loading" class="text-center text-eb-muted">A carregar…</p>
 
     <section
       v-else-if="!groups.length && !error"
-      class="flex flex-col items-center gap-3 rounded-xl border border-surface-200 bg-surface-0 p-8 text-center"
+      class="flex flex-col items-center gap-3 rounded-2xl border border-eb-border bg-eb-surface p-8 text-center"
     >
-      <p class="m-0 text-surface-600">Sem prognósticos neste dia.</p>
+      <p class="m-0 text-eb-muted">Sem prognósticos neste dia.</p>
       <RouterLink
         :to="{ name: 'predictions' }"
-        class="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 font-medium text-primary-contrast"
+        class="inline-flex min-h-11 items-center rounded-xl bg-eb-accent px-4 font-semibold text-eb-on-accent"
       >
         Registar prognóstico
       </RouterLink>
     </section>
 
-    <section
-      v-for="group in groups"
-      v-else
-      :key="group.eventId"
-      class="rounded-xl border border-surface-200 bg-surface-0"
-    >
+    <section v-for="group in groups" v-else :key="group.eventId" class="mt-2">
       <RouterLink
         :to="{ name: 'event', params: { id: group.eventId } }"
-        class="flex min-h-11 flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-t-xl border-b border-surface-200 px-4 py-2.5 text-surface-900 hover:bg-surface-50"
+        class="flex min-h-11 items-center gap-2.5 rounded-xl text-eb-text"
       >
-        <span class="font-semibold tabular-nums">
+        <span class="rounded-lg bg-eb-surface-2 px-2 py-1 text-[13px] font-bold">
           {{ time.format(new Date(group.event.kickoff_at)) }}
         </span>
-        <span class="font-semibold">
-          {{ group.event.home_team.name }} – {{ group.event.away_team.name }}
+        <span class="min-w-0 flex-1">
+          <span class="block text-[15px] font-semibold">
+            {{ group.event.home_team.name }} – {{ group.event.away_team.name }}
+          </span>
+          <span v-if="group.event.league" class="block text-xs text-eb-muted">
+            {{ group.event.league.name }}
+          </span>
         </span>
-        <span v-if="group.event.league" class="text-sm text-surface-500">
-          {{ group.event.league.name }}
-        </span>
+        <AppIcon name="chevron-right" class="size-[18px] shrink-0 text-eb-muted" />
       </RouterLink>
-      <div class="divide-y divide-surface-100 px-4">
+      <div
+        class="mt-1.5 divide-y divide-eb-border overflow-hidden rounded-2xl border border-eb-border bg-eb-surface"
+      >
         <PredictionRow
           v-for="prediction in group.predictions"
           :key="prediction.id"
           :prediction="prediction"
           :unit-value="settings.unitValue"
+          :money-display="settings.moneyDisplay"
           :busy="saving.has(prediction.id)"
           @settle="settle(prediction, $event)"
         />

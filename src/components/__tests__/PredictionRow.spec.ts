@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PredictionRow from '../PredictionRow.vue'
+import type { MoneyDisplay } from '@/domain/money'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
 
 const prediction = (overrides: Partial<PredictionWithRelations> = {}) =>
@@ -19,10 +20,17 @@ const prediction = (overrides: Partial<PredictionWithRelations> = {}) =>
     ...overrides,
   }) as PredictionWithRelations
 
-const mountRow = (status: BetStatus, overrides: Partial<PredictionWithRelations> = {}) =>
+const mountRow = (
+  status: BetStatus,
+  overrides: Partial<PredictionWithRelations> = {},
+  moneyDisplay: MoneyDisplay = 'units',
+) =>
   mount(PredictionRow, {
-    props: { prediction: prediction({ status, ...overrides }), unitValue: 10 },
+    props: { prediction: prediction({ status, ...overrides }), unitValue: 10, moneyDisplay },
   })
+
+const box = (wrapper: ReturnType<typeof mountRow>, name: 'stake' | 'result') =>
+  wrapper.get(`[data-box="${name}"]`)
 
 const button = (wrapper: ReturnType<typeof mountRow>, label: string) =>
   wrapper.findAll('button').find((b) => b.text() === label)!
@@ -41,10 +49,45 @@ describe('PredictionRow', () => {
     expect(wrapper.emitted('settle')).toEqual([['pending']])
   })
 
-  it('shows real profit for punter bets and virtual profit otherwise', () => {
-    expect(mountRow('won').text()).toContain('+1,80 u · +18,00 €')
-    expect(mountRow('pending').text()).not.toContain(' u · ')
-    const virtual = mountRow('lost', { is_punter: false, stake_units: null }).text()
-    expect(virtual).toContain('-1,00 u (virtual)')
+  it('shows the stake and the real profit of a punter bet', () => {
+    const won = mountRow('won')
+    expect(box(won, 'stake').text()).toBe('Apostado2,00')
+    expect(box(won, 'stake').classes()).toContain('bg-eb-info-soft')
+    expect(box(won, 'result').text()).toBe('Lucro+1,80')
+    expect(box(won, 'result').classes()).toContain('bg-eb-pos-soft')
+    expect(box(mountRow('lost'), 'result').text()).toBe('Prejuízo-2,00')
+    expect(box(mountRow('void'), 'result').text()).toBe('Nulo0,00')
+  })
+
+  it('shows a pending row with its stake and no result yet', () => {
+    const pending = mountRow('pending')
+    expect(box(pending, 'stake').text()).toBe('Apostado2,00')
+    expect(box(pending, 'result').text()).toBe('Por resolver—')
+  })
+
+  it('marks non-punter results as virtual, on 1 unit', () => {
+    const virtual = mountRow('lost', { is_punter: false, stake_units: null })
+    expect(box(virtual, 'stake').text()).toBe('Sem aposta—')
+    expect(box(virtual, 'result').text()).toBe('Prejuízovirtual-1,00')
+    expect(box(virtual, 'result').classes()).toContain('bg-eb-neg-soft')
+  })
+
+  it('shows money in euros when chosen', () => {
+    const won = mountRow('won', {}, 'euros')
+    expect(box(won, 'stake').text()).toBe('Apostado20,00 €')
+    expect(box(won, 'result').text()).toBe('Lucro+18,00 €')
+  })
+
+  it('labels the value band with its index', () => {
+    // 65% at 1.90 → 1.235, shown as 1,23 (floating point).
+    expect(mountRow('pending').get('[data-band]').text()).toContain('Favorável (1,23)')
+    expect(mountRow('pending', { odd: 2.2 }).get('[data-band]').text()).toContain('Banger (1,43)')
+    expect(mountRow('pending', { odd: 1.55 }).get('[data-band]').text()).toMatch(/Neutro$/)
+    expect(mountRow('pending', { odd: 1.4 }).get('[data-band]').text()).toContain(
+      'Valor reduzido (0,91)',
+    )
+    expect(mountRow('pending', { odd: 1.2 }).get('[data-band]').text()).toContain(
+      'Odd sem valor (0,78)',
+    )
   })
 })
