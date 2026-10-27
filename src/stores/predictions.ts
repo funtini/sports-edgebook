@@ -76,9 +76,22 @@ export const usePredictionsStore = defineStore('predictions', () => {
     )
   }
 
+  /**
+   * Bookmakers used before, for autocomplete; most used first.
+   * TODO: read a distinct-bookmakers view; PostgREST caps this select at 1000 rows.
+   */
+  async function listBookmakers(): Promise<string[]> {
+    const rows = unwrap<{ bookmaker: string }[]>(
+      await requireSupabase().from('predictions').select('bookmaker').not('bookmaker', 'is', null),
+    )
+    const counts = new Map<string, number>()
+    for (const { bookmaker } of rows) counts.set(bookmaker, (counts.get(bookmaker) ?? 0) + 1)
+    return [...counts.keys()].sort((a, b) => counts.get(b)! - counts.get(a)! || a.localeCompare(b))
+  }
+
   async function remove(id: string): Promise<void> {
     unwrap(await requireSupabase().from('predictions').delete().eq('id', id))
   }
 
-  return { create, listByDate, listByEvent, listPending, settle, remove }
+  return { create, listByDate, listByEvent, listPending, listBookmakers, settle, remove }
 })

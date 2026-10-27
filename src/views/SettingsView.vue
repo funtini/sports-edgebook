@@ -6,6 +6,7 @@ import Message from 'primevue/message'
 import { CONFIDENCE_LABELS, CONFIDENCE_LEVELS } from '@/domain/confidence'
 import { DEFAULT_UNIT_VALUE, UNIT_VALUE_PRESETS, formatMoney } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
+import { userMessage } from '@/lib/errors'
 import { useSettingsStore } from '@/stores/settings'
 
 const store = useSettingsStore()
@@ -39,20 +40,13 @@ const bankrollInEuros = computed(() =>
     : formatMoney(bankroll.value, unitValue.value ?? 0, { signed: false }),
 )
 
-function message(e: unknown, fallback: string): string {
-  if (e && typeof e === 'object' && 'issues' in e && Array.isArray(e.issues)) {
-    return e.issues[0]?.message ?? fallback
-  }
-  return e instanceof Error ? e.message : fallback
-}
-
 onMounted(async () => {
   try {
     const row = await store.ensureLoaded()
     unitValue.value = row.unit_value
     bankroll.value = row.starting_bankroll_units
   } catch (e) {
-    error.value = message(e, 'Não foi possível carregar as definições.')
+    error.value = userMessage(e, 'Não foi possível carregar as definições.')
   } finally {
     loading.value = false
   }
@@ -69,7 +63,7 @@ async function save() {
     })
     saved.value = true
   } catch (e) {
-    error.value = message(e, 'Não foi possível guardar as definições.')
+    error.value = userMessage(e, 'Não foi possível guardar as definições.')
   } finally {
     saving.value = false
   }

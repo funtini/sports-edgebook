@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { confidenceAnchorsSchema, eventCreateSchema, predictionCreateSchema } from '../schemas'
+import {
+  confidenceAnchorsSchema,
+  eventCreateSchema,
+  marketFormSchema,
+  newGameFormSchema,
+  predictionCreateSchema,
+  predictionFormSchema,
+} from '../schemas'
 
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
 const MARKET_ID = '6a1e2f3d-4c5b-4a69-8b7c-0d1e2f3a4b5c'
@@ -105,5 +112,64 @@ describe('confidenceAnchorsSchema', () => {
       confidenceAnchorsSchema.safeParse({ '1': 0.4, '2': 0.55, '3': 0.65, '4': 0.75, '5': 1 })
         .success,
     ).toBe(false)
+  })
+})
+
+describe('predictionFormSchema', () => {
+  const { event_id: _event, market_id: _market, ...fields } = prediction
+
+  it('validates the prediction fields without game or market ids', () => {
+    expect(predictionFormSchema.safeParse(fields).success).toBe(true)
+    expect(issuePaths(predictionFormSchema.safeParse({ ...fields, is_punter: true }))).toEqual([
+      'stake_units',
+    ])
+  })
+
+  it('asks for the confidence and odd in PT-PT when missing', () => {
+    const result = predictionFormSchema.safeParse({ selection: 'Benfica' })
+    expect(result.error?.issues.map((i) => i.message)).toEqual([
+      'Odd inválida',
+      'Escolhe a confiança',
+    ])
+  })
+})
+
+describe('marketFormSchema', () => {
+  it('tidies names and requires both', () => {
+    expect(marketFormSchema.parse({ category: ' Golos ', name: 'Mais  de' })).toEqual({
+      category: 'Golos',
+      name: 'Mais de',
+    })
+    expect(issuePaths(marketFormSchema.safeParse({ category: ' ', name: '' }))).toEqual([
+      'category',
+      'name',
+    ])
+  })
+})
+
+describe('newGameFormSchema', () => {
+  const game = { date: '2026-10-27', time: '20:15', league: '', home: 'Benfica', away: 'Porto' }
+
+  it('reads date and time as local time and leaves a blank league out', () => {
+    expect(newGameFormSchema.parse(game)).toEqual({
+      kickoff_at: new Date(2026, 9, 27, 20, 15).toISOString(),
+      league: null,
+      home: 'Benfica',
+      away: 'Porto',
+    })
+  })
+
+  it('requires date, time and both teams', () => {
+    const result = newGameFormSchema.safeParse({ ...game, time: '', home: ' ', away: '' })
+    expect(issuePaths(result)).toEqual(['time', 'home', 'away'])
+  })
+
+  it('rejects the same team twice, ignoring case and extra spaces', () => {
+    const result = newGameFormSchema.safeParse({
+      ...game,
+      home: 'Sporting  CP',
+      away: 'sporting cp',
+    })
+    expect(issuePaths(result)).toEqual(['away'])
   })
 })
