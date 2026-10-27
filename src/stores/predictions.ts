@@ -63,6 +63,19 @@ export const usePredictionsStore = defineStore('predictions', () => {
     return rows.sort(byKickoff)
   }
 
+  /** Pending predictions on games that kicked off before `date` (local day), oldest first. */
+  async function listPendingBefore(date: Date): Promise<PredictionWithRelations[]> {
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+    const rows = unwrap<PredictionWithRelations[]>(
+      await requireSupabase()
+        .from('predictions')
+        .select(PREDICTION_SELECT)
+        .eq('status', 'pending')
+        .lt('event.kickoff_at', start.toISOString()),
+    )
+    return rows.sort(byKickoff)
+  }
+
   /** Sets the status; `settled_at` is now, or cleared when going back to pending. */
   async function settle(id: string, status: BetStatus): Promise<PredictionWithRelations> {
     const settled_at = status === 'pending' ? null : new Date().toISOString()
@@ -80,5 +93,5 @@ export const usePredictionsStore = defineStore('predictions', () => {
     unwrap(await requireSupabase().from('predictions').delete().eq('id', id))
   }
 
-  return { create, listByDate, listByEvent, listPending, settle, remove }
+  return { create, listByDate, listByEvent, listPending, listPendingBefore, settle, remove }
 })

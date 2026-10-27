@@ -111,6 +111,16 @@ describe('predictions store', () => {
     ])
   })
 
+  it('lists pending predictions on games before a local day', async () => {
+    const queries = setup(() => ({ data: [] }))
+    await usePredictionsStore().listPendingBefore(new Date(2026, 9, 27, 13, 30))
+    expect(argsOf(queries[0]!, 'eq')).toEqual(['status', 'pending'])
+    expect(argsOf(queries[0]!, 'lt')).toEqual([
+      'event.kickoff_at',
+      new Date(2026, 9, 27).toISOString(),
+    ])
+  })
+
   it('surfaces database errors', async () => {
     setup(() => ({ error: new Error('permission denied') }))
     await expect(usePredictionsStore().remove('p')).rejects.toThrow('permission denied')

@@ -50,6 +50,8 @@ The settings screen (`/definicoes`) edits `unit_value` (quick picks 10, 20, 30, 
 
 Code: `src/domain/settlement.ts`.
 
+The today view (`/`) settles predictions with one tap (Ganho / Perdido / Nulo; tapping the active one again returns to pending). A row's profit uses the real stake for punter bets and 1 virtual unit otherwise; the day summary shows count, settled, hit rate (voids excluded) and P/L of punter bets only. Code: `src/domain/daySummary.ts`.
+
 ## Data model
 
 See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets`, `predictions`, `multiples`, `multiple_legs`, `user_settings`. Metrics will be SQL views (`v_*`) added in phase 2.
