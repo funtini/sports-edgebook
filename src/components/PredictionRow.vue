@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useLocale } from '@/composables/useLocale'
 import { numberFormat } from '@/domain/intl'
+import type { ConfidenceLevel } from '@/domain/confidence'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import { valueBand, valueIndex } from '@/domain/value'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
+import ConfidenceBadge from './ConfidenceBadge.vue'
 import { VALUE_BAND_STYLES, valueRowLabel } from './valueBands'
 
 const props = defineProps<{
@@ -43,11 +45,6 @@ const selection = computed(() => {
   return value == null
     ? selection
     : `${selection} ${numberFormat(intlLocale.value, { maximumFractionDigits: 2 }).format(value)}`
-})
-
-const confidence = computed(() => {
-  const level = props.prediction.confidence
-  return `${level} · ${t(`confidence.${level}`)}`
 })
 
 const value = computed(() => {
@@ -125,15 +122,13 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
     </div>
 
     <div class="mt-2 flex flex-wrap items-center gap-2">
-      <span class="rounded-full bg-eb-surface-2 px-2 py-0.5 text-xs font-semibold">
-        {{ confidence }}
-      </span>
+      <ConfidenceBadge :level="prediction.confidence as ConfidenceLevel" />
       <span
-        class="inline-flex items-center gap-1.5 text-xs font-semibold"
-        :class="value.text"
+        class="rounded-full px-2 py-0.5 text-xs font-bold"
+        :class="[value.text, value.soft]"
+        :title="t('predictionRow.valueTooltip')"
         :data-band="value.band"
       >
-        <span class="inline-block size-2 rounded-full" :class="value.fill" aria-hidden="true" />
         <span class="sr-only">{{ `${t('predictionRow.valueIndex')} ` }}</span
         >{{ value.label }}
       </span>

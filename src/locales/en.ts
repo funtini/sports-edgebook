@@ -5,7 +5,7 @@ const en: Messages = {
     loading: 'Loading…',
     saving: 'Saving…',
     backToToday: 'Back to today',
-    newPrediction: 'Log a prediction',
+    newPrediction: 'New prediction',
     predictions: 'Predictions',
   },
   app: {
@@ -90,6 +90,7 @@ const en: Messages = {
     noStake: 'No stake',
     virtual: 'virtual',
     valueIndex: 'Value index:',
+    valueTooltip: 'Value index (probability × odd)',
     settle: 'Settle',
     outcome: {
       won: 'Won',

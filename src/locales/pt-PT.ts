@@ -8,7 +8,7 @@ const ptPT = {
     loading: 'A carregar…',
     saving: 'A guardar…',
     backToToday: 'Voltar a hoje',
-    newPrediction: 'Registar prognóstico',
+    newPrediction: 'Novo prognóstico',
     predictions: 'Prognósticos',
   },
   app: {
@@ -94,6 +94,7 @@ const ptPT = {
     noStake: 'Sem aposta',
     virtual: 'virtual',
     valueIndex: 'Índice de valor:',
+    valueTooltip: 'Índice de valor (probabilidade × odd)',
     settle: 'Liquidar',
     outcome: {
       won: 'Ganho',
