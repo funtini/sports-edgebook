@@ -57,7 +57,7 @@ describe('events store', () => {
         home_team_id: team,
         away_team_id: team,
       }),
-    ).rejects.toThrow(/têm de ser diferentes/)
+    ).rejects.toThrow(/validation.teamsDifferent/)
     expect(queries).toHaveLength(0)
   })
 
@@ -82,14 +82,14 @@ describe('events store', () => {
         home_score: 2,
         away_score: null,
       }),
-    ).rejects.toThrow(/duas equipas/)
+    ).rejects.toThrow(/validation.bothGoalsRequired/)
     expect(queries).toHaveLength(0)
   })
 
   it('rejects a malformed id when saving the score', async () => {
     const queries = setup(() => ({}))
     await expect(useEventsStore().setScore('e1', { home_score: 1, away_score: 0 })).rejects.toThrow(
-      /Identificador inválido/,
+      /validation.idInvalid/,
     )
     expect(queries).toHaveLength(0)
   })
@@ -97,7 +97,7 @@ describe('events store', () => {
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
     await expect(useEventsStore().getById('0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60')).rejects.toThrow(
-      /Supabase não está configurado/,
+      /errors.supabaseNotConfigured/,
     )
   })
 })

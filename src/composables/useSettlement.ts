@@ -6,7 +6,7 @@ import { useLatestRequest } from './useLatestRequest'
 
 /**
  * One-tap settlement for a list of `PredictionRow`s. Optimistic: `rows` shows the new status at
- * once and rolls back if the save fails, with the reason in `error`.
+ * once and rolls back if the save fails, with the reason in `error` (a translation key).
  */
 export function useSettlement(rows: Ref<PredictionWithRelations[]>) {
   const predictions = usePredictionsStore()
@@ -39,7 +39,7 @@ export function useSettlement(rows: Ref<PredictionWithRelations[]>) {
     } catch (e) {
       if (!current()) return
       replace(previous)
-      error.value = userMessage(e, 'Não foi possível guardar a liquidação.')
+      error.value = userMessage(e, 'settlement.saveFailed')
     } finally {
       if (current()) {
         const next = new Set(saving.value)

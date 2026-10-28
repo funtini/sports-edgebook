@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, dateTimeFormat } from './intl'
+
 /** Local midnight of the day `date` falls on. */
 export function startOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -27,7 +29,13 @@ export function fromDayKey(key: string): Date | null {
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
-/** `ter, 27 out`: short PT-PT day label (Intl's pt-PT short weekday is the full name). */
-export function shortDayLabel(date: Date): string {
-  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+/**
+ * Short day label: PT-PT `ter, 27 out` (built by hand, Intl's pt-PT short weekday is the full
+ * name); other locales from Intl, e.g. en-GB `Tue 27 Oct`.
+ */
+export function shortDayLabel(date: Date, locale: string = DEFAULT_LOCALE): string {
+  if (locale === DEFAULT_LOCALE) {
+    return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`
+  }
+  return dateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(date)
 }

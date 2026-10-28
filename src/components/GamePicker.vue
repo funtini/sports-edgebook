@@ -4,11 +4,13 @@ import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocompl
 import Button from 'primevue/button'
 import AppIcon from './AppIcon.vue'
 import InputText from 'primevue/inputtext'
+import { dateTimeFormat } from '@/domain/intl'
 import { LocalEventSource, type EventSearchResult, type EventSource } from '@/domain/eventSource'
 import { suggestNames } from '@/domain/names'
 import { emptyNewGame } from '@/domain/predictionDraft'
 import type { NewGameForm } from '@/domain/schemas'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useLocale } from '@/composables/useLocale'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
 import { useReferenceStore } from '@/stores/reference'
@@ -38,20 +40,21 @@ const leagueSuggestions = ref<string[]>([])
 const teamSuggestions = ref<string[]>([])
 const searches = useLatestRequest()
 
-const kickoffFormat = new Intl.DateTimeFormat('pt-PT', {
+const { t, intlLocale, message } = useLocale()
+const KICKOFF: Intl.DateTimeFormatOptions = {
   weekday: 'short',
   day: '2-digit',
   month: '2-digit',
   hour: '2-digit',
   minute: '2-digit',
-})
+}
 
 function label(result: EventSearchResult): string {
   return `${result.homeTeam} – ${result.awayTeam}`
 }
 
 function details(result: EventSearchResult): string {
-  const kickoff = kickoffFormat.format(new Date(result.kickoffAt))
+  const kickoff = dateTimeFormat(intlLocale.value, KICKOFF).format(new Date(result.kickoffAt))
   return result.leagueName ? `${kickoff} · ${result.leagueName}` : kickoff
 }
 
@@ -64,7 +67,7 @@ async function search(event: AutoCompleteCompleteEvent) {
   } catch (e) {
     if (!isLatest()) return
     results.value = []
-    searchError.value = userMessage(e, 'Não foi possível procurar jogos.')
+    searchError.value = userMessage(e, 'gamePicker.searchFailed')
   }
 }
 
@@ -104,15 +107,15 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         class="inline-flex items-center gap-1.5 rounded-full bg-eb-accent-soft px-2.5 py-1 text-xs font-bold text-eb-accent-text"
       >
         <AppIcon name="check" class="size-3.5" stroke-width="2.5" />
-        Mesmo jogo
+        {{ t('gamePicker.kept') }}
       </span>
-      <span v-else class="text-xs font-semibold text-eb-muted">Jogo</span>
+      <span v-else class="text-xs font-semibold text-eb-muted">{{ t('gamePicker.game') }}</span>
       <button
         type="button"
         class="min-h-11 shrink-0 px-1 text-sm font-semibold text-eb-accent-text"
         @click="clear"
       >
-        Outro jogo
+        {{ t('gamePicker.other') }}
       </button>
     </div>
     <div class="text-[17px] font-bold break-words">{{ label(game) }}</div>
@@ -120,13 +123,13 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
   </div>
 
   <template v-else-if="!newGame">
-    <label for="game" class="sr-only">Procurar jogo</label>
+    <label for="game" class="sr-only">{{ t('gamePicker.search') }}</label>
     <AutoComplete
       v-model="query"
       input-id="game"
       :suggestions="results"
       :option-label="label"
-      placeholder="Procurar equipa (ex.: Benfica)"
+      :placeholder="t('gamePicker.placeholder')"
       input-class="min-h-12 w-full"
       :invalid="!!(errors.game || searchError)"
       fluid
@@ -140,15 +143,15 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         </div>
       </template>
       <template #empty>
-        <span class="text-sm text-eb-muted">Nenhum jogo encontrado.</span>
+        <span class="text-sm text-eb-muted">{{ t('gamePicker.empty') }}</span>
       </template>
     </AutoComplete>
     <small v-if="searchError || errors.game" class="text-eb-neg">
-      {{ searchError ?? errors.game }}
+      {{ message(searchError ?? errors.game ?? '') }}
     </small>
     <Button
       type="button"
-      label="Novo jogo"
+      :label="t('gamePicker.newGame')"
       text
       class="min-h-11 self-start"
       @click="startNewGame"
@@ -158,7 +161,9 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
   <div v-else class="flex flex-col gap-3">
     <div class="grid grid-cols-2 gap-3">
       <div class="flex min-w-0 flex-col gap-1">
-        <label for="new-date" class="text-[13px] font-semibold text-eb-muted">Data</label>
+        <label for="new-date" class="text-[13px] font-semibold text-eb-muted">{{
+          t('gamePicker.date')
+        }}</label>
         <InputText
           id="new-date"
           v-model="newGame.date"
@@ -168,7 +173,9 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         />
       </div>
       <div class="flex min-w-0 flex-col gap-1">
-        <label for="new-time" class="text-[13px] font-semibold text-eb-muted">Hora</label>
+        <label for="new-time" class="text-[13px] font-semibold text-eb-muted">{{
+          t('gamePicker.time')
+        }}</label>
         <InputText
           id="new-time"
           v-model="newGame.time"
@@ -178,13 +185,13 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         />
       </div>
       <small v-if="errors.date || errors.time" class="col-span-2 text-eb-neg">
-        {{ errors.date ?? errors.time }}
+        {{ message(errors.date ?? errors.time ?? '') }}
       </small>
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-league" class="text-[13px] font-semibold text-eb-muted"
-        >Liga (opcional)</label
-      >
+      <label for="new-league" class="text-[13px] font-semibold text-eb-muted">{{
+        t('gamePicker.league')
+      }}</label>
       <AutoComplete
         v-model="newGame.league"
         input-id="new-league"
@@ -195,7 +202,9 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
       />
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-home" class="text-[13px] font-semibold text-eb-muted">Equipa da casa</label>
+      <label for="new-home" class="text-[13px] font-semibold text-eb-muted">{{
+        t('gamePicker.home')
+      }}</label>
       <AutoComplete
         v-model="newGame.home"
         input-id="new-home"
@@ -205,10 +214,12 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         fluid
         @complete="completeTeam"
       />
-      <small v-if="errors.home" class="text-eb-neg">{{ errors.home }}</small>
+      <small v-if="errors.home" class="text-eb-neg">{{ message(errors.home) }}</small>
     </div>
     <div class="flex flex-col gap-1">
-      <label for="new-away" class="text-[13px] font-semibold text-eb-muted">Equipa de fora</label>
+      <label for="new-away" class="text-[13px] font-semibold text-eb-muted">{{
+        t('gamePicker.away')
+      }}</label>
       <AutoComplete
         v-model="newGame.away"
         input-id="new-away"
@@ -218,11 +229,11 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
         fluid
         @complete="completeTeam"
       />
-      <small v-if="errors.away" class="text-eb-neg">{{ errors.away }}</small>
+      <small v-if="errors.away" class="text-eb-neg">{{ message(errors.away) }}</small>
     </div>
     <Button
       type="button"
-      label="Procurar jogo existente"
+      :label="t('gamePicker.searchExisting')"
       text
       class="min-h-11 self-start"
       @click="clear"

@@ -70,7 +70,7 @@ describe('PunterFields', () => {
     expect(hint(render({ isPunter: true, stake: '2' }))).toBe('unidades')
 
     const euros = render({ isPunter: true, stake: '1,5', unitValue: 20, moneyDisplay: 'euros' })
-    expect(hint(euros)).toBe('unidades · 30,00 €')
+    expect(hint(euros)).toBe('unidades · 30,00\u00a0€')
     await euros.setProps({ stake: 'x' })
     expect(hint(euros)).toBe('unidades')
   })

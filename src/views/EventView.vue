@@ -6,8 +6,10 @@ import Message from 'primevue/message'
 import AppIcon from '@/components/AppIcon.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
+import { useLocale } from '@/composables/useLocale'
 import { useSettlement } from '@/composables/useSettlement'
 import { shortDayLabel } from '@/domain/days'
+import { formatTime } from '@/domain/intl'
 import { scoreFormSchema, toScoreForm, type ScoreForm } from '@/domain/schemas'
 import { userMessage } from '@/lib/errors'
 import { useEventsStore } from '@/stores/events'
@@ -20,6 +22,7 @@ const props = defineProps<{ id: string }>()
 const events = useEventsStore()
 const predictions = usePredictionsStore()
 const settings = useSettingsStore()
+const { t, intlLocale, message } = useLocale()
 
 const event = ref<EventWithTeams | null>(null)
 const rows = ref<PredictionWithRelations[]>([])
@@ -32,13 +35,11 @@ const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
 const savingScore = ref(false)
 
-const time = new Intl.DateTimeFormat('pt-PT', { hour: '2-digit', minute: '2-digit' })
-
 /** `ter, 27 out · 20:15` */
 const kickoff = computed(() => {
   if (!event.value) return ''
   const date = new Date(event.value.kickoff_at)
-  return `${shortDayLabel(date)} · ${time.format(date)}`
+  return `${shortDayLabel(date, intlLocale.value)} · ${formatTime(date, intlLocale.value)}`
 })
 const hasScore = computed(() => event.value?.home_score != null && event.value.away_score != null)
 const settled = computed(() => rows.value.filter((p) => p.status !== 'pending').length)
@@ -65,7 +66,7 @@ async function load() {
     event.value = found
   } catch (e) {
     if (!isLatest()) return
-    error.value = userMessage(e, 'Não foi possível carregar o jogo.')
+    error.value = userMessage(e, 'event.loadFailed')
   } finally {
     if (isLatest()) loading.value = false
   }
@@ -78,7 +79,7 @@ async function saveScore() {
   scoreError.value = null
   const parsed = scoreFormSchema.safeParse(score.value)
   if (!parsed.success) {
-    scoreError.value = parsed.error.issues[0]?.message ?? 'Resultado inválido'
+    scoreError.value = parsed.error.issues[0]?.message ?? 'event.invalidScore'
     return
   }
   const id = event.value.id
@@ -91,7 +92,7 @@ async function saveScore() {
     event.value = saved
     score.value = toScoreForm(saved)
   } catch (e) {
-    if (isSameGame()) scoreError.value = userMessage(e, 'Não foi possível guardar o resultado.')
+    if (isSameGame()) scoreError.value = userMessage(e, 'event.saveScoreFailed')
   } finally {
     if (isSameGame()) savingScore.value = false
   }
@@ -105,24 +106,24 @@ async function saveScore() {
       class="-mt-2 flex min-h-11 items-center gap-1 self-start text-[15px] font-semibold text-eb-accent-text"
     >
       <AppIcon name="chevron-left" class="size-[18px]" />
-      Hoje
+      {{ t('app.nav.today') }}
     </RouterLink>
 
-    <p v-if="loading" class="text-center text-eb-muted">A carregar…</p>
+    <p v-if="loading" class="text-center text-eb-muted">{{ t('common.loading') }}</p>
 
-    <Message v-else-if="error" severity="error">{{ error }}</Message>
+    <Message v-else-if="error" severity="error">{{ message(error) }}</Message>
 
     <section
       v-else-if="!event"
       class="flex flex-col items-center gap-3 rounded-2xl border border-eb-border bg-eb-surface p-8 text-center"
     >
-      <h1 class="m-0 text-xl font-bold">Jogo não encontrado</h1>
-      <p class="m-0 text-eb-muted">Este jogo não existe ou foi apagado.</p>
+      <h1 class="m-0 text-xl font-bold">{{ t('event.notFound') }}</h1>
+      <p class="m-0 text-eb-muted">{{ t('event.notFoundText') }}</p>
       <RouterLink
         :to="{ name: 'today' }"
         class="inline-flex min-h-11 items-center rounded-xl px-4 font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
       >
-        Voltar a hoje
+        {{ t('common.backToToday') }}
       </RouterLink>
     </section>
 
@@ -142,19 +143,19 @@ async function saveScore() {
           >
             {{ event.home_score }} – {{ event.away_score }}
           </span>
-          <span v-else class="px-1 text-base font-semibold text-eb-muted">vs</span>
+          <span v-else class="px-1 text-base font-semibold text-eb-muted">{{ t('event.vs') }}</span>
           <span class="break-words">{{ event.away_team.name }}</span>
         </h1>
 
         <form
           class="mt-[18px] flex flex-wrap items-end gap-2 border-t border-eb-border pt-3.5"
-          aria-label="Resultado"
+          :aria-label="t('event.result')"
           novalidate
           @submit.prevent="saveScore"
         >
           <div class="flex flex-col gap-1.5">
             <label for="home-score" class="text-[13px] font-semibold text-eb-muted">
-              Casa<span class="sr-only"> ({{ event.home_team.name }})</span>
+              {{ t('event.home') }}<span class="sr-only"> ({{ event.home_team.name }})</span>
             </label>
             <InputText
               id="home-score"
@@ -169,7 +170,7 @@ async function saveScore() {
           <span class="flex h-11 items-center text-eb-muted" aria-hidden="true">–</span>
           <div class="flex flex-col gap-1.5">
             <label for="away-score" class="text-[13px] font-semibold text-eb-muted">
-              Fora<span class="sr-only"> ({{ event.away_team.name }})</span>
+              {{ t('event.away') }}<span class="sr-only"> ({{ event.away_team.name }})</span>
             </label>
             <InputText
               id="away-score"
@@ -186,25 +187,25 @@ async function saveScore() {
             class="ml-auto min-h-11 rounded-[10px] border border-eb-border bg-eb-surface-2 px-4 text-sm font-semibold text-eb-text hover:border-eb-muted disabled:opacity-60"
             :disabled="savingScore"
           >
-            {{ savingScore ? 'A guardar…' : 'Guardar resultado' }}
+            {{ savingScore ? t('common.saving') : t('event.saveScore') }}
           </button>
         </form>
-        <small v-if="scoreError" class="mt-2 block text-eb-neg">{{ scoreError }}</small>
+        <small v-if="scoreError" class="mt-2 block text-eb-neg">{{ message(scoreError) }}</small>
       </section>
 
       <div class="mt-1 flex items-baseline justify-between gap-3">
-        <h2 class="m-0 text-[17px] font-bold">Prognósticos</h2>
+        <h2 class="m-0 text-[17px] font-bold">{{ t('common.predictions') }}</h2>
         <span v-if="rows.length" class="text-[13px] text-eb-muted">
-          {{ rows.length }} · {{ settled }} liquidados
+          {{ t('event.settledCount', { count: rows.length, settled }) }}
         </span>
       </div>
 
-      <Message v-if="settleError" severity="error">{{ settleError }}</Message>
+      <Message v-if="settleError" severity="error">{{ message(settleError) }}</Message>
       <p
         v-if="!rows.length"
         class="m-0 rounded-2xl border border-eb-border bg-eb-surface p-4 text-eb-muted"
       >
-        Ainda não tens prognósticos neste jogo.
+        {{ t('event.empty') }}
       </p>
       <div
         v-else
@@ -226,7 +227,7 @@ async function saveScore() {
         class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-eb-accent text-[15px] font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
       >
         <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-        Registar prognóstico
+        {{ t('common.newPrediction') }}
       </RouterLink>
 
       <!--
@@ -238,15 +239,15 @@ async function saveScore() {
         class="mt-1.5 flex flex-col gap-2.5 rounded-2xl border border-dashed border-eb-border p-4"
       >
         <div class="flex items-center justify-between gap-3">
-          <h2 class="m-0 text-[17px] font-bold">Análise do jogo</h2>
+          <h2 class="m-0 text-[17px] font-bold">{{ t('event.analyser.title') }}</h2>
           <span
             class="rounded-full bg-eb-surface-2 px-2 py-0.5 text-xs font-semibold text-eb-muted"
           >
-            Em breve
+            {{ t('event.analyser.soon') }}
           </span>
         </div>
         <p class="m-0 text-sm leading-snug text-eb-muted">
-          Estatísticas, notícias e resumo com IA para este jogo.
+          {{ t('event.analyser.text') }}
         </p>
         <div class="grid grid-cols-3 gap-2" aria-hidden="true">
           <div class="h-14 rounded-[10px] bg-eb-surface-2" />

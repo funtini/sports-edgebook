@@ -10,6 +10,7 @@ import {
   type Query,
   type Responder,
 } from '@/stores/__tests__/fakeSupabase'
+import { i18n } from '@/i18n'
 import PredictionsView from '../PredictionsView.vue'
 
 const mocked = vi.hoisted(() => ({ client: null as unknown }))
@@ -220,5 +221,29 @@ describe('PredictionsView', () => {
 
     await wrapper.get('[aria-label="Trocar o sinal da linha"]').trigger('click')
     expect((line.element as HTMLInputElement).value).toBe('-1,5')
+  })
+
+  it('in English, saves a translated seeded market under its stored PT-PT name', async () => {
+    i18n.global.locale.value = 'en'
+    const queries = setup(backend())
+    const wrapper = await render()
+    await button(wrapper, 'New game').trigger('click')
+    await wrapper.get('#new-time').setValue('20:00')
+    await wrapper.get('#new-home').setValue('Benfica')
+    await wrapper.get('#new-away').setValue('Porto')
+    await wrapper.get('#category').setValue('Goals')
+    await wrapper.get('#market-name').setValue('over')
+    await wrapper.get('#selection').setValue('Over 2.5')
+    await wrapper.get('#odd').setValue('1.85')
+    await button(wrapper, '3Good').trigger('click')
+
+    await submit(wrapper)
+
+    const lookups = queries.filter((q) => q.table === 'markets' && has(q, 'ilike'))
+    expect(lookups.map((q) => argsOf(q, 'ilike'))).toContainEqual(['category', 'Golos'])
+    expect(argsOf(inserted(queries, 'markets')[0]!, 'insert')?.[0]).toEqual({
+      category: 'Golos',
+      name: 'Mais de',
+    })
   })
 })

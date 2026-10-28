@@ -13,14 +13,6 @@ export const DEFAULT_CONFIDENCE_ANCHORS: ConfidenceAnchors = {
   5: 0.85,
 }
 
-export const CONFIDENCE_LABELS: Record<ConfidenceLevel, string> = {
-  1: 'Palpite',
-  2: 'Moderada',
-  3: 'Boa',
-  4: 'Alta',
-  5: 'Muito alta',
-}
-
 export function probabilityFor(
   level: ConfidenceLevel,
   anchors: ConfidenceAnchors = DEFAULT_CONFIDENCE_ANCHORS,

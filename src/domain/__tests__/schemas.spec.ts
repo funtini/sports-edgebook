@@ -128,11 +128,11 @@ describe('predictionFormSchema', () => {
     ])
   })
 
-  it('asks for the confidence and odd in PT-PT when missing', () => {
+  it('asks for the confidence and odd when missing, as message keys', () => {
     const result = predictionFormSchema.safeParse({ selection: 'Benfica' })
     expect(result.error?.issues.map((i) => i.message)).toEqual([
-      'Odd inválida',
-      'Escolhe a confiança',
+      'validation.oddInvalid',
+      'validation.confidenceRequired',
     ])
   })
 })
@@ -213,13 +213,13 @@ describe('scoreFormSchema', () => {
 
   it('asks for both teams when only one is filled in', () => {
     const result = scoreFormSchema.safeParse({ home: '1', away: '' })
-    expect(result.error?.issues[0]?.message).toBe('Indica os golos das duas equipas')
+    expect(result.error?.issues[0]?.message).toBe('validation.bothGoalsRequired')
   })
 
   it('rejects anything but whole numbers', () => {
     for (const home of ['-1', '1,5', 'a', '100']) {
       expect(scoreFormSchema.safeParse({ home, away: '0' }).error?.issues[0]?.message).toBe(
-        'Golos inválidos',
+        'validation.goalsInvalid',
       )
     }
   })
@@ -240,13 +240,13 @@ describe('userSettingsUpdateSchema', () => {
     expect(parse(50).data?.starting_bankroll_units).toBe(50)
   })
 
-  it('rejects a negative bankroll with a PT-PT message', () => {
-    expect(parse(-5).error?.issues[0]?.message).toBe('A banca inicial não pode ser negativa')
+  it('rejects a negative bankroll', () => {
+    expect(parse(-5).error?.issues[0]?.message).toBe('validation.bankrollNegative')
   })
 
   it('still requires a positive unit value', () => {
     const result = userSettingsUpdateSchema.safeParse({ unit_value: 0, starting_bankroll_units: 0 })
-    expect(result.error?.issues[0]?.message).toBe('O valor da unidade tem de ser maior que 0')
+    expect(result.error?.issues[0]?.message).toBe('validation.unitValuePositive')
   })
 
   it('accepts units or euros as the money display, and leaves it out when omitted', () => {

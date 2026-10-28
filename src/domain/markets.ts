@@ -1,3 +1,5 @@
+import { sameName } from './names'
+
 export interface MarketDefinition {
   category: string
   name: string
@@ -18,3 +20,40 @@ export const DEFAULT_MARKETS: readonly MarketDefinition[] = [
   { category: 'Cartões', name: 'Menos de' },
   { category: 'Handicap', name: 'Handicap' },
 ]
+
+/** Translation key (`markets.*`) of each seeded name, so seeds display in the active language. */
+const SEED_NAME_KEYS: Record<string, string> = {
+  Casa: 'home',
+  Empate: 'draw',
+  Fora: 'away',
+  'Dupla hipótese': 'doubleChance',
+  Golos: 'goals',
+  'Mais de': 'over',
+  'Menos de': 'under',
+  'Ambas marcam': 'btts',
+  Cantos: 'corners',
+  Cartões: 'cards',
+  Handicap: 'handicap',
+}
+
+/**
+ * `markets.*` key for a seeded market name or category, or null for a name the user typed
+ * (shown as is). Stored names never change; this is for display only.
+ */
+export function seedNameKey(name: string): string | null {
+  const key = SEED_NAME_KEYS[name]
+  return key ? `markets.${key}` : null
+}
+
+/**
+ * Stored name for what the user typed or picked: a seeded name in any language (`Goals`, `golos`)
+ * becomes its stored PT-PT name (`Golos`), so a translated label never creates a duplicate
+ * market. Anything else is returned as typed. `translate` resolves a `markets.*` key in the
+ * active language.
+ */
+export function storedMarketName(label: string, translate: (key: string) => string): string {
+  for (const [name, slug] of Object.entries(SEED_NAME_KEYS)) {
+    if (sameName(label, name) || sameName(label, translate(`markets.${slug}`))) return name
+  }
+  return label
+}

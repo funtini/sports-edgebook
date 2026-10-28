@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
+import { i18n } from '@/i18n'
 import PredictionRow from '../PredictionRow.vue'
 import type { MoneyDisplay } from '@/domain/money'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
@@ -74,8 +76,8 @@ describe('PredictionRow', () => {
 
   it('shows money in euros when chosen', () => {
     const won = mountRow('won', {}, 'euros')
-    expect(box(won, 'stake').text()).toBe('Apostado20,00 €')
-    expect(box(won, 'result').text()).toBe('Lucro+18,00 €')
+    expect(box(won, 'stake').text()).toBe('Apostado20,00\u00a0€')
+    expect(box(won, 'result').text()).toBe('Lucro+18,00\u00a0€')
   })
 
   it('labels the value band with its index', () => {
@@ -89,5 +91,21 @@ describe('PredictionRow', () => {
     expect(mountRow('pending', { odd: 1.2 }).get('[data-band]').text()).toContain(
       'Odd sem valor (0,78)',
     )
+  })
+})
+
+describe('PredictionRow in English', () => {
+  it('translates labels, seeded market names and numbers live', async () => {
+    const wrapper = mountRow('won', {}, 'euros')
+    expect(wrapper.text()).toContain('Golos · Mais de')
+    i18n.global.locale.value = 'en'
+    await nextTick()
+    expect(wrapper.text()).toContain('Goals · Over')
+    expect(box(wrapper, 'stake').text()).toBe('Staked€20.00')
+    expect(box(wrapper, 'result').text()).toBe('Profit+€18.00')
+    expect(wrapper.text()).toContain('3 · Good')
+    expect(button(wrapper, 'Won').attributes('aria-pressed')).toBe('true')
+    // The selection is user data: never translated.
+    expect(wrapper.text()).toContain('Mais de 2.5')
   })
 })

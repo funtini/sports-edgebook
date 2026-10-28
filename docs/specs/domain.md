@@ -21,7 +21,7 @@ Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues
 5. **Aposta real (punter)**: when on, **Valor apostado** (typed in units, starts at 1, shown in the info colour; in euros mode its euro value shows beside it) and **Casa de apostas** (autocompleted from bookmakers used before).
 6. **Notas**, collapsed by default.
 
-Errors show inline, from `predictionFormSchema`, `marketFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic PT-PT message. Saving shows "Prognóstico guardado" and clears the form except the game, marked "Mesmo jogo", so the next market for the same game is one tap away; "Outro jogo" clears it.
+Errors show inline, from `predictionFormSchema`, `marketFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the game, marked "Mesmo jogo", so the next market for the same game is one tap away; "Outro jogo" clears it.
 
 ## Confidence levels
 
@@ -62,7 +62,7 @@ Code: `src/domain/value.ts`.
 
 Everything is stored and computed in units; the base stake is 1 unit, and a bet may use any stake (0.5, 2...). `user_settings.unit_value` (default 10, typical 10/20/30/100) converts units to currency for display.
 
-`user_settings.money_display` (`units` by default, or `euros`) chooses how money is shown. Every amount shows **one** value: units mode shows the bare number (`+1,81`, no "u"); euros mode shows units × `unit_value` (`+36,20 €`). Signed for profit, unsigned for stakes and balances, PT-PT format. It applies to Hoje, Evento and Registo; the Dashboard has its own toggle (see [metrics.md](metrics.md)). Code: `formatMoney` in `src/domain/money.ts`.
+`user_settings.money_display` (`units` by default, or `euros`) chooses how money is shown. Every amount shows **one** value: units mode shows the bare number (`+1,81`, no "u"); euros mode shows units × `unit_value` (`+36,20 €`). Signed for profit, unsigned for stakes and balances, in the active language's format (EN: `+1.81`, `+€36.20`). It applies to Hoje, Evento and Registo; the Dashboard has its own toggle (see [metrics.md](metrics.md)). Code: `formatMoney` in `src/domain/money.ts`.
 
 The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds "Sair" (sign out). The header reaches it through a gear icon (see [ui.md](ui.md)).
 

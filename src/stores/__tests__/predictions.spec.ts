@@ -45,7 +45,7 @@ describe('predictions store', () => {
   it('throws a clear error when Supabase is not configured', async () => {
     mocked.client = null
     await expect(usePredictionsStore().listPending()).rejects.toThrow(
-      /Supabase não está configurado/,
+      /errors.supabaseNotConfigured/,
     )
   })
 
@@ -70,7 +70,9 @@ describe('predictions store', () => {
 
   it('validates input before touching the database', async () => {
     const queries = setup()
-    await expect(usePredictionsStore().create({ ...input, odd: 1 })).rejects.toThrow(/maior que 1/)
+    await expect(usePredictionsStore().create({ ...input, odd: 1 })).rejects.toThrow(
+      /validation.oddAboveOne/,
+    )
     expect(queries).toHaveLength(0)
   })
 

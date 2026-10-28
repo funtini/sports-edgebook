@@ -24,7 +24,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function sendMagicLink(email: string) {
-    if (!supabase) throw new UserError('Supabase não está configurado')
+    if (!supabase) throw new UserError('errors.supabaseNotConfigured')
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: window.location.origin },

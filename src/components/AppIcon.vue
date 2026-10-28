@@ -12,6 +12,8 @@ export type IconName =
   | 'clock'
   | 'check'
   | 'logo'
+  | 'moon'
+  | 'sun'
 
 defineProps<{ name: IconName }>()
 
@@ -33,6 +35,11 @@ const PATHS: Record<IconName, string[]> = {
   clock: ['M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z', 'M12 7v5l3 2'],
   check: ['M20 6L9 17l-5-5'],
   logo: ['M4 17l6-6 4 4 6-8'],
+  moon: ['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z'],
+  sun: [
+    'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
+    'M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41',
+  ],
 }
 </script>
 

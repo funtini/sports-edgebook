@@ -26,4 +26,8 @@ describe('days', () => {
     expect(shortDayLabel(new Date(2026, 9, 27))).toBe('ter, 27 out')
     expect(shortDayLabel(new Date(2026, 0, 3))).toBe('sáb, 3 jan')
   })
+
+  it('uses Intl for other locales', () => {
+    expect(shortDayLabel(new Date(2026, 9, 27), 'en-GB')).toBe('Tue 27 Oct')
+  })
 })
