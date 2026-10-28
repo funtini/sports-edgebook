@@ -7,7 +7,6 @@ const ptPT = {
   common: {
     loading: 'A carregar…',
     saving: 'A guardar…',
-    save: 'Guardar',
     backToToday: 'Voltar a hoje',
     newPrediction: 'Registar prognóstico',
     predictions: 'Prognósticos',
@@ -64,6 +63,9 @@ const ptPT = {
     3: 'Boa',
     4: 'Alta',
     5: 'Muito alta',
+  },
+  confidenceBadge: {
+    label: 'Confiança {level} de 5 · {label}',
   },
   valueBand: {
     row: {
@@ -175,7 +177,7 @@ const ptPT = {
       legend: 'Mostrar valores em',
       units: 'Unidades',
       euros: 'Euros',
-      help: 'Tudo é registado em unidades. Em euros, cada valor é unidades × valor da unidade.',
+      help: 'Tudo é registado em unidades. Em euros, cada valor é unidades × valor da unidade. O Dashboard tem o seu próprio botão para trocar.',
     },
     unit: {
       legend: 'Valor da unidade',
@@ -187,17 +189,26 @@ const ptPT = {
       help: 'Em unidades (opcional). Vazio ou 0 = sem banca inicial.',
     },
     saved: 'Definições guardadas.',
+    save: 'Guardar alterações',
+    unchanged: 'Sem alterações',
+    appearance: {
+      title: 'Aparência',
+      language: 'Idioma',
+      theme: 'Tema',
+      light: 'Claro',
+      dark: 'Escuro',
+      help: 'Também os trocas no cabeçalho, em qualquer ecrã.',
+    },
     levels: {
       title: 'Níveis de confiança',
       help: 'Probabilidade que cada nível representa. A edição chega com a calibração (Fase 4).',
       level: 'Nível',
-      label: 'Etiqueta',
       probability: 'Probabilidade',
       fairOdd: 'Odd justa',
     },
     account: {
       title: 'Conta',
-      signOut: 'Sair',
+      signOut: 'Terminar sessão',
     },
     loadFailed: 'Não foi possível carregar as definições.',
     saveFailed: 'Não foi possível guardar as definições.',

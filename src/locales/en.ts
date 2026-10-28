@@ -4,7 +4,6 @@ const en: Messages = {
   common: {
     loading: 'Loading…',
     saving: 'Saving…',
-    save: 'Save',
     backToToday: 'Back to today',
     newPrediction: 'Log a prediction',
     predictions: 'Predictions',
@@ -60,6 +59,9 @@ const en: Messages = {
     3: 'Good',
     4: 'High',
     5: 'Very high',
+  },
+  confidenceBadge: {
+    label: 'Confidence {level} of 5 · {label}',
   },
   valueBand: {
     row: {
@@ -171,7 +173,7 @@ const en: Messages = {
       legend: 'Show amounts in',
       units: 'Units',
       euros: 'Euros',
-      help: 'Everything is logged in units. In euros, each amount is units × unit value.',
+      help: 'Everything is logged in units. In euros, each amount is units × unit value. The Dashboard has its own switch.',
     },
     unit: {
       legend: 'Unit value',
@@ -183,11 +185,20 @@ const en: Messages = {
       help: 'In units (optional). Empty or 0 = no starting bankroll.',
     },
     saved: 'Settings saved.',
+    save: 'Save changes',
+    unchanged: 'No changes',
+    appearance: {
+      title: 'Appearance',
+      language: 'Language',
+      theme: 'Theme',
+      light: 'Light',
+      dark: 'Dark',
+      help: 'You can also switch them in the header, on any screen.',
+    },
     levels: {
       title: 'Confidence levels',
       help: 'Probability each level stands for. Editing comes with calibration (Phase 4).',
       level: 'Level',
-      label: 'Label',
       probability: 'Probability',
       fairOdd: 'Fair odd',
     },
