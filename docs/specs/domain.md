@@ -46,13 +46,13 @@ Five bands (`valueBand`), judged on the index rounded to 2 decimals, as it is sh
 
 | Band | Index | Row label (Hoje, Evento) | Pill (Registo) | Colour |
 | --- | --- | --- | --- | --- |
-| `banger` | > 1.35 | Banger (1,37) | Banger | purple |
-| `favourable` | 1.06 – 1.35 | Favorável (1,20) | Favorável | pos |
+| `banger` | > 1.35 | Banger 1,37 | Banger | purple |
+| `favourable` | 1.06 – 1.35 | Favorável 1,20 | Favorável | pos |
 | `neutral` | 0.95 – 1.05 | Neutro | Neutro | muted |
-| `reduced` | 0.85 – 0.94 | Valor reduzido (0,90) | Desfavorável | amber |
-| `no_value` | < 0.85 | Odd sem valor (0,77) | Sem valor | neg |
+| `reduced` | 0.85 – 0.94 | Valor reduzido 0,90 | Desfavorável | amber |
+| `no_value` | < 0.85 | Odd sem valor 0,77 | Sem valor | neg |
 
-- Shown live in the logging form before saving, and on every prediction row.
+- Shown live in the logging form before saving, and on every prediction row as a pill in the band colours (see the prediction row in [ui.md](ui.md#prediction-row)).
 - Labels and colours: `src/components/valueBands.ts`.
 - Example: level 3 (65%) at 1.80 → 1.17 (favourable). Level 4 (75%) at 1.25 → 0.94 (reduced).
 
@@ -64,7 +64,7 @@ Everything is stored and computed in units; the base stake is 1 unit, and a bet 
 
 `user_settings.money_display` (`units` by default, or `euros`) chooses how money is shown. Every amount shows **one** value: units mode shows the bare number (`+1,81`, no "u"); euros mode shows units × `unit_value` (`+36,20 €`). Signed for profit, unsigned for stakes and balances, in the active language's format (EN: `+1.81`, `+€36.20`). It applies to Hoje, Evento and Registo; the Dashboard has its own toggle (see [metrics.md](metrics.md)). Code: `formatMoney` in `src/domain/money.ts`.
 
-The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds "Sair" (sign out). The header reaches it through a gear icon (see [ui.md](ui.md)).
+The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds Aparência (language and theme, same preferences as the header toggles) and "Terminar sessão" (sign out); layout in [ui.md](ui.md#definições). The header reaches it through a gear icon (see [ui.md](ui.md)).
 
 ## Settlement
 
@@ -82,7 +82,7 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 - **Day**: selected with previous / next, or a date picker. Today has no query; any other day is `?dia=YYYY-MM-DD` (local date), so back/forward and links work. A malformed `dia` falls back to today and is dropped from the URL. The view follows the date past midnight when left open.
 - **Games**: predictions of the day grouped by game, by kickoff. The game header links to `/eventos/:id`.
 - **Settlement**: Ganho / Perdido / Nulo on each row; tapping the active one returns it to pending and clears `settled_at`. The row updates at once and rolls back with an error message if the save fails. Each row shows the amount staked and its result (see the prediction row in [ui.md](ui.md)); non-punter results are on 1 virtual unit and tagged "virtual".
-- **Day summary**: "Lucro punter" (P/L of punter bets, one value per the money display) with the amount staked, "N de M liquidados", and tiles Prognósticos / Taxa de acerto / Em aberto.
+- **Day summary**: "Lucro punter" (P/L of punter bets, one value per the money display) with the amount staked, "N de M liquidados", and tiles Prognósticos / Taxa de acerto / Em aberto. On desktop the summary is a strip with Apostado / Prognósticos / Ganhos / Taxa de acerto / Em aberto (see [ui.md](ui.md#hoje)).
 - **Pendentes de dias anteriores**: amber banner with the count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
 
@@ -95,7 +95,7 @@ Route `/eventos/:id`, one game. Phase 6 adds the Game Analyser below (see [futur
 - **Back link** "‹ Hoje".
 - **Game card**: league, kickoff date and time, home and away teams with the score between them ("vs" until set), and the Resultado inputs.
 - **Resultado** ("Casa" / "Fora"): home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 5 fills it from the API. Saving the score does not settle predictions.
-- **Prognósticos** (count and settled): the game's predictions in logging order, with the same row and one-tap settlement as the today view. A dashed "+ Registar prognóstico" button opens `/registo?evento=<id>`.
+- **Prognósticos** (count and settled): the game's predictions in logging order, with the same row and one-tap settlement as the today view. A dashed "+ Novo prognóstico" button opens `/registo?evento=<id>`.
 - **Análise do jogo · Em breve**: placeholder card reserved for the Game Analyser.
 - **Unknown or malformed id**: "Jogo não encontrado" with a link back to today.
 
