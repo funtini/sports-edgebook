@@ -48,7 +48,7 @@ Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
    - **Apostado** + amount in the info colours (`info-soft` / `info`), pending rows included. Non-punter rows: "Sem aposta" + "—" on `surface-2` / `muted`.
    - Result: pending "Por resolver" + "—" (`surface-2` / `muted`); won "Lucro" (`pos-soft` / `pos`); lost "Prejuízo" (`neg-soft` / `neg`); void "Nulo" (`surface-2` / `muted`). Non-punter results use the same colours plus a small muted "virtual" tag (1 virtual unit).
 3. **Confidence badge** and **value pill**, side by side:
-   - Badge: 21px circle, 1.5px `text` border, the level number (11px bold) inside. No label on screen; the label is its tooltip and accessible name ("Confiança 4 de 5 · Alta").
+   - Badge (`src/components/ConfidenceBadge.vue`, shared with Definições): 21px circle, 1.5px `text` border, the level number (11px bold) inside. No label on screen; the label is its tooltip and accessible name ("Confiança 4 de 5 · Alta").
    - Pill: fully rounded, 12px bold, text in the band colour on the band's soft fill (`purple-soft`, `pos-soft`, `surface-2` for neutral, `amber-soft`, `neg-soft`). Text is the row label with the index and no brackets: "Banger 1,42", "Favorável 1,20", "Neutro", "Valor reduzido 0,90", "Odd sem valor 0,77" (see [domain.md](domain.md#value-index)). Tooltip: "Índice de valor (probabilidade × odd)".
 4. Ganho / Perdido / Nulo: 3 equal columns, 44px; the active one is filled (`pos` / `neg` / `muted`); tapping it again returns the row to pending.
 

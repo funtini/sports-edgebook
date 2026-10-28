@@ -6,7 +6,7 @@ const en: Messages = {
     saving: 'Saving…',
     save: 'Save',
     backToToday: 'Back to today',
-    newPrediction: 'Log a prediction',
+    newPrediction: 'New prediction',
     predictions: 'Predictions',
   },
   app: {
@@ -61,6 +61,9 @@ const en: Messages = {
     4: 'High',
     5: 'Very high',
   },
+  confidenceBadge: {
+    label: 'Confidence {level} of 5 · {label}',
+  },
   valueBand: {
     row: {
       banger: 'Banger',
@@ -88,6 +91,7 @@ const en: Messages = {
     noStake: 'No stake',
     virtual: 'virtual',
     valueIndex: 'Value index:',
+    valueTooltip: 'Value index (probability × odd)',
     settle: 'Settle',
     outcome: {
       won: 'Won',

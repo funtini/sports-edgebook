@@ -26,7 +26,10 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05)
 }
 
-/** [text, background]: body text, badges and boxes (soft fills), pills and buttons (solid fills), P/L. */
+/**
+ * [text, background]: body text, badges and boxes (soft fills), pills and buttons (solid fills), P/L.
+ * The prediction row value pills are the band colour on its soft fill (neutral: muted on surface-2).
+ */
 const PAIRS = [
   ['text', 'bg'],
   ['text', 'surface'],
