@@ -205,7 +205,7 @@ describe('EventView', () => {
     const wrapper = await render()
     const link = wrapper
       .findAllComponents(RouterLinkStub)
-      .find((l) => l.text() === 'Registar prognóstico')!
+      .find((l) => l.text() === 'Novo prognóstico')!
     expect(link.props('to')).toEqual({ name: 'predictions', query: { evento: EVENT_ID } })
   })
 })

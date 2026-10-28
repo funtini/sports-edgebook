@@ -80,16 +80,32 @@ describe('PredictionRow', () => {
     expect(box(won, 'result').text()).toBe('Lucro+18,00\u00a0€')
   })
 
+  it('shows the confidence level in a badge, with its label as the accessible name', () => {
+    const badge = mountRow('pending', { confidence: 4 }).get('[data-confidence-badge]')
+    expect(badge.text()).toBe('4')
+    expect(badge.attributes('aria-label')).toBe('Confiança 4 de 5 · Alta')
+    expect(badge.attributes('title')).toBe('Confiança 4 de 5 · Alta')
+  })
+
+  it('shows the value pill on the band soft fill', () => {
+    const pill = mountRow('pending', { odd: 2.2 }).get('[data-band]')
+    expect(pill.classes()).toEqual(expect.arrayContaining(['text-eb-purple', 'bg-eb-purple-soft']))
+    expect(pill.attributes('title')).toBe('Índice de valor (probabilidade × odd)')
+    expect(mountRow('pending', { odd: 1.55 }).get('[data-band]').classes()).toContain(
+      'bg-eb-surface-2',
+    )
+  })
+
   it('labels the value band with its index', () => {
     // 65% at 1.90 → 1.235, shown as 1,23 (floating point).
-    expect(mountRow('pending').get('[data-band]').text()).toContain('Favorável (1,23)')
-    expect(mountRow('pending', { odd: 2.2 }).get('[data-band]').text()).toContain('Banger (1,43)')
+    expect(mountRow('pending').get('[data-band]').text()).toContain('Favorável 1,23')
+    expect(mountRow('pending', { odd: 2.2 }).get('[data-band]').text()).toContain('Banger 1,43')
     expect(mountRow('pending', { odd: 1.55 }).get('[data-band]').text()).toMatch(/Neutro$/)
     expect(mountRow('pending', { odd: 1.4 }).get('[data-band]').text()).toContain(
-      'Valor reduzido (0,91)',
+      'Valor reduzido 0,91',
     )
     expect(mountRow('pending', { odd: 1.2 }).get('[data-band]').text()).toContain(
-      'Odd sem valor (0,78)',
+      'Odd sem valor 0,78',
     )
   })
 })
@@ -103,7 +119,10 @@ describe('PredictionRow in English', () => {
     expect(wrapper.text()).toContain('Goals · Over')
     expect(box(wrapper, 'stake').text()).toBe('Staked€20.00')
     expect(box(wrapper, 'result').text()).toBe('Profit+€18.00')
-    expect(wrapper.text()).toContain('3 · Good')
+    expect(wrapper.get('[data-confidence-badge]').attributes('aria-label')).toBe(
+      'Confidence 3 of 5 · Good',
+    )
+    expect(wrapper.get('[data-band]').text()).toContain('Favourable 1.23')
     expect(button(wrapper, 'Won').attributes('aria-pressed')).toBe('true')
     // The selection is user data: never translated.
     expect(wrapper.text()).toContain('Mais de 2.5')

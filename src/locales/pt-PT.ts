@@ -9,7 +9,7 @@ const ptPT = {
     saving: 'A guardar…',
     save: 'Guardar',
     backToToday: 'Voltar a hoje',
-    newPrediction: 'Registar prognóstico',
+    newPrediction: 'Novo prognóstico',
     predictions: 'Prognósticos',
   },
   app: {
@@ -65,6 +65,9 @@ const ptPT = {
     4: 'Alta',
     5: 'Muito alta',
   },
+  confidenceBadge: {
+    label: 'Confiança {level} de 5 · {label}',
+  },
   valueBand: {
     row: {
       banger: 'Banger',
@@ -92,6 +95,7 @@ const ptPT = {
     noStake: 'Sem aposta',
     virtual: 'virtual',
     valueIndex: 'Índice de valor:',
+    valueTooltip: 'Índice de valor (probabilidade × odd)',
     settle: 'Liquidar',
     outcome: {
       won: 'Ganho',
