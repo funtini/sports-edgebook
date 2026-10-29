@@ -2,20 +2,20 @@
 
 Every metric filters by period (day, week, month, custom) and scope (punter only, all predictions, multiples).
 
-| Metric              | Definition                                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------------- |
-| Hit rate            | won ÷ (won + lost); voids excluded                                                                      |
-| Break-even hit rate | mean of 1 ÷ odd over won and lost                                                                       |
-| Edge                | hit rate − break-even hit rate                                                                          |
-| P/L                 | sum of profit, in units or currency (see Units or euros)                                                |
-| Yield               | P/L ÷ total staked on won and lost; a void stake is handed back (main metric to compare segments)       |
-| Bankroll ROI        | P/L ÷ starting bankroll; none without one                                                               |
-| Average odd         | mean odd over won and lost                                                                              |
-| Expected vs actual  | sum of probabilities vs number of wins, over won and lost                                               |
-| Calibration         | real hit rate per confidence level vs the mean stored probability of its bets                           |
-| CLV                 | odd ÷ closing odd − 1                                                                                   |
-| Max drawdown        | largest drop from a peak of the cumulative P/L curve                                                    |
-| Streaks             | longest winning and losing streaks, by date then logging order; voids neither extend nor break a streak |
+| Metric | Definition |
+| --- | --- |
+| Hit rate | won ÷ (won + lost); voids excluded |
+| Break-even hit rate | mean of 1 ÷ odd over won and lost |
+| Edge | hit rate − break-even hit rate |
+| P/L | sum of profit, in units or currency (see Units or euros) |
+| Yield | P/L ÷ total staked on won and lost; a void stake is handed back (main metric to compare segments) |
+| Bankroll ROI | P/L ÷ starting bankroll; none without one |
+| Average odd | mean odd over won and lost |
+| Expected vs actual | sum of probabilities vs number of wins, over won and lost |
+| Calibration | real hit rate per confidence level vs the mean stored probability of its bets |
+| CLV | odd ÷ closing odd − 1 |
+| Max drawdown | largest drop from a peak of the cumulative P/L curve |
+| Streaks | longest winning and losing streaks, by date then logging order; voids neither extend nor break a streak |
 
 Pending bets count in none of them. A metric with nothing to measure (no won or lost bet, nothing staked) is empty, never 0 or NaN.
 
@@ -30,15 +30,15 @@ Every function reads one `Bet` shape, built from either a single or a multiple:
 
 The date of a bet is its kickoff, not when it was settled; periods and days are local.
 
-| Function                                    | Gives                                                                                                                         |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `scope(bets, s)`                            | `punter`: real singles; `all`: every single (non-punter on 1 virtual unit); `multiples`: every multiple, placed and simulated |
-| `inPeriod(bets, from, to)`                  | bets whose local day is within `from`..`to` (`YYYY-MM-DD`, both included)                                                     |
-| `summary(bets, { startingBankroll })`       | n (settled), won, lost, void, hit rate, break-even, edge, P/L, staked, yield, bankroll ROI, average odd, expected wins        |
-| `cumulativeSeries(bets, from, to)`          | running P/L per day; days without bets carry the previous value                                                               |
-| `maxDrawdown(series)`                       | largest drop from a peak of that series, starting from 0                                                                      |
-| `streaks(bets)`                             | longest winning and losing runs                                                                                               |
-| `breakdown(bets, dimension, { oddsBands })` | one row per segment: n, hit rate, expected hit rate, average odd, yield, P/L, small sample; by n, largest first               |
+| Function | Gives |
+| --- | --- |
+| `scope(bets, s)` | `punter`: real singles; `all`: every single (non-punter on 1 virtual unit); `multiples`: every multiple, placed and simulated |
+| `inPeriod(bets, from, to)` | bets whose local day is within `from`..`to` (`YYYY-MM-DD`, both included) |
+| `summary(bets, { startingBankroll })` | n (settled), won, lost, void, hit rate, break-even, edge, P/L, staked, yield, bankroll ROI, average odd, expected wins |
+| `cumulativeSeries(bets, from, to)` | running P/L per day; days without bets carry the previous value |
+| `maxDrawdown(series)` | largest drop from a peak of that series, starting from 0 |
+| `streaks(bets)` | longest winning and losing runs |
+| `breakdown(bets, dimension, { oddsBands })` | one row per segment: n, hit rate, expected hit rate, average odd, yield, P/L, small sample; by n, largest first |
 
 ## Units or euros
 
