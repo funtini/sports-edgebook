@@ -26,12 +26,12 @@ Errors show inline, from `predictionFormSchema`, `marketFormSchema` and `newGame
 ## Confidence levels
 
 | Level | Label (UI) | Probability | Fair odd |
-| --- | --- | --- | --- |
-| 1 | Palpite | 40% | 2.50 |
-| 2 | Moderada | 55% | 1.82 |
-| 3 | Boa | 65% | 1.54 |
-| 4 | Alta | 75% | 1.33 |
-| 5 | Muito alta | 85% | 1.18 |
+| ----- | ---------- | ----------- | -------- |
+| 1     | Palpite    | 40%         | 2.50     |
+| 2     | Moderada   | 55%         | 1.82     |
+| 3     | Boa        | 65%         | 1.54     |
+| 4     | Alta       | 75%         | 1.33     |
+| 5     | Muito alta | 85%         | 1.18     |
 
 Anchors are per-user settings (`user_settings.confidence_anchors`). Each prediction stores the probability in force when it was logged. After ~100 settled predictions per level, the app shows the real hit rate per level and suggests recalibrating. Code: `src/domain/confidence.ts`.
 
@@ -44,13 +44,13 @@ value index = p × odd
 
 Five bands (`valueBand`), judged on the index rounded to 2 decimals, as it is shown:
 
-| Band | Index | Row label (Hoje, Evento) | Pill (Registo) | Colour |
-| --- | --- | --- | --- | --- |
-| `banger` | > 1.35 | Banger 1,37 | Banger | purple |
-| `favourable` | 1.06 – 1.35 | Favorável 1,20 | Favorável | pos |
-| `neutral` | 0.95 – 1.05 | Neutro | Neutro | muted |
-| `reduced` | 0.85 – 0.94 | Valor reduzido 0,90 | Desfavorável | amber |
-| `no_value` | < 0.85 | Odd sem valor 0,77 | Sem valor | neg |
+| Band         | Index       | Row label (Hoje, Evento) | Pill (Registo) | Colour |
+| ------------ | ----------- | ------------------------ | -------------- | ------ |
+| `banger`     | > 1.35      | Banger 1,37              | Banger         | purple |
+| `favourable` | 1.06 – 1.35 | Favorável 1,20           | Favorável      | pos    |
+| `neutral`    | 0.95 – 1.05 | Neutro                   | Neutro         | muted  |
+| `reduced`    | 0.85 – 0.94 | Valor reduzido 0,90      | Desfavorável   | amber  |
+| `no_value`   | < 0.85      | Odd sem valor 0,77       | Sem valor      | neg    |
 
 - Shown live in the logging form before saving, and on every prediction row as a pill in the band colours (see the prediction row in [ui.md](ui.md#prediction-row)).
 - Labels and colours: `src/components/valueBands.ts`.
@@ -85,8 +85,9 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 - **Day summary**: "Lucro punter" (P/L of punter bets, one value per the money display) with the amount staked, "N de M liquidados", and tiles Prognósticos / Taxa de acerto / Em aberto. On desktop the summary is a strip with Apostado / Prognósticos / Ganhos / Taxa de acerto / Em aberto (see [ui.md](ui.md#hoje)).
 - **Pendentes de dias anteriores**: amber banner with the count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
+- **Shortcut**: pressing N opens `/registo`, except while typing in an input, textarea, select or editable element, or with Ctrl / Cmd / Alt held. The desktop "Novo prognóstico" button shows the hint.
 
-Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/composables/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`.
+Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/composables/useSettlement.ts` (shared with the event screen), `src/domain/daySummary.ts`, `src/domain/days.ts`, `src/composables/useKeyShortcut.ts`.
 
 ## Event screen
 

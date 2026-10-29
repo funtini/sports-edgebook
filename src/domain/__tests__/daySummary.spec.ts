@@ -22,6 +22,8 @@ describe('daySummary', () => {
     expect(summary).toEqual({
       total: 5,
       settled: 4,
+      won: 2,
+      open: 1,
       hitRate: 2 / 3,
       punterProfit: 0,
       punterBets: 3,
@@ -33,6 +35,8 @@ describe('daySummary', () => {
     expect(daySummary([])).toEqual({
       total: 0,
       settled: 0,
+      won: 0,
+      open: 0,
       hitRate: null,
       punterProfit: 0,
       punterBets: 0,

@@ -16,6 +16,11 @@ const props = defineProps<{
   moneyDisplay: MoneyDisplay
   /** Disables the settlement buttons while a save is in flight. */
   busy?: boolean
+  /**
+   * `card` (default): stacked, as on phone. `line`: the same card below `lg`; from `lg` one grid
+   * line (prediction · odd · badge + pill · Apostado · Resultado · Ganho / Perdido / Nulo).
+   */
+  layout?: 'card' | 'line'
 }>()
 
 const emit = defineEmits<{ settle: [status: BetStatus] }>()
@@ -89,30 +94,47 @@ const result = computed(() => {
   }
 })
 
+const line = computed(() => props.layout === 'line')
+
 function toggle(status: Exclude<BetStatus, 'pending'>) {
   emit('settle', props.prediction.status === status ? 'pending' : status)
 }
 </script>
 
 <template>
-  <div class="flex flex-col p-3.5 tabular-nums">
-    <div class="flex items-start justify-between gap-3">
+  <div
+    class="flex flex-col p-3.5 tabular-nums"
+    :class="
+      line &&
+      'lg:grid lg:grid-cols-[minmax(0,1fr)_76px_176px_120px_120px_204px] lg:items-center lg:gap-x-3 lg:px-4 lg:py-2.5'
+    "
+    :data-layout="layout ?? 'card'"
+  >
+    <div class="flex items-start justify-between gap-3" :class="line && 'lg:contents'">
       <div class="min-w-0">
         <div class="text-xs text-eb-muted">{{ market }}</div>
         <div class="text-[15px] font-semibold break-words">{{ selection }}</div>
       </div>
-      <div class="text-lg font-bold">
+      <div class="text-lg font-bold" :class="line && 'lg:text-right'">
         <span class="sr-only">{{ `${t('predictionRow.odd')} ` }}</span
         >{{ formatDecimal(prediction.odd, intlLocale) }}
       </div>
     </div>
 
-    <div class="mt-2.5 grid grid-cols-2 gap-1.5">
-      <div class="min-w-0 rounded-[10px] px-2.5 py-2" :class="stake.classes" data-box="stake">
+    <div class="mt-2.5 grid grid-cols-2 gap-1.5" :class="line && 'lg:contents'">
+      <div
+        class="min-w-0 rounded-[10px] px-2.5 py-2"
+        :class="[stake.classes, line && 'lg:order-4']"
+        data-box="stake"
+      >
         <div class="text-[11px] font-semibold">{{ stake.label }}</div>
         <div class="mt-0.5 truncate text-base font-bold">{{ stake.amount }}</div>
       </div>
-      <div class="min-w-0 rounded-[10px] px-2.5 py-2" :class="result.classes" data-box="result">
+      <div
+        class="min-w-0 rounded-[10px] px-2.5 py-2"
+        :class="[result.classes, line && 'lg:order-5']"
+        data-box="result"
+      >
         <div class="flex justify-between gap-1 text-[11px] font-semibold">
           <span>{{ result.label }}</span>
           <span v-if="result.virtual" class="text-eb-muted">{{ t('predictionRow.virtual') }}</span>
@@ -121,7 +143,10 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
       </div>
     </div>
 
-    <div class="mt-2 flex flex-wrap items-center gap-2">
+    <div
+      class="mt-2 flex flex-wrap items-center gap-2"
+      :class="line && 'lg:order-3 lg:mt-0 lg:pl-1.5'"
+    >
       <ConfidenceBadge :level="prediction.confidence as ConfidenceLevel" />
       <span
         class="rounded-full px-2 py-0.5 text-xs font-bold"
@@ -136,6 +161,7 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
 
     <div
       class="mt-2.5 grid grid-cols-3 gap-1.5"
+      :class="line && 'lg:order-6 lg:mt-0'"
       role="group"
       :aria-label="t('predictionRow.settle')"
     >

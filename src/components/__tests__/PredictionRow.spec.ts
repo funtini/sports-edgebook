@@ -127,4 +127,18 @@ describe('PredictionRow in English', () => {
     // The selection is user data: never translated.
     expect(wrapper.text()).toContain('Mais de 2.5')
   })
+
+  it('stacks by default and becomes one grid line from lg with layout="line"', () => {
+    const card = mountRow('pending')
+    expect(card.attributes('data-layout')).toBe('card')
+    expect(card.classes()).not.toContain('lg:grid')
+
+    const line = mount(PredictionRow, {
+      props: { prediction: prediction(), unitValue: 10, moneyDisplay: 'units', layout: 'line' },
+    })
+    expect(line.attributes('data-layout')).toBe('line')
+    expect(line.classes()).toEqual(expect.arrayContaining(['flex-col', 'lg:grid']))
+    expect(box(line, 'stake').classes()).toContain('lg:order-4')
+    expect(box(line, 'result').classes()).toContain('lg:order-5')
+  })
 })

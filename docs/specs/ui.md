@@ -10,22 +10,22 @@ All user-facing text goes through vue-i18n, PT-PT by default (see [Languages](#l
 
 CSS variables in `src/assets/main.css`: light on `:root`, dark under `.app-dark` (the class PrimeVue already uses for its dark scheme). Tailwind exposes them as `eb-*` colours (`bg-eb-surface`, `text-eb-muted`, `border-eb-border`, `bg-eb-pos-soft`...). Views use only these, never fixed palette shades (`bg-surface-0`, `text-green-700`), so setting `class="app-dark"` on `<html>` renders every screen in dark with no `dark:` variants.
 
-| Token | Light | Dark | Use |
-| --- | --- | --- | --- |
-| `bg` | #f5f6f8 | #0d1015 | page |
-| `surface` | #ffffff | #151920 | cards, header, tab bar |
-| `surface-2` | #eef0f3 | #1e232c | chips, neutral boxes |
-| `border` | #e1e4e9 | #2a313c | |
-| `text` | #12151a | #e9ecf0 | |
-| `muted` | #5a6370 | #9aa4b1 | secondary text, neutral |
-| `accent` / `on-accent` | #047857 / #ffffff | #34d399 / #06281c | primary buttons, active nav |
-| `accent-soft` / `accent-text` | #e3f4ec / #065f46 | #123326 / #6ee7b7 | "Mesmo jogo" chip, active links |
-| `pos` / `pos-soft` | #047857 / #e6f4ed | #34d399 / #10261d | profit, Ganho, Favorável |
-| `neg` / `neg-soft` | #c0262d / #fcebec | #f87171 / #2a1416 | loss, Perdido, Sem valor |
-| `info` / `info-soft` | #1d4fb8 / #e8f0fd | #8fbcff / #16243b | amount staked |
-| `purple` / `purple-soft` | #6d28d9 / #f1ebfd | #c4b5fd / #221a38 | Banger |
-| `amber` / `amber-soft` | #9a5800 / #fbf0dc | #f0b44c / #2b2111 | Valor reduzido, pending banner |
-| `on-fill` | #ffffff | #0d1015 | text on a filled pos / neg / muted button or pill |
+| Token                         | Light             | Dark              | Use                                               |
+| ----------------------------- | ----------------- | ----------------- | ------------------------------------------------- |
+| `bg`                          | #f5f6f8           | #0d1015           | page                                              |
+| `surface`                     | #ffffff           | #151920           | cards, header, tab bar                            |
+| `surface-2`                   | #eef0f3           | #1e232c           | chips, neutral boxes                              |
+| `border`                      | #e1e4e9           | #2a313c           |                                                   |
+| `text`                        | #12151a           | #e9ecf0           |                                                   |
+| `muted`                       | #5a6370           | #9aa4b1           | secondary text, neutral                           |
+| `accent` / `on-accent`        | #047857 / #ffffff | #34d399 / #06281c | primary buttons, active nav                       |
+| `accent-soft` / `accent-text` | #e3f4ec / #065f46 | #123326 / #6ee7b7 | "Mesmo jogo" chip, active links                   |
+| `pos` / `pos-soft`            | #047857 / #e6f4ed | #34d399 / #10261d | profit, Ganho, Favorável                          |
+| `neg` / `neg-soft`            | #c0262d / #fcebec | #f87171 / #2a1416 | loss, Perdido, Sem valor                          |
+| `info` / `info-soft`          | #1d4fb8 / #e8f0fd | #8fbcff / #16243b | amount staked                                     |
+| `purple` / `purple-soft`      | #6d28d9 / #f1ebfd | #c4b5fd / #221a38 | Banger                                            |
+| `amber` / `amber-soft`        | #9a5800 / #fbf0dc | #f0b44c / #2b2111 | Valor reduzido, pending banner                    |
+| `on-fill`                     | #ffffff           | #0d1015           | text on a filled pos / neg / muted button or pill |
 
 PrimeVue components follow the same tokens through the preset in `src/theme.ts` (Aura with emerald primary; form fields, overlays and text mapped to the `--eb-*` variables).
 
@@ -53,6 +53,8 @@ Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 4. Ganho / Perdido / Nulo: 3 equal columns, 44px; the active one is filled (`pos` / `neg` / `muted`); tapping it again returns the row to pending.
 
 Amounts follow the money display setting (units or euros, see [domain.md](domain.md#units-and-money)).
+
+With `layout="line"` the row keeps this stacked layout below 1024px and becomes the one-line grid of Hoje desktop from `lg` (columns `1fr · 76px · 176px · 120px · 120px · 204px`, the outcome buttons 3 × ≥ 64px wide, 44px tall).
 
 ## Screens
 

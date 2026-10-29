@@ -5,6 +5,7 @@ import Message from 'primevue/message'
 import AppIcon from '@/components/AppIcon.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
+import { useKeyShortcut } from '@/composables/useKeyShortcut'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useLocale } from '@/composables/useLocale'
 import { useSettlement } from '@/composables/useSettlement'
@@ -84,6 +85,37 @@ const summary = computed(() => daySummary(rows.value))
 const money = (units: number, signed = true) =>
   formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed }, intlLocale.value)
 
+const tiles = computed(() => {
+  const s = summary.value
+  return [
+    {
+      key: 'staked',
+      label: t('today.staked'),
+      value: s.punterBets ? money(s.punterStaked, false) : '—',
+      class: s.punterBets ? 'text-eb-info' : 'text-eb-muted',
+    },
+    { key: 'predictions', label: t('common.predictions'), value: String(s.total), class: '' },
+    {
+      key: 'won',
+      label: t('today.won'),
+      value: String(s.won),
+      class: s.won > 0 ? 'text-eb-pos' : '',
+    },
+    {
+      key: 'hitRate',
+      label: t('today.hitRate'),
+      value: s.hitRate == null ? '—' : formatPercent(s.hitRate, intlLocale.value),
+      class: '',
+    },
+    {
+      key: 'open',
+      label: t('today.open'),
+      value: String(s.open),
+      class: s.open > 0 ? 'text-eb-amber' : '',
+    },
+  ]
+})
+
 const staked = computed(() => {
   const amount = money(summary.value.punterStaked, false)
   return t(settings.moneyDisplay === 'euros' ? 'today.stakedEuros' : 'today.stakedUnits', {
@@ -112,6 +144,8 @@ function openPicker(event: Event) {
     // Some browsers only allow it on a direct user gesture; the native control still works.
   }
 }
+
+useKeyShortcut('n', () => router.push({ name: 'predictions' }))
 
 function jumpToOldestPending() {
   const oldest = pendingBefore.value[0]
@@ -158,8 +192,8 @@ watch(
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-3 tabular-nums">
-    <div class="flex items-center gap-2">
+  <div class="mx-auto flex max-w-3xl flex-col gap-3 tabular-nums lg:max-w-[1200px]">
+    <div class="flex items-center gap-2 lg:justify-center">
       <button
         type="button"
         :aria-label="t('today.previousDay')"
@@ -169,7 +203,7 @@ watch(
         <AppIcon name="chevron-left" class="size-[18px]" />
       </button>
       <label
-        class="relative flex min-h-11 min-w-0 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-eb-border bg-eb-surface px-2 text-[15px] font-semibold hover:bg-eb-surface-2"
+        class="relative flex min-h-11 min-w-0 flex-1 cursor-pointer lg:min-w-[260px] lg:flex-none items-center justify-center gap-2 rounded-xl border border-eb-border bg-eb-surface px-2 text-[15px] font-semibold hover:bg-eb-surface-2"
       >
         <AppIcon name="calendar" class="size-4 shrink-0" />
         <span class="truncate">{{ dayLabel }}</span>
@@ -203,7 +237,7 @@ watch(
 
     <section
       v-if="summary.total"
-      class="rounded-2xl border border-eb-border bg-eb-surface p-4"
+      class="rounded-2xl border border-eb-border bg-eb-surface p-4 lg:hidden"
       :aria-label="t('today.summary')"
     >
       <div class="flex items-baseline justify-between gap-3 text-[13px] text-eb-muted">
@@ -237,6 +271,38 @@ watch(
       </div>
     </section>
 
+    <section
+      v-if="summary.total"
+      class="hidden items-center gap-6 rounded-2xl border border-eb-border bg-eb-surface p-5 lg:flex"
+      :aria-label="t('today.summary')"
+      data-summary="strip"
+    >
+      <div class="min-w-48 shrink-0">
+        <div class="text-[13px] font-semibold text-eb-muted">{{ t('today.punterProfit') }}</div>
+        <div
+          class="text-[34px] leading-tight font-bold tracking-tight"
+          :class="summary.punterBets ? profitClass(summary.punterProfit) : 'text-eb-muted'"
+        >
+          {{ summary.punterBets ? money(summary.punterProfit) : '—' }}
+        </div>
+        <div class="text-[13px] text-eb-muted">
+          {{ t('today.settledOf', { settled: summary.settled, total: summary.total }) }}
+        </div>
+      </div>
+      <div class="w-px self-stretch bg-eb-border" aria-hidden="true"></div>
+      <div class="grid min-w-0 flex-1 grid-cols-5 gap-2">
+        <div
+          v-for="tile in tiles"
+          :key="tile.key"
+          class="min-w-0 rounded-xl bg-eb-surface-2 px-3 py-2.5"
+          :data-tile="tile.key"
+        >
+          <div class="truncate text-xs text-eb-muted">{{ tile.label }}</div>
+          <div class="mt-0.5 truncate text-lg font-bold" :class="tile.class">{{ tile.value }}</div>
+        </div>
+      </div>
+    </section>
+
     <button
       v-if="pendingBefore.length"
       type="button"
@@ -253,6 +319,22 @@ watch(
     <Message v-if="error || settleError" severity="error">
       {{ message(error ?? settleError ?? '') }}
     </Message>
+
+    <div v-if="!loading && groups.length" class="mt-2 hidden items-center gap-3 lg:flex">
+      <h2 class="m-0 flex-1 text-lg font-bold">{{ t('common.predictions') }}</h2>
+      <RouterLink
+        :to="{ name: 'predictions' }"
+        class="inline-flex min-h-11 items-center gap-2.5 rounded-xl bg-eb-accent px-4 font-semibold text-eb-on-accent"
+        aria-keyshortcuts="n"
+      >
+        {{ t('common.newPrediction') }}
+        <kbd
+          class="rounded-md border border-current/40 px-1.5 font-sans text-xs leading-5 font-semibold"
+          :title="t('today.newShortcut')"
+          >N</kbd
+        >
+      </RouterLink>
+    </div>
 
     <p v-if="loading" class="text-center text-eb-muted">{{ t('common.loading') }}</p>
 
@@ -285,6 +367,9 @@ watch(
             {{ group.event.league.name }}
           </span>
         </span>
+        <span class="hidden text-sm font-semibold text-eb-muted lg:inline">
+          {{ t('today.seeGame') }}
+        </span>
         <AppIcon name="chevron-right" class="size-[18px] shrink-0 text-eb-muted" />
       </RouterLink>
       <div
@@ -296,6 +381,7 @@ watch(
           :prediction="prediction"
           :unit-value="settings.unitValue"
           :money-display="settings.moneyDisplay"
+          layout="line"
           :busy="saving.has(prediction.id)"
           @settle="settle(prediction, $event)"
         />
