@@ -24,9 +24,25 @@ export function dateTimeFormat(locale: string, options: Intl.DateTimeFormatOptio
   return cached(dateFormats, locale, options, () => new Intl.DateTimeFormat(locale, options))
 }
 
-/** `0.65` → `65%`. */
-export function formatPercent(value: number, locale: string = DEFAULT_LOCALE): string {
-  return numberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(value)
+interface PercentOptions {
+  /** Fixed decimals (default 0). */
+  decimals?: number
+  /** Prefix positive values with `+` (yield). */
+  signed?: boolean
+}
+
+/** `0.65` → `65%`; `0.0843` with one signed decimal → `+8,4%`. */
+export function formatPercent(
+  value: number,
+  locale: string = DEFAULT_LOCALE,
+  { decimals = 0, signed = false }: PercentOptions = {},
+): string {
+  return numberFormat(locale, {
+    style: 'percent',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    ...(signed && { signDisplay: 'exceptZero' }),
+  }).format(value)
 }
 
 /** Local time of day, `20:15`. */

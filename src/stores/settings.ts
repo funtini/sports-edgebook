@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
 import { DEFAULT_MARKETS } from '@/domain/markets'
+import { DEFAULT_ODDS_BANDS } from '@/domain/metrics'
 import { DEFAULT_MONEY_DISPLAY, DEFAULT_UNIT_VALUE, type MoneyDisplay } from '@/domain/money'
 import {
   confidenceAnchorsSchema,
@@ -18,6 +19,10 @@ export const useSettingsStore = defineStore('settings', () => {
   const unitValue = computed(() => settings.value?.unit_value ?? DEFAULT_UNIT_VALUE)
   const moneyDisplay = computed<MoneyDisplay>(() =>
     settings.value?.money_display === 'euros' ? 'euros' : DEFAULT_MONEY_DISPLAY,
+  )
+
+  const oddsBands = computed<readonly number[]>(
+    () => settings.value?.odds_bands ?? DEFAULT_ODDS_BANDS,
   )
 
   const confidenceAnchors = computed<ConfidenceAnchors>(() => {
@@ -69,5 +74,14 @@ export const useSettingsStore = defineStore('settings', () => {
     return row
   }
 
-  return { settings, unitValue, moneyDisplay, confidenceAnchors, load, ensureLoaded, update }
+  return {
+    settings,
+    unitValue,
+    moneyDisplay,
+    oddsBands,
+    confidenceAnchors,
+    load,
+    ensureLoaded,
+    update,
+  }
 })

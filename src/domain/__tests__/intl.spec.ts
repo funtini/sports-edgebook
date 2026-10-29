@@ -15,6 +15,8 @@ describe('intl', () => {
   it('formats percentages in both languages', () => {
     expect(formatPercent(0.65)).toMatch(/^65\s?%$/)
     expect(formatPercent(0.654, 'en-GB')).toBe('65%')
+    expect(formatPercent(0.0843, 'en-GB', { decimals: 1, signed: true })).toBe('+8.4%')
+    expect(formatPercent(-0.0843, 'pt-PT', { decimals: 1, signed: true })).toMatch(/^-8,4\s?%$/)
   })
 
   it('formats the time of day in both languages', () => {

@@ -2,7 +2,7 @@
 import { useLocale } from '@/composables/useLocale'
 
 /** A screen that arrives in a later phase; its texts live under `placeholder.<section>`. */
-defineProps<{ section: 'dashboard' | 'multiples' }>()
+defineProps<{ section: 'multiples' }>()
 
 const { t } = useLocale()
 </script>
