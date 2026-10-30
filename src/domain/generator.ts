@@ -1,4 +1,5 @@
 import type { ConfidenceLevel } from './confidence'
+import { addDays, fromDayKey, startOfDay, toDayKey } from './days'
 import { multipleOdd } from './settlement'
 import { valueIndex } from './value'
 
@@ -22,8 +23,15 @@ export type GeneratorMode =
 
 export interface GeneratorParams {
   mode: GeneratorMode
-  /** 2–10; required unless mode is `target_odd`, where it fixes the number of legs when given. */
+  /**
+   * Legs to add: 2–10 without `fixed`, 1–6 with it. Required unless mode is `target_odd`, where it
+   * fixes the number of legs to add when given.
+   */
   legs?: number
+  /** Legs already in the multiple: kept first, in order; their events are not picked again. */
+  fixed?: Candidate[]
+  /** Candidate ids to try not to pick; used only when too few others are left. */
+  avoid?: string[]
   /** Required for `target_odd`. */
   targetOdd?: number
   /** Relative, ±; default 0.10. */
@@ -53,6 +61,8 @@ export interface GeneratedMultiple {
 
 export const MIN_LEGS = 2
 export const MAX_LEGS = 10
+export const MIN_ADDED_LEGS = 1
+export const MAX_ADDED_LEGS = 6
 export const DEFAULT_TOLERANCE = 0.1
 export const BEAM_WIDTH = 50
 
@@ -62,26 +72,71 @@ export function generateMultiple(
   params: GeneratorParams,
 ): GeneratedMultiple | null {
   validate(params)
-  const pool = applyFilters(candidates, params)
-  const events = new Set(pool.map((c) => c.event_id)).size
-  const needed = params.legs ?? MIN_LEGS
-  if (events < needed) return null
+  const fixed = params.fixed ?? []
+  const fixedEvents = new Set(fixed.map((leg) => leg.event_id))
+  const pool = applyFilters(candidates, params).filter((c) => !fixedEvents.has(c.event_id))
+  const needed = params.legs ?? (fixed.length ? MIN_ADDED_LEGS : MIN_LEGS)
+  if (countEvents(pool) < needed) return null
 
-  if (params.mode === 'target_odd') return searchTargetOdd(pool, params)
+  const avoid = new Set(params.avoid ?? [])
+  const preferred = pool.filter((c) => !avoid.has(c.id))
+
+  if (params.mode === 'target_odd') {
+    return searchTargetOdd(countEvents(preferred) >= needed ? preferred : pool, params)
+  }
 
   const ordered =
     params.mode === 'random'
       ? shuffle(sortByKickoff(pool), rngFor(params.seed))
       : rank(pool, params.mode)
+  // Avoided candidates go last, keeping their order, so they only fill what the others cannot.
   const legs: Candidate[] = []
   const seen = new Set<string>()
-  for (const candidate of ordered) {
+  for (const candidate of [
+    ...ordered.filter((c) => !avoid.has(c.id)),
+    ...ordered.filter((c) => avoid.has(c.id)),
+  ]) {
     if (seen.has(candidate.event_id)) continue
     seen.add(candidate.event_id)
     legs.push(candidate)
     if (legs.length === needed) break
   }
-  return build(legs, params)
+  return build([...fixed, ...legs], params)
+}
+
+export type DateWindow = 'today' | 'tomorrow' | 'next3' | { from: string; to: string }
+
+/** Inclusive range of local `YYYY-MM-DD` days. */
+export interface DayRange {
+  from: string
+  to: string
+}
+
+/** Last day a custom window can reach: today + 13, so at most 14 days. */
+export const MAX_WINDOW_DAYS = 14
+
+/**
+ * Local-date range of a generator window. A custom range is clamped to today … today + 13; an
+ * invalid day, `from` after `to`, or a range wholly outside that span throws `RangeError`.
+ */
+export function windowRange(window: DateWindow, now: Date): DayRange {
+  const today = startOfDay(now)
+  if (window === 'today') return { from: toDayKey(today), to: toDayKey(today) }
+  if (window === 'tomorrow') {
+    const tomorrow = addDays(today, 1)
+    return { from: toDayKey(tomorrow), to: toDayKey(tomorrow) }
+  }
+  if (window === 'next3') return { from: toDayKey(today), to: toDayKey(addDays(today, 2)) }
+
+  const from = fromDayKey(window.from)
+  const to = fromDayKey(window.to)
+  if (!from || !to) throw new RangeError('from and to must be valid YYYY-MM-DD days')
+  if (from > to) throw new RangeError('from must not be after to')
+  const last = addDays(today, MAX_WINDOW_DAYS - 1)
+  const clampedFrom = from < today ? today : from
+  const clampedTo = to > last ? last : to
+  if (clampedFrom > clampedTo) throw new RangeError('the range must overlap today … today + 13')
+  return { from: toDayKey(clampedFrom), to: toDayKey(clampedTo) }
 }
 
 /**
@@ -119,10 +174,15 @@ export function swapLeg(
   return build(withLeg(replacement as Candidate), params)
 }
 
+function countEvents(candidates: Candidate[]): number {
+  return new Set(candidates.map((c) => c.event_id)).size
+}
+
 function validate(params: GeneratorParams): void {
   const { mode, legs, targetOdd, tolerance } = params
-  if (legs !== undefined && (!Number.isInteger(legs) || legs < MIN_LEGS || legs > MAX_LEGS)) {
-    throw new RangeError(`legs must be a whole number from ${MIN_LEGS} to ${MAX_LEGS}`)
+  const [min, max] = params.fixed?.length ? [MIN_ADDED_LEGS, MAX_ADDED_LEGS] : [MIN_LEGS, MAX_LEGS]
+  if (legs !== undefined && (!Number.isInteger(legs) || legs < min || legs > max)) {
+    throw new RangeError(`legs must be a whole number from ${min} to ${max}`)
   }
   if (mode === 'target_odd') {
     if (targetOdd === undefined || !(targetOdd > 1)) {
@@ -249,16 +309,20 @@ interface BeamState {
 /**
  * Beam search in log space: grows combinations one leg at a time, keeping the BEAM_WIDTH states
  * whose sum of log(odd) is closest to where it should be at that depth (log(target) when the
- * number of legs is free, or its share of it when `legs` is fixed).
+ * number of legs is free, or its share of it when `legs` is fixed). With `fixed` legs it searches
+ * the legs to add towards log(target) − log(fixed odd), and judges the whole multiple.
  */
 function searchTargetOdd(pool: Candidate[], params: GeneratorParams): GeneratedMultiple | null {
   const target = params.targetOdd as number
   const tolerance = params.tolerance ?? DEFAULT_TOLERANCE
-  const logTarget = Math.log(target)
+  const fixed = params.fixed ?? []
+  const logTarget = Math.log(target) - fixed.reduce((total, leg) => total + Math.log(leg.odd), 0)
   const sorted = sortByKickoff(pool)
   const logs = sorted.map((c) => Math.log(c.odd))
-  const minDepth = params.legs ?? MIN_LEGS
-  const maxDepth = params.legs ?? MAX_LEGS
+  const minDepth = params.legs ?? (fixed.length ? MIN_ADDED_LEGS : MIN_LEGS)
+  const maxDepth = params.legs ?? (fixed.length ? MAX_ADDED_LEGS : MAX_LEGS)
+  const toResult = (state: BeamState) =>
+    build([...fixed, ...state.picks.map((i) => sorted[i] as Candidate)], params, target, tolerance)
 
   const goal = (depth: number) => (params.legs ? (logTarget * depth) / params.legs : logTarget)
   const prune = (states: BeamState[], depth: number) =>
@@ -276,7 +340,7 @@ function searchTargetOdd(pool: Candidate[], params: GeneratorParams): GeneratedM
     })),
     1,
   )
-  const results: GeneratedMultiple[] = []
+  const results: GeneratedMultiple[] = minDepth === 1 ? beam.map(toResult) : []
   for (let depth = 2; depth <= maxDepth && beam.length; depth++) {
     const next: BeamState[] = []
     for (const state of beam) {
@@ -292,16 +356,7 @@ function searchTargetOdd(pool: Candidate[], params: GeneratorParams): GeneratedM
     }
     beam = prune(next, depth)
     if (depth >= minDepth) {
-      for (const state of beam) {
-        results.push(
-          build(
-            state.picks.map((i) => sorted[i] as Candidate),
-            params,
-            target,
-            tolerance,
-          ),
-        )
-      }
+      results.push(...beam.map(toResult))
     }
   }
   return pickTargetResult(results, target)

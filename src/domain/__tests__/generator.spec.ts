@@ -3,6 +3,7 @@ import {
   generateMultiple,
   mulberry32,
   swapLeg,
+  windowRange,
   type Candidate,
   type GeneratorParams,
 } from '../generator'
@@ -292,5 +293,222 @@ describe('swapLeg', () => {
     const current = generateMultiple(two, params)!
     expect(swapLeg(current, 'a', two, params)).toBeNull()
     expect(swapLeg(current, 'missing', pool, params)).toBeNull()
+  })
+})
+
+describe('generateMultiple: completing a multiple', () => {
+  const fixedA = pick({ id: 'fa', event_id: 'g-fa', odd: 1.8, probability: 0.6 })
+  const fixedB = pick({ id: 'fb', event_id: 'g-fb', odd: 1.5, probability: 0.7 })
+  const pool = [
+    pick({ id: 'a', confidence: 3, odd: 1.5, probability: 0.65 }),
+    pick({ id: 'b', confidence: 5, odd: 1.3, probability: 0.85 }),
+    pick({ id: 'c', confidence: 3, odd: 1.9, probability: 0.65 }),
+    pick({ id: 'd', confidence: 1, odd: 3.2, probability: 0.4 }),
+    pick({ id: 'e', confidence: 2, odd: 2.4, probability: 0.55 }),
+  ]
+
+  it.each([
+    ['confidence', ['fa', 'fb', 'b', 'c']],
+    ['value', ['fa', 'fb', 'e', 'd']],
+    ['highest_odds', ['fa', 'fb', 'd', 'e']],
+    ['lowest_odds', ['fa', 'fb', 'b', 'a']],
+  ] as const)('%s appends legs after the fixed ones', (mode, expected) => {
+    expect(ids(generateMultiple(pool, { mode, legs: 2, fixed: [fixedA, fixedB] }))).toEqual(
+      expected,
+    )
+  })
+
+  it('random appends legs after the fixed ones, reproducibly', () => {
+    const params: GeneratorParams = { mode: 'random', legs: 3, seed: 7, fixed: [fixedA] }
+    const result = generateMultiple(pool, params)
+    expect(result?.legs[0]).toBe(fixedA)
+    expect(result?.legs).toHaveLength(4)
+    expect(ids(generateMultiple([...pool].reverse(), params))).toEqual(ids(result))
+  })
+
+  it('counts the fixed legs in the totals', () => {
+    const result = generateMultiple(pool, { mode: 'confidence', legs: 1, fixed: [fixedA] })
+    expect(ids(result)).toEqual(['fa', 'b'])
+    expect(result?.totalOdd).toBeCloseTo(1.8 * 1.3)
+    expect(result?.probability).toBeCloseTo(0.6 * 0.85)
+    expect(result?.ev).toBeCloseTo(0.6 * 0.85 * 1.8 * 1.3 - 1)
+  })
+
+  it('leaves out the events of fixed legs', () => {
+    const sameGame = pick({ id: 's', event_id: 'g-fa', confidence: 5, odd: 1.9 })
+    expect(
+      ids(generateMultiple([sameGame, ...pool], { mode: 'confidence', legs: 1, fixed: [fixedA] })),
+    ).toEqual(['fa', 'b'])
+  })
+
+  it('does not filter the fixed legs themselves', () => {
+    const punter = pick({ id: 'fp', is_punter: true, confidence: 1, odd: 5 })
+    const result = generateMultiple(pool, {
+      mode: 'confidence',
+      legs: 1,
+      fixed: [punter],
+      pool: 'non_punter',
+      minConfidence: 3,
+      maxOdd: 2,
+    })
+    expect(ids(result)).toEqual(['fp', 'b'])
+  })
+
+  it('returns null when fewer events than legs to add are left', () => {
+    const two = [pick({ id: 'x', event_id: 'g-fa' }), pick({ id: 'y' })]
+    expect(generateMultiple(two, { mode: 'value', legs: 2, fixed: [fixedA] })).toBeNull()
+    expect(ids(generateMultiple(two, { mode: 'value', legs: 1, fixed: [fixedA] }))).toEqual([
+      'fa',
+      'y',
+    ])
+  })
+
+  it('takes 1–6 legs to add with fixed legs', () => {
+    const fixed = [fixedA]
+    expect(() => generateMultiple(pool, { mode: 'value', legs: 0, fixed })).toThrow(RangeError)
+    expect(() => generateMultiple(pool, { mode: 'value', legs: 7, fixed })).toThrow(RangeError)
+    expect(() => generateMultiple(pool, { mode: 'value', fixed })).toThrow(RangeError)
+    expect(() => generateMultiple(pool, { mode: 'value', legs: 1, fixed: [] })).toThrow(RangeError)
+    expect(generateMultiple(pool, { mode: 'value', legs: 1, fixed })?.legs).toHaveLength(2)
+  })
+})
+
+describe('generateMultiple: target_odd with fixed legs', () => {
+  const fixed = [pick({ id: 'f', event_id: 'g-f', odd: 2, probability: 0.5 })]
+  const pool = [
+    pick({ id: 'a', odd: 1.2, probability: 0.8, kickoff_at: '2026-10-28T21:00:00Z' }),
+    pick({ id: 'b', odd: 1.5, probability: 0.7, kickoff_at: '2026-10-28T18:00:00Z' }),
+    pick({ id: 'c', odd: 2.5, probability: 0.45 }),
+    pick({ id: 'd', odd: 4, probability: 0.2 }),
+  ]
+
+  it('completes the multiple towards the target', () => {
+    // 2 × 2.5 = 5 hits the target exactly.
+    const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 5, fixed })
+    expect(ids(result)).toEqual(['f', 'c'])
+    expect(result?.totalOdd).toBeCloseTo(5)
+    expect(result?.withinTolerance).toBe(true)
+  })
+
+  it('adds the requested number of legs, fixed first, then kickoff order', () => {
+    // 2 × 1.5 × 1.2 = 3.6
+    const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 3.6, legs: 2, fixed })
+    expect(ids(result)).toEqual(['f', 'b', 'a'])
+  })
+
+  it('judges the tolerance on the whole multiple', () => {
+    const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 1.5, legs: 1, fixed })
+    // Best is 2 × 1.2 = 2.4, far from 1.5.
+    expect(ids(result)).toEqual(['f', 'a'])
+    expect(result?.withinTolerance).toBe(false)
+  })
+
+  it('leaves out the events of fixed legs', () => {
+    const sameGame = pick({ id: 's', event_id: 'g-f', odd: 2.5 })
+    const result = generateMultiple([sameGame, ...pool.filter((c) => c.id !== 'c')], {
+      mode: 'target_odd',
+      targetOdd: 5,
+      legs: 1,
+      fixed,
+    })
+    expect(ids(result)).not.toContain('s')
+  })
+})
+
+describe('generateMultiple: avoid', () => {
+  const pool = [
+    pick({ id: 'a', odd: 3 }),
+    pick({ id: 'b', odd: 2.5 }),
+    pick({ id: 'c', odd: 2 }),
+    pick({ id: 'd', odd: 1.5 }),
+  ]
+
+  it('picks others when it can', () => {
+    expect(
+      ids(generateMultiple(pool, { mode: 'highest_odds', legs: 2, avoid: ['a', 'b'] })),
+    ).toEqual(['c', 'd'])
+  })
+
+  it('fills from the avoided ones when too few others are left', () => {
+    expect(
+      ids(generateMultiple(pool, { mode: 'highest_odds', legs: 3, avoid: ['a', 'b'] })),
+    ).toEqual(['c', 'd', 'a'])
+  })
+
+  it('in random mode, gives a set without the avoided legs when possible', () => {
+    const result = generateMultiple(pool, { mode: 'random', legs: 2, seed: 3, avoid: ['a', 'c'] })
+    expect(ids(result)?.sort()).toEqual(['b', 'd'])
+  })
+
+  it('in target_odd mode, avoids when possible and falls back when not', () => {
+    // a × c = 6 is exact, but avoided; b × a or others come closest.
+    const avoided = generateMultiple(pool, {
+      mode: 'target_odd',
+      targetOdd: 6,
+      legs: 2,
+      avoid: ['c'],
+    })
+    expect(ids(avoided)).not.toContain('c')
+    const fallback = generateMultiple(pool, {
+      mode: 'target_odd',
+      targetOdd: 6,
+      legs: 2,
+      avoid: ['a', 'b', 'c'],
+    })
+    expect(fallback?.legs).toHaveLength(2)
+  })
+
+  it('works with fixed legs, as "Gerar outra" uses it', () => {
+    const fixed = [pick({ id: 'f', odd: 1.7 })]
+    expect(
+      ids(generateMultiple(pool, { mode: 'highest_odds', legs: 2, fixed, avoid: ['a', 'b'] })),
+    ).toEqual(['f', 'c', 'd'])
+  })
+})
+
+describe('swapLeg with fixed legs', () => {
+  it('can swap a fixed or an added leg, keeping the others in place', () => {
+    const fixed = [pick({ id: 'f', odd: 1.7 })]
+    const pool = [pick({ id: 'a', odd: 3 }), pick({ id: 'b', odd: 2.5 }), pick({ id: 'c', odd: 2 })]
+    const params: GeneratorParams = { mode: 'highest_odds', legs: 1, fixed }
+    const current = generateMultiple(pool, params)
+    expect(ids(current)).toEqual(['f', 'a'])
+    expect(ids(swapLeg(current!, 'f', pool, params))).toEqual(['b', 'a'])
+    expect(ids(swapLeg(current!, 'a', pool, params))).toEqual(['f', 'b'])
+  })
+})
+
+describe('windowRange', () => {
+  const now = new Date(2026, 9, 28, 23, 30)
+
+  it('today, tomorrow and the next 3 days', () => {
+    expect(windowRange('today', now)).toEqual({ from: '2026-10-28', to: '2026-10-28' })
+    expect(windowRange('tomorrow', now)).toEqual({ from: '2026-10-29', to: '2026-10-29' })
+    expect(windowRange('next3', now)).toEqual({ from: '2026-10-28', to: '2026-10-30' })
+  })
+
+  it('crosses month ends', () => {
+    expect(windowRange('next3', new Date(2026, 9, 31, 9))).toEqual({
+      from: '2026-10-31',
+      to: '2026-11-02',
+    })
+  })
+
+  it('keeps a custom range inside today … today + 13', () => {
+    expect(windowRange({ from: '2026-10-30', to: '2026-11-02' }, now)).toEqual({
+      from: '2026-10-30',
+      to: '2026-11-02',
+    })
+    expect(windowRange({ from: '2026-10-20', to: '2026-12-31' }, now)).toEqual({
+      from: '2026-10-28',
+      to: '2026-11-10',
+    })
+  })
+
+  it('rejects invalid days, from after to, and ranges outside the span', () => {
+    expect(() => windowRange({ from: '2026-11-02', to: '2026-10-30' }, now)).toThrow(RangeError)
+    expect(() => windowRange({ from: '2026-02-30', to: '2026-10-30' }, now)).toThrow(RangeError)
+    expect(() => windowRange({ from: '2026-10-01', to: '2026-10-27' }, now)).toThrow(RangeError)
+    expect(() => windowRange({ from: '2026-11-11', to: '2026-11-20' }, now)).toThrow(RangeError)
   })
 })
