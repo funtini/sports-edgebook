@@ -305,6 +305,7 @@ const en: Messages = {
     addNotes: 'Add notes',
     notes: 'Notes',
     submit: 'Save prediction',
+    submitHint: 'Enter to save · the game stays selected',
     saved: 'Prediction saved',
     pickGame: 'Pick the event or create a new one',
     gameNotSaved: 'This event is not saved yet.',

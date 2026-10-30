@@ -100,7 +100,7 @@ async function saveScore() {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-3xl flex-col gap-3.5 tabular-nums">
+  <div class="mx-auto flex max-w-3xl flex-col gap-3.5 tabular-nums lg:max-w-[1200px]">
     <RouterLink
       :to="{ name: 'today' }"
       class="-mt-2 flex min-h-11 items-center gap-1 self-start text-[15px] font-semibold text-eb-accent-text"
@@ -127,8 +127,17 @@ async function saveScore() {
       </RouterLink>
     </section>
 
-    <template v-else>
-      <section class="rounded-2xl border border-eb-border bg-eb-surface px-4 py-[18px]">
+    <!--
+      Phone: one column. Desktop: the game and the analysis on the left (340px), the predictions on
+      the right; the second row takes the extra height so the analysis stays under the game.
+    -->
+    <div
+      v-else
+      class="flex flex-col gap-3.5 lg:grid lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-x-5 lg:gap-y-3.5"
+    >
+      <section
+        class="rounded-2xl border border-eb-border bg-eb-surface px-4 py-[18px] lg:col-start-1 lg:row-start-1 lg:p-5"
+      >
         <div class="flex flex-wrap justify-between gap-x-3 text-[13px] text-eb-muted">
           <span class="font-semibold">{{ event.league?.name }}</span>
           <span>{{ kickoff }}</span>
@@ -193,42 +202,59 @@ async function saveScore() {
         <small v-if="scoreError" class="mt-2 block text-eb-neg">{{ message(scoreError) }}</small>
       </section>
 
-      <div class="mt-1 flex items-baseline justify-between gap-3">
-        <h2 class="m-0 text-[17px] font-bold">{{ t('common.predictions') }}</h2>
-        <span v-if="rows.length" class="text-[13px] text-eb-muted">
-          {{ t('event.settledCount', { count: rows.length, settled }) }}
-        </span>
-      </div>
+      <section
+        class="contents lg:col-start-2 lg:row-[1/span_2] lg:flex lg:min-w-0 lg:flex-col lg:gap-3"
+        data-column="predictions"
+      >
+        <div class="mt-1 flex items-baseline justify-between gap-3 lg:mt-0 lg:items-center">
+          <div class="contents lg:flex lg:items-baseline lg:gap-2.5">
+            <h2 class="m-0 text-[17px] font-bold lg:text-lg">{{ t('common.predictions') }}</h2>
+            <span v-if="rows.length" class="text-[13px] text-eb-muted">
+              {{ t('event.settledCount', { count: rows.length, settled }) }}
+            </span>
+          </div>
+          <RouterLink
+            :to="{ name: 'predictions', query: { evento: event.id } }"
+            class="hidden min-h-11 shrink-0 items-center gap-2 rounded-xl border-[1.5px] border-dashed border-eb-accent px-4 text-sm font-semibold text-eb-accent-text hover:bg-eb-accent-soft lg:flex"
+            data-new-prediction="desktop"
+          >
+            <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+            {{ t('common.newPrediction') }}
+          </RouterLink>
+        </div>
 
-      <Message v-if="settleError" severity="error">{{ message(settleError) }}</Message>
-      <p
-        v-if="!rows.length"
-        class="m-0 rounded-2xl border border-eb-border bg-eb-surface p-4 text-eb-muted"
-      >
-        {{ t('event.empty') }}
-      </p>
-      <div
-        v-else
-        class="divide-y divide-eb-border overflow-hidden rounded-2xl border border-eb-border bg-eb-surface"
-      >
-        <PredictionRow
-          v-for="prediction in rows"
-          :key="prediction.id"
-          :prediction="prediction"
-          :unit-value="settings.unitValue"
-          :money-display="settings.moneyDisplay"
-          :busy="saving.has(prediction.id)"
-          @settle="settle(prediction, $event)"
-        />
-      </div>
+        <Message v-if="settleError" severity="error">{{ message(settleError) }}</Message>
+        <p
+          v-if="!rows.length"
+          class="m-0 rounded-2xl border border-eb-border bg-eb-surface p-4 text-eb-muted"
+        >
+          {{ t('event.empty') }}
+        </p>
+        <div
+          v-else
+          class="divide-y divide-eb-border overflow-hidden rounded-2xl border border-eb-border bg-eb-surface"
+        >
+          <PredictionRow
+            v-for="prediction in rows"
+            :key="prediction.id"
+            :prediction="prediction"
+            :unit-value="settings.unitValue"
+            :money-display="settings.moneyDisplay"
+            layout="line"
+            :busy="saving.has(prediction.id)"
+            @settle="settle(prediction, $event)"
+          />
+        </div>
 
-      <RouterLink
-        :to="{ name: 'predictions', query: { evento: event.id } }"
-        class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-eb-accent text-[15px] font-semibold text-eb-accent-text hover:bg-eb-accent-soft"
-      >
-        <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-        {{ t('common.newPrediction') }}
-      </RouterLink>
+        <RouterLink
+          :to="{ name: 'predictions', query: { evento: event.id } }"
+          class="flex min-h-12 items-center justify-center gap-2 rounded-xl border-[1.5px] border-dashed border-eb-accent text-[15px] font-semibold text-eb-accent-text hover:bg-eb-accent-soft lg:hidden"
+          data-new-prediction="phone"
+        >
+          <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+          {{ t('common.newPrediction') }}
+        </RouterLink>
+      </section>
 
       <!--
         Reserved for the Game Analyser (phase 6, docs/specs/future-integrations.md): API stats,
@@ -236,7 +262,7 @@ async function saveScore() {
       -->
       <section
         data-slot="game-analyser"
-        class="mt-1.5 flex flex-col gap-2.5 rounded-2xl border border-dashed border-eb-border p-4"
+        class="mt-1.5 flex flex-col gap-2.5 rounded-2xl border border-dashed border-eb-border p-4 lg:col-start-1 lg:row-start-2 lg:mt-0"
       >
         <div class="flex items-center justify-between gap-3">
           <h2 class="m-0 text-[17px] font-bold">{{ t('event.analyser.title') }}</h2>
@@ -255,6 +281,6 @@ async function saveScore() {
           <div class="h-14 rounded-[10px] bg-eb-surface-2" />
         </div>
       </section>
-    </template>
+    </div>
   </div>
 </template>

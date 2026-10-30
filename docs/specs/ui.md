@@ -54,7 +54,11 @@ Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 
 Amounts follow the money display setting (units or euros, see [domain.md](domain.md#units-and-money)).
 
-With `layout="line"` the row keeps this stacked layout below 1024px and becomes the one-line grid of Hoje desktop from `lg` (columns `1fr · 76px · 176px · 120px · 120px · 204px`, the outcome buttons 3 × ≥ 64px wide, 44px tall).
+With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` its own width (container query) picks the grid:
+
+- **≥ 880px** (Hoje): the one-line grid of Hoje desktop (columns `1fr · 76px · 176px · 120px · 120px · 204px`, the outcome buttons 3 × ≥ 64px wide, 44px tall).
+- **680–879px** (Evento's right column): the same line with the confidence badge and value pill under the selection (columns `1fr · 64px · 104px · 112px · 204px`).
+- **< 680px**: the stacked layout.
 
 ## Screens
 
@@ -71,12 +75,12 @@ With `layout="line"` the row keeps this stacked layout below 1024px and becomes 
 ### Evento
 
 - **Phone**: "‹ Hoje", game card (league, date · time, teams with the score in the middle, Resultado inputs + "Guardar resultado"), "Prognósticos" list, dashed "+ Novo prognóstico", "Análise do jogo · Em breve" placeholder.
-- **Desktop**: "‹ Hoje", then two columns: left (max 380px) the game card and the analysis placeholder; right the "Prognósticos" title with count, the dashed "+ Novo prognóstico" button on its right, and the rows in the same one-line grid as Hoje desktop.
+- **Desktop**: "‹ Hoje", then two columns: left (340px) the game card and the analysis placeholder under it; right the "Prognósticos" title with count, the dashed "+ Novo prognóstico" button on its right (the full-width one under the list is phone only), and the rows with `layout="line"` (one line from a 680px column, about 1080px of window; see [Prediction row](#prediction-row)).
 
 ### Registo
 
 - **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right), the search and, under it, **Recentes** show: one card with a 64px row per event (teams; day · time · league; the prediction count in a pill, `accent-soft` when the game is today; chevron). On desktop Recentes is three tiles side by side (league in caps and "N prognósticos" pill on top, teams 16px bold, day · time). Recentes hides while something is typed.
-- **Desktop**: title "Novo prognóstico", two columns: left card with the event (or "Mesmo evento" chip), the Mercado / Tipo / Período / Seleção chips, Linha (totals and handicaps only) and Odd, Confiança (five buttons) and "Adicionar notas"; right column (max 380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado".
+- **Desktop**: title "Novo prognóstico" (26px). Until an event is picked, one full-width card with the event search and the Recentes tiles. Then two columns: left card with the event (or "Mesmo evento" chip), the Pré-jogo / Live switch (max 320px), the Mercado and Tipo chips, Período and Seleção side by side, Linha (totals and handicaps only) and Odd side by side, Confiança (five buttons) and "Adicionar notas"; right column (380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado" (desktop only). Tab order follows the columns: left card, then the right column.
 
 ### Múltiplas
 
