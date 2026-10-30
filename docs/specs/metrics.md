@@ -1,6 +1,6 @@
 # Dashboard metrics
 
-Every metric filters by period (day, week, month, custom) and scope (punter only, all predictions, multiples).
+Every metric filters by period and scope (punter only, all predictions, multiples). The Dashboard's periods (`src/domain/periods.ts`) end today and start on Monday of this week (**Semana**), the 1st of this month (**Mês**), 1 January (**Ano**), or the earliest settled bet (**Tudo**).
 
 | Metric | Definition |
 | --- | --- |
@@ -29,6 +29,8 @@ Every function reads one `Bet` shape, built from either a single or a multiple:
 - **Multiple**: its effective odd (void legs at 1.00), stake (1 virtual unit when simulated), the product of leg probabilities and the first leg's kickoff. No breakdown dimensions.
 
 The date of a bet is its kickoff, not when it was settled; periods and days are local.
+
+Mapping: `betFromPrediction` and `betFromMultiple` in `src/domain/bets.ts`. A multiple's status and effective odd are worked out from its legs' current statuses (`multipleStatus`, `multipleOdd` on `odd_at_selection`), so settling a leg on Hoje shows on the Dashboard on the next load. `src/stores/bets.ts` loads the settled predictions of the period (paging past PostgREST's 1000-row cap) and every multiple with its legs.
 
 | Function | Gives |
 | --- | --- |

@@ -189,6 +189,9 @@ export function streaks(bets: Bet[]): Streaks {
   return result
 }
 
+/** Default `user_settings.odds_bands`: the lower bounds of the bands above the first. */
+export const DEFAULT_ODDS_BANDS: readonly number[] = [1.5, 1.8, 2.2, 3, 5]
+
 export interface OddsBand {
   /** `min` with two decimals, used as the breakdown key. */
   key: string

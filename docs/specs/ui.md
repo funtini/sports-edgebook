@@ -102,6 +102,20 @@ Two tabs: **Criar** and **Guardadas**. Behaviour of the generator itself: [multi
 - **Conta**: email and "Terminar sessão" (outlined).
 - The header gear is shown active (`accent-soft` / `accent-text`) on this screen; no tab is active on phone.
 
+### Dashboard
+
+Desktop-first; usable at 390px with no page-level horizontal scroll. Metrics and definitions: [metrics.md](metrics.md). No metric maths in the view: every number comes from `src/domain/metrics.ts`.
+
+- **Top bar**: "Dashboard" and a subtitle with the period's dates and the number of settled bets ("1/10/2026 – 28/10/2026 · 32 apostas liquidadas"; Tudo: "Desde <data>"). Three segmented controls, on the right on desktop and stacked full width on phone: period **Semana / Mês / Ano / Tudo** (default Mês), scope **Punter / Todos / Múltiplas** (default Punter), **Unidades / €** (starts from `money_display`, not saved).
+- **KPI cards** (grid `auto-fit minmax(220px, 1fr)`, 2 columns on phone): **Lucro** (+ "29,50 unidades apostadas"), **Yield** ("Lucro ÷ apostado"), **Taxa de acerto** ("18 de 30 · nulos excluídos"), **Edge** in percentage points ("+10,8 pp", "break-even 49,2%"). Percentages with one decimal; signed values in `pos` / `neg`; a metric with nothing to measure shows "—".
+- **Lucro acumulado**: ECharts line chart (`src/components/ProfitChart.vue`), one point per day of the period. The singles line follows the scope (Punter, or Todos) in `accent`; Múltiplas in `info`; dashed zero line; y axis and tooltip in units or € per the toggle. Colours are read from the `--eb-*` tokens and read again when the theme switches.
+- **Punter vs múltiplas**: beside the chart on desktop, under it on phone (two columns). For each: count, P/L, yield, hit rate, and "Menos de 30 apostas: lê com cautela." when n < 30.
+- **Desempenho por segmento**: tabs Mercado, Liga, Equipa, Faixa de odd, Confiança, Índice de valor, Casa de apostas, Dia da semana (the tab row scrolls on phone). Table: Segmento, Apostas, Acerto, Odd média, Yield (diverging bar, `neg` left and `pos` right of the centre, ±20% fills its side, plus the number), Lucro. Rows with n < 30 are `muted` with an "amostra pequena" tag. Segment labels: seeded markets and confidence and value-band labels in the active language, odds bands as "1,80–2,19" / "5,00+", weekdays by name; everything else as stored. The table scrolls horizontally inside its card on phones. With scope Múltiplas the table is replaced by "Os segmentos contam só prognósticos simples: escolhe Punter ou Todos."
+- **Empty state**: "Sem apostas liquidadas neste período." when the scope has no settled bet in the period.
+- Calibration, CLV, drawdown and the calendar come in Phase 4.
+
+Code: `src/views/DashboardView.vue`, `src/stores/bets.ts`, `src/domain/bets.ts`, `src/domain/periods.ts`.
+
 ### Login, 404
 
 Cards on `surface` with the same type scale.
