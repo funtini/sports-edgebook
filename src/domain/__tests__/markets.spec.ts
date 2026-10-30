@@ -16,7 +16,7 @@ const PT: Record<string, string> = {
   'catalogue.betType.handicap': 'Handicap',
   'catalogue.betType.result_total': 'Resultado + Total',
   'catalogue.betType.other': 'Outro',
-  'catalogue.pick.home': 'Casa',
+  'catalogue.pick.home': 'V1',
   'catalogue.pick.x2': 'X2',
 }
 const translate = (key: string) => PT[key] ?? key
@@ -85,7 +85,7 @@ describe('pickSummary', () => {
   it('reads Mercado - Tipo - Período - Seleção', () => {
     expect(
       summary({ market: 'result', bet_type: '1x2', period: 'HT', selection: 'home', line: null }),
-    ).toBe('Resultado - 1X2 - HT - Casa')
+    ).toBe('Resultado - 1X2 - HT - V1')
     expect(
       summary({ market: 'goals', bet_type: 'total', period: 'FT', selection: 'over', line: 2.5 }),
     ).toBe('Golos - Total - FT - +2,5')
@@ -97,7 +97,7 @@ describe('pickSummary', () => {
         selection: 'home',
         line: -1.5,
       }),
-    ).toBe('Resultado - Handicap - FT - Casa −1,5')
+    ).toBe('Resultado - Handicap - FT - V1 −1,5')
     expect(
       summary({
         market: 'result',

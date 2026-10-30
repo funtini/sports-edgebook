@@ -143,8 +143,8 @@ export function pickParts(
 }
 
 /**
- * The bet as one line: Mercado - Tipo - Período - Seleção, e.g. `Resultado - 1X2 - HT - Casa`,
- * `Golos - Total - FT - +2,5`, `Resultado - Handicap - FT - Casa −1,5`. `formatLine` formats the
+ * The bet as one line: Mercado - Tipo - Período - Seleção, e.g. `Resultado - 1X2 - HT - V1`,
+ * `Golos - Total - FT - +2,5`, `Resultado - Handicap - FT - V1 −1,5`. `formatLine` formats the
  * absolute line in the active locale.
  */
 export function pickSummary(

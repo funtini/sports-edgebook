@@ -293,10 +293,10 @@ describe('PredictionsView', () => {
     const wrapper = await render({ eventId: EVENT_ID })
     const labels = () => wrapper.findAll('[role="group"] button').map((b) => b.text())
 
-    expect(labels()).toEqual(expect.arrayContaining(['1X2', 'Dupla hipótese', 'Casa', 'Empate']))
+    expect(labels()).toEqual(expect.arrayContaining(['1X2', 'Dupla hipótese', 'V1', 'X']))
     await button(wrapper, 'Golos').trigger('click')
     expect(labels()).not.toContain('1X2')
-    expect(labels()).not.toContain('Casa')
+    expect(labels()).not.toContain('V1')
     expect(labels()).toContain('Ambas marcam')
 
     await button(wrapper, 'Outro').trigger('click')
@@ -315,7 +315,7 @@ describe('PredictionsView', () => {
     await button(wrapper, 'Corners').trigger('click')
     await button(wrapper, 'Team total').trigger('click')
     await button(wrapper, 'HT').trigger('click')
-    await button(wrapper, 'Away').trigger('click')
+    await button(wrapper, 'W2').trigger('click')
     await wrapper.get('#line').setValue('-1.5')
     await wrapper.get('#odd').setValue('1.85')
     await button(wrapper, '3Good').trigger('click')

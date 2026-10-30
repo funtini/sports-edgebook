@@ -374,9 +374,9 @@ const ptPT = {
       other: 'Outro',
     },
     pick: {
-      home: 'Casa',
-      draw: 'Empate',
-      away: 'Fora',
+      home: 'V1',
+      draw: 'X',
+      away: 'V2',
       '1x': '1X',
       x2: 'X2',
       '12': '12',

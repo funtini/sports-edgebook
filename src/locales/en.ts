@@ -370,9 +370,9 @@ const en: Messages = {
       other: 'Other',
     },
     pick: {
-      home: 'Home',
-      draw: 'Draw',
-      away: 'Away',
+      home: 'W1',
+      draw: 'X',
+      away: 'W2',
       '1x': '1X',
       x2: 'X2',
       '12': '12',
