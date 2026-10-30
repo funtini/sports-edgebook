@@ -29,12 +29,16 @@ function contrast(a: string, b: string): number {
 /**
  * [text, background]: body text, badges and boxes (soft fills), pills and buttons (solid fills), P/L.
  * The prediction row value pills are the band colour on its soft fill (neutral: muted on surface-2).
+ * Hoje's desktop summary tiles colour their numbers (info, pos, amber) on surface-2.
  */
 const PAIRS = [
   ['text', 'bg'],
   ['text', 'surface'],
   ['muted', 'surface'],
   ['muted', 'surface-2'],
+  ['info', 'surface-2'],
+  ['pos', 'surface-2'],
+  ['amber', 'surface-2'],
   ['pos', 'pos-soft'],
   ['neg', 'neg-soft'],
   ['info', 'info-soft'],

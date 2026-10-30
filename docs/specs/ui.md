@@ -54,6 +54,8 @@ Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 
 Amounts follow the money display setting (units or euros, see [domain.md](domain.md#units-and-money)).
 
+With `layout="line"` the row keeps this stacked layout below 1024px and becomes the one-line grid of Hoje desktop from `lg` (columns `1fr · 76px · 176px · 120px · 120px · 204px`, the outcome buttons 3 × ≥ 64px wide, 44px tall).
+
 ## Screens
 
 ### Hoje

@@ -4,6 +4,10 @@ import { isPunterBet, predictionProfit, stakeFor, type SettleablePrediction } fr
 export interface DaySummary {
   total: number
   settled: number
+  /** Predictions won, punter or not. */
+  won: number
+  /** Predictions still pending. */
+  open: number
   hitRate: number | null
   /** P/L of settled punter bets, in units. */
   punterProfit: number
@@ -15,9 +19,12 @@ export interface DaySummary {
 
 export function daySummary(predictions: SettleablePrediction[]): DaySummary {
   const punter = predictions.filter(isPunterBet)
+  const open = predictions.filter((p) => p.status === 'pending').length
   return {
     total: predictions.length,
-    settled: predictions.filter((p) => p.status !== 'pending').length,
+    settled: predictions.length - open,
+    won: predictions.filter((p) => p.status === 'won').length,
+    open,
     hitRate: hitRate(predictions.map((p) => p.status)),
     punterProfit: punter.reduce((sum, p) => sum + (predictionProfit(p) ?? 0), 0),
     punterBets: punter.length,
