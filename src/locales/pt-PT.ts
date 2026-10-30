@@ -308,6 +308,7 @@ const ptPT = {
     addNotes: 'Adicionar notas',
     notes: 'Notas',
     submit: 'Guardar prognóstico',
+    submitHint: 'Enter para guardar · o jogo fica selecionado',
     saved: 'Prognóstico guardado',
     pickGame: 'Escolhe o evento ou cria um novo',
     gameNotSaved: 'Este evento ainda não está guardado.',

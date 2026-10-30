@@ -140,14 +140,28 @@ describe('PredictionRow in English', () => {
   it('stacks by default and becomes one grid line from lg with layout="line"', () => {
     const card = mountRow('pending')
     expect(card.attributes('data-layout')).toBe('card')
-    expect(card.classes()).not.toContain('lg:grid')
+    expect(card.classes()).not.toContain('@container')
+    expect(
+      card
+        .get('[data-grid]')
+        .classes()
+        .some((c) => c.includes('grid-cols')),
+    ).toBe(false)
 
     const line = mount(PredictionRow, {
       props: { prediction: prediction(), unitValue: 10, moneyDisplay: 'units', layout: 'line' },
     })
     expect(line.attributes('data-layout')).toBe('line')
-    expect(line.classes()).toEqual(expect.arrayContaining(['flex-col', 'lg:grid']))
-    expect(box(line, 'stake').classes()).toContain('lg:order-4')
-    expect(box(line, 'result').classes()).toContain('lg:order-5')
+    // The row's own width picks the grid: compact from 680px (Evento), full from 880px (Hoje).
+    expect(line.classes()).toContain('@container')
+    expect(line.get('[data-grid]').classes()).toEqual(
+      expect.arrayContaining([
+        'flex-col',
+        'lg:@min-[680px]:grid',
+        'lg:@min-[880px]:grid-cols-[minmax(0,1fr)_76px_176px_120px_120px_204px]',
+      ]),
+    )
+    expect(box(line, 'stake').classes()).toContain('lg:@min-[880px]:col-start-4')
+    expect(box(line, 'result').classes()).toContain('lg:@min-[880px]:col-start-5')
   })
 })

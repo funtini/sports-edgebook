@@ -3,15 +3,15 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
-import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
-import AppIcon from '@/components/AppIcon.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
 import GamePicker from '@/components/GamePicker.vue'
+import NotesField from '@/components/NotesField.vue'
 import PunterFields from '@/components/PunterFields.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
 import { useLocale } from '@/composables/useLocale'
+import { DESKTOP_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
 import { formatPercent } from '@/domain/intl'
@@ -53,6 +53,8 @@ const reference = useReferenceStore()
 const settings = useSettingsStore()
 const toast = useToast()
 const { t, intlLocale, message } = useLocale()
+/** From `lg` the value index and the notes move to the desktop columns (docs/specs/ui.md). */
+const desktop = useMediaQuery(DESKTOP_QUERY)
 
 const loading = ref(true)
 const saving = ref(false)
@@ -234,176 +236,208 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="mx-auto flex max-w-xl flex-col gap-4">
-    <h1 class="m-0 text-[22px] font-bold tracking-tight">{{ t('logging.title') }}</h1>
+  <div class="mx-auto flex max-w-xl flex-col gap-4 lg:max-w-[1100px] lg:gap-[18px]">
+    <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
+      {{ t('logging.title') }}
+    </h1>
 
-    <form class="flex flex-col gap-[18px]" novalidate @submit.prevent="save">
-      <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="sr-only">{{ t('logging.game') }}</legend>
-        <GamePicker
-          v-model:game="game"
-          v-model:new-game="newGame"
-          :errors="errors"
-          :kept="kept"
-          :recent="recent"
-        />
-      </fieldset>
-
-      <!-- The rest of the form appears once an event is picked or being created. -->
-      <template v-if="hasEvent">
+    <!--
+      Phone: one column. Desktop: a card with the event and the prediction on the left, and the
+      value index, the punter card and the save button on the right (max 380px).
+    -->
+    <form
+      class="flex flex-col gap-[18px] lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start lg:gap-5"
+      novalidate
+      @submit.prevent="save"
+    >
+      <div
+        class="flex min-w-0 flex-col gap-[18px] lg:rounded-2xl lg:border lg:border-eb-border lg:bg-eb-surface lg:p-5"
+        :class="!hasEvent && 'lg:col-span-2'"
+        data-column="main"
+      >
         <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-          <legend class="sr-only">{{ t('logging.prediction') }}</legend>
-          <SegmentedControl
-            v-model="timing"
-            :options="timingOptions"
-            :label="t('logging.timing')"
+          <legend class="sr-only">{{ t('logging.game') }}</legend>
+          <GamePicker
+            v-model:game="game"
+            v-model:new-game="newGame"
+            :errors="errors"
+            :kept="kept"
+            :recent="recent"
           />
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.market') }}</span>
-            <ChipGroup
-              v-model="draft.market"
-              :options="marketOptions"
-              :label="t('logging.market')"
-            />
-          </div>
+        </fieldset>
 
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.type') }}</span>
-            <ChipGroup
-              v-model="draft.betType"
-              :options="betTypeOptions"
-              :label="t('logging.type')"
-              :invalid="!!errors.bet_type"
-            />
-            <small v-if="errors.bet_type" class="text-eb-neg">{{ message(errors.bet_type) }}</small>
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.period') }}</span>
+        <!-- The rest of the form appears once an event is picked or being created. -->
+        <template v-if="hasEvent">
+          <fieldset
+            class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0 lg:gap-[18px]"
+            :disabled="loading"
+          >
+            <legend class="sr-only">{{ t('logging.prediction') }}</legend>
             <SegmentedControl
-              v-model="draft.period"
-              :options="periodOptions"
-              :label="t('logging.period')"
+              v-model="timing"
+              :options="timingOptions"
+              :label="t('logging.timing')"
+              class="lg:max-w-[320px]"
             />
-          </div>
-
-          <div v-if="draft.betType === 'other'" class="flex flex-col gap-1">
-            <label for="selection" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.selection')
-            }}</label>
-            <InputText
-              id="selection"
-              v-model="draft.pick"
-              autocomplete="off"
-              :placeholder="t('logging.selectionPlaceholder')"
-              class="min-h-12 w-full"
-              :invalid="!!errors.selection"
-            />
-            <small v-if="errors.selection" class="text-eb-neg">{{
-              message(errors.selection)
-            }}</small>
-          </div>
-          <div v-else-if="pickOptions.length > 0" class="flex flex-col gap-1.5">
-            <span class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.selection')
-            }}</span>
-            <ChipGroup
-              v-model="draft.pick"
-              :options="pickOptions"
-              :label="t('logging.selection')"
-              :invalid="!!errors.selection"
-            />
-            <small v-if="errors.selection" class="text-eb-neg">{{
-              message(errors.selection)
-            }}</small>
-          </div>
-
-          <div v-if="line" class="flex flex-col gap-1">
-            <label for="line" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.line')
-            }}</label>
-            <div class="flex gap-1">
-              <InputText
-                id="line"
-                v-model="draft.line"
-                inputmode="decimal"
-                :placeholder="
-                  t(
-                    line === 'total'
-                      ? 'logging.lineTotalPlaceholder'
-                      : 'logging.lineHandicapPlaceholder',
-                  )
-                "
-                autocomplete="off"
-                class="min-h-12 w-full min-w-0"
-                :invalid="!!errors.line"
-              />
-              <Button
-                type="button"
-                label="±"
-                :aria-label="t('logging.toggleSign')"
-                severity="secondary"
-                outlined
-                class="min-h-12 min-w-12 shrink-0"
-                @click="draft.line = toggleSign(draft.line)"
+            <div class="flex flex-col gap-1.5">
+              <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.market') }}</span>
+              <ChipGroup
+                v-model="draft.market"
+                :options="marketOptions"
+                :label="t('logging.market')"
               />
             </div>
-            <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
-            <small v-else-if="line === 'total'" class="text-eb-muted">{{
-              t('logging.lineTotalHint')
-            }}</small>
-          </div>
 
-          <div class="flex flex-col gap-1">
-            <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.odd')
-            }}</label>
-            <InputText
-              id="odd"
-              v-model="draft.odd"
-              inputmode="decimal"
-              :placeholder="t('logging.oddPlaceholder')"
-              autocomplete="off"
-              class="min-h-12 w-full text-xl font-bold tabular-nums"
-              :invalid="!!errors.odd"
-            />
-            <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
-          </div>
-        </fieldset>
+            <div class="flex flex-col gap-1.5">
+              <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.type') }}</span>
+              <ChipGroup
+                v-model="draft.betType"
+                :options="betTypeOptions"
+                :label="t('logging.type')"
+                :invalid="!!errors.bet_type"
+              />
+              <small v-if="errors.bet_type" class="text-eb-neg">{{
+                message(errors.bet_type)
+              }}</small>
+            </div>
 
-        <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-          <legend
-            class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
-          >
-            <span>{{ t('logging.confidence') }}</span>
-            <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
-          </legend>
-          <div class="grid grid-cols-5 gap-2">
-            <button
-              v-for="level in CONFIDENCE_LEVELS"
-              :key="level"
-              type="button"
-              class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
-              :class="
-                draft.confidence === level
-                  ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
-                  : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
-              "
-              :aria-pressed="draft.confidence === level"
-              @click="draft.confidence = level"
+            <!-- Desktop: Período and Seleção side by side, then Linha and Odd. -->
+            <div class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[13px] font-semibold text-eb-muted">{{
+                  t('logging.period')
+                }}</span>
+                <SegmentedControl
+                  v-model="draft.period"
+                  :options="periodOptions"
+                  :label="t('logging.period')"
+                />
+              </div>
+
+              <div v-if="draft.betType === 'other'" class="flex flex-col gap-1">
+                <label for="selection" class="text-[13px] font-semibold text-eb-muted">{{
+                  t('logging.selection')
+                }}</label>
+                <InputText
+                  id="selection"
+                  v-model="draft.pick"
+                  autocomplete="off"
+                  :placeholder="t('logging.selectionPlaceholder')"
+                  class="min-h-12 w-full"
+                  :invalid="!!errors.selection"
+                />
+                <small v-if="errors.selection" class="text-eb-neg">{{
+                  message(errors.selection)
+                }}</small>
+              </div>
+              <div v-else-if="pickOptions.length > 0" class="flex flex-col gap-1.5">
+                <span class="text-[13px] font-semibold text-eb-muted">{{
+                  t('logging.selection')
+                }}</span>
+                <ChipGroup
+                  v-model="draft.pick"
+                  :options="pickOptions"
+                  :label="t('logging.selection')"
+                  :invalid="!!errors.selection"
+                />
+                <small v-if="errors.selection" class="text-eb-neg">{{
+                  message(errors.selection)
+                }}</small>
+              </div>
+
+              <div v-if="line" class="flex flex-col gap-1">
+                <label for="line" class="text-[13px] font-semibold text-eb-muted">{{
+                  t('logging.line')
+                }}</label>
+                <div class="flex gap-1">
+                  <InputText
+                    id="line"
+                    v-model="draft.line"
+                    inputmode="decimal"
+                    :placeholder="
+                      t(
+                        line === 'total'
+                          ? 'logging.lineTotalPlaceholder'
+                          : 'logging.lineHandicapPlaceholder',
+                      )
+                    "
+                    autocomplete="off"
+                    class="min-h-12 w-full min-w-0"
+                    :invalid="!!errors.line"
+                  />
+                  <Button
+                    type="button"
+                    label="±"
+                    :aria-label="t('logging.toggleSign')"
+                    severity="secondary"
+                    outlined
+                    class="min-h-12 min-w-12 shrink-0"
+                    @click="draft.line = toggleSign(draft.line)"
+                  />
+                </div>
+                <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
+                <small v-else-if="line === 'total'" class="text-eb-muted">{{
+                  t('logging.lineTotalHint')
+                }}</small>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
+                  t('logging.odd')
+                }}</label>
+                <InputText
+                  id="odd"
+                  v-model="draft.odd"
+                  inputmode="decimal"
+                  :placeholder="t('logging.oddPlaceholder')"
+                  autocomplete="off"
+                  class="min-h-12 w-full text-xl font-bold tabular-nums"
+                  :invalid="!!errors.odd"
+                />
+                <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
+            <legend
+              class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
             >
-              <span class="text-xl leading-none font-bold">{{ level }}</span>
-              <span class="text-center text-[11px] leading-tight font-semibold">
-                {{ t(`confidence.${level}`) }}
-              </span>
-            </button>
-          </div>
-          <small v-if="errors.confidence" class="text-eb-neg">{{
-            message(errors.confidence)
-          }}</small>
-          <ValueIndex :odd="parsedOdd" :probability="probability" />
-        </fieldset>
+              <span>{{ t('logging.confidence') }}</span>
+              <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
+            </legend>
+            <div class="grid grid-cols-5 gap-2">
+              <button
+                v-for="level in CONFIDENCE_LEVELS"
+                :key="level"
+                type="button"
+                class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
+                :class="
+                  draft.confidence === level
+                    ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
+                    : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
+                "
+                :aria-pressed="draft.confidence === level"
+                @click="draft.confidence = level"
+              >
+                <span class="text-xl leading-none font-bold">{{ level }}</span>
+                <span class="text-center text-[11px] leading-tight font-semibold">
+                  {{ t(`confidence.${level}`) }}
+                </span>
+              </button>
+            </div>
+            <small v-if="errors.confidence" class="text-eb-neg">{{
+              message(errors.confidence)
+            }}</small>
+            <ValueIndex v-if="!desktop" :odd="parsedOdd" :probability="probability" />
+          </fieldset>
 
+          <NotesField v-if="desktop" v-model:notes="draft.notes" v-model:open="showNotes" />
+        </template>
+      </div>
+
+      <div v-if="hasEvent" class="flex min-w-0 flex-col gap-[18px] lg:gap-3.5" data-column="side">
+        <ValueIndex v-if="desktop" :odd="parsedOdd" :probability="probability" />
         <PunterFields
           v-model:is-punter="draft.isPunter"
           v-model:stake="draft.stake"
@@ -414,23 +448,7 @@ onMounted(async () => {
           :money-display="settings.moneyDisplay"
         />
 
-        <div class="flex flex-col gap-1">
-          <button
-            v-if="!showNotes"
-            type="button"
-            class="flex min-h-11 items-center gap-1.5 self-start text-[15px] font-semibold text-eb-accent-text"
-            @click="showNotes = true"
-          >
-            <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-            {{ t('logging.addNotes') }}
-          </button>
-          <template v-else>
-            <label for="notes" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.notes')
-            }}</label>
-            <Textarea id="notes" v-model="draft.notes" rows="3" auto-resize class="w-full" />
-          </template>
-        </div>
+        <NotesField v-if="!desktop" v-model:notes="draft.notes" v-model:open="showNotes" />
 
         <Message v-if="error" severity="error">{{ message(error) }}</Message>
         <Button
@@ -440,7 +458,10 @@ onMounted(async () => {
           :disabled="loading"
           class="min-h-[52px] !rounded-[14px] !text-base !font-bold"
         />
-      </template>
+        <p class="m-0 hidden text-center text-xs text-eb-muted lg:block">
+          {{ t('logging.submitHint') }}
+        </p>
+      </div>
     </form>
   </div>
 </template>
