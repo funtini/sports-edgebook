@@ -538,11 +538,11 @@ describe('breakdown', () => {
       ['reduced', 1],
     ])
     expect(keysAndN(breakdown(all, 'betType'))).toEqual([
-      ['goals · total', 6],
-      ['result · 1x2', 4],
-      ['result · handicap', 3],
-      ['corners · total', 1],
-      ['goals · btts', 1],
+      ['goals · FT · total', 6],
+      ['result · FT · 1x2', 4],
+      ['result · FT · handicap', 3],
+      ['corners · FT · total', 1],
+      ['goals · FT · btts', 1],
     ])
     expect(keysAndN(breakdown(all, 'market'))).toEqual([
       ['goals', 7],
@@ -557,6 +557,17 @@ describe('breakdown', () => {
     expect(keysAndN(timing)).toEqual([
       ['prematch', 11],
       ['live', 4],
+    ])
+  })
+
+  it('splits market and type by period, a bet without one counting as FT', () => {
+    const [first, second, third] = all.filter(
+      (bet) => bet.market === 'goals' && bet.betType === 'total',
+    )
+    const bets = [{ ...first!, period: 'HT' as const }, { ...second!, period: undefined }, third!]
+    expect(keysAndN(breakdown(bets, 'betType'))).toEqual([
+      ['goals · FT · total', 2],
+      ['goals · HT · total', 1],
     ])
   })
 

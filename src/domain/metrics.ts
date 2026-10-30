@@ -239,7 +239,7 @@ export const SMALL_SAMPLE = 30
 
 export interface BreakdownRow {
   /**
-   * Segment: the code or name as stored (bet type is `market · bet_type`, timing `prematch` or `live`), the odds band's `key`, the
+   * Segment: the code or name as stored (bet type is `market · period · bet_type`, timing `prematch` or `live`), the odds band's `key`, the
    * confidence level or value band, or the local weekday `0` (Sunday) to `6`.
    */
   key: string
@@ -262,7 +262,10 @@ function keysOf(bet: Bet, dimension: Dimension, bands: OddsBand[]): string[] {
     case 'market':
       return present(bet.market)
     case 'betType':
-      return bet.market && bet.betType ? [`${bet.market} · ${bet.betType}`] : []
+      // Market, period and type: a first-half 1X2 is not a full-time one. No period counts as FT.
+      return bet.market && bet.betType
+        ? [`${bet.market} · ${bet.period ?? 'FT'} · ${bet.betType}`]
+        : []
     case 'period':
       return present(bet.period)
     case 'timing':

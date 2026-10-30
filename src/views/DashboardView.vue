@@ -164,8 +164,10 @@ function segmentLabel(key: string): string {
     case 'timing':
       return t(`timing.${key}`)
     case 'betType': {
-      const [market, betType] = key.split(' · ')
-      return `${t(`catalogue.market.${market}`)} - ${t(`catalogue.betType.${betType}`)}`
+      // "Resultado - 1X2" for FT, "Resultado HT - 1X2" for the other periods.
+      const [market, period, betType] = key.split(' · ')
+      const head = t(`catalogue.market.${market}`) + (period === 'FT' ? '' : ` ${period}`)
+      return `${head} - ${t(`catalogue.betType.${betType}`)}`
     }
     case 'oddsBand': {
       const band = oddsBands([...settings.oddsBands]).find((b) => b.key === key)

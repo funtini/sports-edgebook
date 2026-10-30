@@ -9,7 +9,7 @@ import { formatPercent } from '@/domain/intl'
 import { breakdown, cumulativeSeries, scope, summary, type Bet } from '@/domain/metrics'
 import { formatMoney } from '@/domain/money'
 import type { BetStatus } from '@/domain/settlement'
-import type { BetType, Market } from '@/domain/markets'
+import type { BetType, Market, MatchPeriod } from '@/domain/markets'
 import DashboardView from '../DashboardView.vue'
 
 const mocked = vi.hoisted(() => ({ client: null as unknown }))
@@ -36,6 +36,7 @@ function prediction(
   odd: number,
   stake: number | null,
   market: [Market, BetType] = ['goals', 'total'],
+  period: MatchPeriod = 'FT',
 ): BetPrediction & { id: string } {
   return {
     id: `p${++id}`,
@@ -55,14 +56,14 @@ function prediction(
     },
     market: market[0],
     bet_type: market[1],
-    period: 'FT',
+    period,
   }
 }
 
 // October 2026: four punter bets, two virtual ones, one void.
 const predictions = [
   prediction('05', 'won', 1.9, 2),
-  prediction('07', 'lost', 2.1, 1, ['result', '1x2']),
+  prediction('07', 'lost', 2.1, 1, ['result', '1x2'], 'HT'),
   prediction('12', 'won', 1.6, 1.5),
   prediction('20', 'void', 1.8, 1),
   prediction('21', 'won', 2.4, null),
@@ -197,6 +198,8 @@ describe('DashboardView', () => {
     expect(rows[0]!.text()).toContain('amostra pequena')
     expect(rows[0]!.classes()).toContain('text-eb-muted')
     expect(rows[0]!.text()).toContain(formatMoney(expected[0]!.profit, 20, 'units'))
+    // The period follows the market, except FT.
+    expect(rows[1]!.text()).toContain('Resultado HT - 1X2')
 
     await button(wrapper, 'Faixa de odd').trigger('click')
     const bands = wrapper.findAll('[data-segment]').map((r) => r.text())
