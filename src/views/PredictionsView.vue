@@ -17,7 +17,7 @@ import { parseDecimal, toggleSign } from '@/domain/decimal'
 import { formatPercent } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
-import { toSearchResult, type EventSearchResult } from '@/domain/eventSource'
+import { toSearchResult, type EventSearchResult, type RecentEvent } from '@/domain/eventSource'
 import {
   BET_TYPES_BY_MARKET,
   lineKind,
@@ -59,6 +59,7 @@ const saving = ref(false)
 const error = ref<string | null>(null)
 const errors = ref<FieldErrors>({})
 const bookmakers = ref<string[]>([])
+const recent = ref<RecentEvent[]>([])
 
 const game = ref<EventSearchResult | null>(null)
 const newGame = ref<NewGameForm | null>(null)
@@ -91,6 +92,28 @@ const betTypeOptions = computed(() =>
   })),
 )
 const periodOptions = MATCH_PERIODS.map((value) => ({ value, label: value }))
+const timingOptions = computed(() => [
+  { value: 'prematch' as const, label: t('timing.prematch') },
+  { value: 'live' as const, label: t('timing.live') },
+])
+const timing = computed({
+  get: () => (draft.isLive ? 'live' : 'prematch'),
+  set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
+})
+
+/** Kickoff of the picked or new event; null while it is not known. */
+const kickoff = computed(() => {
+  if (game.value) return new Date(game.value.kickoffAt)
+  if (!newGame.value?.date || !newGame.value.time) return null
+  const typed = new Date(`${newGame.value.date}T${newGame.value.time}`)
+  return Number.isNaN(typed.getTime()) ? null : typed
+})
+
+/** Live by default once the event has kicked off. */
+function defaultTiming() {
+  draft.isLive = !!kickoff.value && kickoff.value.getTime() <= Date.now()
+}
+watch(kickoff, defaultTiming)
 const pickOptions = computed(() =>
   PICKS[draft.betType].map((value) => ({ value, label: t(`catalogue.pick.${value}`) })),
 )
@@ -116,6 +139,7 @@ watch(
 /** Clears everything about the prediction but keeps the game. */
 function resetPrediction() {
   Object.assign(draft, emptyPredictionDraft())
+  defaultTiming()
   showNotes.value = false
   errors.value = {}
 }
@@ -194,8 +218,13 @@ onMounted(async () => {
   try {
     // Settings first: a new user's first load creates their settings row.
     await settings.ensureLoaded()
-    const [, used] = await Promise.all([reference.load(), predictions.listBookmakers()])
+    const [, used, recentEvents] = await Promise.all([
+      reference.load(),
+      predictions.listBookmakers(),
+      predictions.listRecentEvents(),
+    ])
     bookmakers.value = used
+    recent.value = recentEvents
   } catch (e) {
     error.value = userMessage(e, 'logging.loadFailed')
   } finally {
@@ -211,13 +240,24 @@ onMounted(async () => {
     <form class="flex flex-col gap-[18px]" novalidate @submit.prevent="save">
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
         <legend class="sr-only">{{ t('logging.game') }}</legend>
-        <GamePicker v-model:game="game" v-model:new-game="newGame" :errors="errors" :kept="kept" />
+        <GamePicker
+          v-model:game="game"
+          v-model:new-game="newGame"
+          :errors="errors"
+          :kept="kept"
+          :recent="recent"
+        />
       </fieldset>
 
       <!-- The rest of the form appears once an event is picked or being created. -->
       <template v-if="hasEvent">
         <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
           <legend class="sr-only">{{ t('logging.prediction') }}</legend>
+          <SegmentedControl
+            v-model="timing"
+            :options="timingOptions"
+            :label="t('logging.timing')"
+          />
           <div class="flex flex-col gap-1.5">
             <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.market') }}</span>
             <ChipGroup

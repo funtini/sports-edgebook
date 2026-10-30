@@ -112,6 +112,13 @@ describe('PredictionRow', () => {
   })
 })
 
+describe('PredictionRow live tag', () => {
+  it('tags a live prediction only', () => {
+    expect(mountRow('pending').find('[data-live]').exists()).toBe(false)
+    expect(mountRow('pending', { is_live: true }).get('[data-live]').text()).toBe('Live')
+  })
+})
+
 describe('PredictionRow in English', () => {
   it('translates labels, the bet summary and numbers live', async () => {
     const wrapper = mountRow('won', {}, 'euros')

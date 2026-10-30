@@ -140,6 +140,7 @@ const DIMENSIONS = [
   'betType',
   'market',
   'period',
+  'timing',
   'league',
   'team',
   'oddsBand',
@@ -160,6 +161,8 @@ function segmentLabel(key: string): string {
   switch (dimension.value) {
     case 'market':
       return t(`catalogue.market.${key}`)
+    case 'timing':
+      return t(`timing.${key}`)
     case 'betType': {
       const [market, betType] = key.split(' · ')
       return `${t(`catalogue.market.${market}`)} - ${t(`catalogue.betType.${betType}`)}`

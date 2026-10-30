@@ -20,6 +20,7 @@ export interface BetPrediction {
   probability: number
   confidence: number
   bookmaker: string | null
+  is_live: boolean
   event: {
     kickoff_at: string
     home_team: { name: string }
@@ -44,6 +45,7 @@ export function betFromPrediction(prediction: BetPrediction): Bet {
     market: prediction.market,
     betType: prediction.bet_type,
     period: prediction.period,
+    live: prediction.is_live,
     leagueName: prediction.event.league?.name ?? null,
     teams: [prediction.event.home_team.name, prediction.event.away_team.name],
     confidence: prediction.confidence as ConfidenceLevel,

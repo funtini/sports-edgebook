@@ -106,6 +106,12 @@ const en: Messages = {
     units: 'units',
     bookmaker: 'Bookmaker',
   },
+  recentEvents: {
+    today: 'Today',
+    title: 'Recent',
+    predictions: 'predictions',
+    count: '{n} prediction | {n} predictions',
+  },
   gamePicker: {
     kept: 'Same event',
     game: 'Event',
@@ -190,6 +196,7 @@ const en: Messages = {
       betType: 'Market and type',
       market: 'Market',
       period: 'Period',
+      timing: 'Pre-match / Live',
       league: 'League',
       team: 'Team',
       oddsBand: 'Odds band',
@@ -283,6 +290,7 @@ const en: Messages = {
     market: 'Market',
     type: 'Type',
     period: 'Period',
+    timing: 'Timing',
     selection: 'Selection',
     selectionPlaceholder: 'E.g. Benfica to score first',
     line: 'Line',
@@ -337,6 +345,11 @@ const en: Messages = {
     bankrollNegative: 'The starting bankroll cannot be negative',
     goalsInvalid: 'Invalid goals',
     bothGoalsRequired: "Enter both teams' goals",
+  },
+  /** When a prediction was logged: before kickoff or with the game under way. */
+  timing: {
+    prematch: 'Pre-match',
+    live: 'Live',
   },
   catalogue: {
     market: {

@@ -3,9 +3,15 @@ import { computed, ref } from 'vue'
 import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import AppIcon from './AppIcon.vue'
+import RecentEvents from './RecentEvents.vue'
 import InputText from 'primevue/inputtext'
 import { dateTimeFormat } from '@/domain/intl'
-import { LocalEventSource, type EventSearchResult, type EventSource } from '@/domain/eventSource'
+import {
+  LocalEventSource,
+  type EventSearchResult,
+  type EventSource,
+  type RecentEvent,
+} from '@/domain/eventSource'
 import { suggestNames } from '@/domain/names'
 import { emptyNewGame } from '@/domain/predictionDraft'
 import type { NewGameForm } from '@/domain/schemas'
@@ -23,6 +29,8 @@ const props = defineProps<{
   kept: boolean
   /** Where games are searched; local events by default, an API-backed source in phase 5. */
   source?: EventSource
+  /** Events offered under the search before anything is typed. */
+  recent?: RecentEvent[]
 }>()
 
 /** The chosen game; null while searching or creating one. */
@@ -176,6 +184,7 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
     <small v-if="searchError || errors.game" class="text-eb-neg">
       {{ message(searchError ?? errors.game ?? '') }}
     </small>
+    <RecentEvents v-if="!typed && recent" :events="recent" class="mt-2" @pick="pick" />
   </template>
 
   <div v-else class="flex flex-col gap-3">

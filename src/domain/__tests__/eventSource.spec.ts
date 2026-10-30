@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LocalEventSource, sortUpcomingFirst } from '../eventSource'
+import { LocalEventSource, recentEvents, sortUpcomingFirst } from '../eventSource'
 import type { EventWithTeams, LeagueRow, TeamRow } from '@/types/db'
 
 function team(name: string): TeamRow {
@@ -77,5 +77,34 @@ describe('LocalEventSource', () => {
         awayTeam: 'Porto',
       },
     ])
+  })
+})
+
+describe('recentEvents', () => {
+  const a = event('a', '2026-10-30T20:00:00Z')
+  const b = event('b', '2026-10-31T13:30:00Z')
+  const c = event('c', '2026-10-31T14:00:00Z')
+  const d = event('d', '2026-11-01T18:00:00Z')
+  const finished = { ...event('f', '2026-10-29T20:00:00Z'), home_score: 2, away_score: 1 }
+  const at = (event: EventWithTeams, created_at: string) => ({ event, created_at })
+
+  it('takes the events logged on most recently, with their prediction counts', () => {
+    const rows = [
+      at(a, '2026-10-30T10:00:00Z'),
+      at(b, '2026-10-30T11:00:00Z'),
+      at(a, '2026-10-30T12:00:00Z'),
+      at(c, '2026-10-30T09:00:00Z'),
+      at(d, '2026-10-30T08:00:00Z'),
+    ]
+    expect(recentEvents(rows).map((r) => [r.event.eventId, r.predictions])).toEqual([
+      ['a', 2],
+      ['b', 1],
+      ['c', 1],
+    ])
+  })
+
+  it('leaves out events that already have a result', () => {
+    const rows = [at(finished, '2026-10-30T12:00:00Z'), at(a, '2026-10-30T10:00:00Z')]
+    expect(recentEvents(rows).map((r) => r.event.eventId)).toEqual(['a'])
   })
 })

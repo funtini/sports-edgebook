@@ -235,6 +235,59 @@ describe('PredictionsView', () => {
     expect((line.element as HTMLInputElement).value).toBe('-1,5')
   })
 
+  it('defaults to pre-match for an upcoming event and to live once it has started', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-27T19:00:00Z') })
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    expect(button(wrapper, 'Pré-jogo').attributes('aria-pressed')).toBe('true')
+
+    vi.setSystemTime(new Date('2026-10-27T20:30:00Z'))
+    await button(wrapper, 'Outro evento').trigger('click')
+    await fillNewGame(wrapper)
+    await wrapper.get('#new-date').setValue('2026-10-27')
+    await wrapper.get('#new-time').setValue('00:00')
+    expect(button(wrapper, 'Live').attributes('aria-pressed')).toBe('true')
+
+    await fillPrediction(wrapper)
+    await submit(wrapper)
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      is_live: true,
+    })
+    vi.useRealTimers()
+  })
+
+  it('picks a recent event without searching', async () => {
+    const respond = backend()
+    setup((q) => {
+      if (q.table === 'predictions' && has(q, 'limit')) {
+        return {
+          data: [
+            {
+              created_at: '2026-10-27T10:00:00Z',
+              event: {
+                id: EVENT_ID,
+                kickoff_at: '2026-10-27T20:00:00Z',
+                home_score: null,
+                source: 'manual',
+                external_id: null,
+                home_team: team('Benfica'),
+                away_team: team('Porto'),
+                league: null,
+              },
+            },
+          ],
+        }
+      }
+      return respond(q)
+    })
+    const wrapper = await render()
+
+    await wrapper.findAll('[data-recent-events] button')[0]!.trigger('click')
+    expect(wrapper.text()).toContain('Benfica – Porto')
+    expect(wrapper.find('#game').exists()).toBe(false)
+    expect(wrapper.find('#odd').exists()).toBe(true)
+  })
+
   it('offers the types of the market and only the sides of the type', async () => {
     setup(backend())
     const wrapper = await render({ eventId: EVENT_ID })

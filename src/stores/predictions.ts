@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { probabilityFor, type ConfidenceLevel } from '@/domain/confidence'
 import { addDays, startOfDay } from '@/domain/days'
+import { recentEvents, type RecentEvent } from '@/domain/eventSource'
 import { predictionCreateSchema, type PredictionCreate } from '@/domain/schemas'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
-import { PREDICTION_SELECT, requireSupabase, unwrap } from './client'
+import { EVENT_SELECT, PREDICTION_SELECT, requireSupabase, unwrap } from './client'
 import { useSettingsStore } from './settings'
 
 /** By kickoff, then by logging order. */
@@ -13,6 +14,9 @@ function byKickoff(a: PredictionWithRelations, b: PredictionWithRelations): numb
     Date.parse(a.created_at) - Date.parse(b.created_at)
   )
 }
+
+/** Newest predictions read to find the recent events. */
+const RECENT_ROWS = 100
 
 export const usePredictionsStore = defineStore('predictions', () => {
   /** Stores the probability of the confidence level from the user's anchors at this moment. */
@@ -91,6 +95,22 @@ export const usePredictionsStore = defineStore('predictions', () => {
   }
 
   /**
+   * The last events predictions were logged on, without a result yet (`recentEvents`). Reads the
+   * newest predictions on events without a score; counts cover those rows.
+   */
+  async function listRecentEvents(limit = 3): Promise<RecentEvent[]> {
+    const rows = unwrap<Pick<PredictionWithRelations, 'created_at' | 'event'>[]>(
+      await requireSupabase()
+        .from('predictions')
+        .select(`created_at, event:events!inner(${EVENT_SELECT})`)
+        .is('event.home_score', null)
+        .order('created_at', { ascending: false })
+        .limit(RECENT_ROWS),
+    )
+    return recentEvents(rows, limit)
+  }
+
+  /**
    * Bookmakers used before, for autocomplete; most used first.
    * TODO: read a distinct-bookmakers view; PostgREST caps this select at 1000 rows.
    */
@@ -114,6 +134,7 @@ export const usePredictionsStore = defineStore('predictions', () => {
     listPending,
     listPendingBefore,
     listBookmakers,
+    listRecentEvents,
     settle,
     remove,
   }

@@ -10,6 +10,7 @@ const prediction = (overrides: Partial<BetPrediction> = {}): BetPrediction => ({
   probability: 0.65,
   confidence: 3,
   bookmaker: 'Betano',
+  is_live: false,
   event: {
     kickoff_at: '2026-10-27T20:00:00Z',
     home_team: { name: 'Benfica' },
@@ -35,6 +36,7 @@ describe('betFromPrediction', () => {
       market: 'goals',
       betType: 'total',
       period: 'HT',
+      live: false,
       leagueName: 'Liga Portugal',
       teams: ['Benfica', 'Porto'],
       confidence: 3,

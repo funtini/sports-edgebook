@@ -46,6 +46,7 @@ function prediction(
     probability: 0.65,
     confidence: 3,
     bookmaker: stake != null ? 'Betano' : null,
+    is_live: false,
     event: {
       kickoff_at: `2026-10-${day}T19:00:00Z`,
       home_team: { name: 'Benfica' },

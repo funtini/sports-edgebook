@@ -29,6 +29,8 @@ export interface Bet {
   market?: Market
   betType?: BetType
   period?: MatchPeriod
+  /** Logged with the game under way. */
+  live?: boolean
   leagueName?: string | null
   teams?: string[]
   confidence?: ConfidenceLevel
@@ -223,6 +225,7 @@ export type Dimension =
   | 'market'
   | 'betType'
   | 'period'
+  | 'timing'
   | 'league'
   | 'team'
   | 'oddsBand'
@@ -236,7 +239,7 @@ export const SMALL_SAMPLE = 30
 
 export interface BreakdownRow {
   /**
-   * Segment: the code or name as stored (bet type is `market · bet_type`), the odds band's `key`, the
+   * Segment: the code or name as stored (bet type is `market · bet_type`, timing `prematch` or `live`), the odds band's `key`, the
    * confidence level or value band, or the local weekday `0` (Sunday) to `6`.
    */
   key: string
@@ -262,6 +265,8 @@ function keysOf(bet: Bet, dimension: Dimension, bands: OddsBand[]): string[] {
       return bet.market && bet.betType ? [`${bet.market} · ${bet.betType}`] : []
     case 'period':
       return present(bet.period)
+    case 'timing':
+      return bet.live == null ? [] : [bet.live ? 'live' : 'prematch']
     case 'league':
       return present(bet.leagueName)
     case 'team':

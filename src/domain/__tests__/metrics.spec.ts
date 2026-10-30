@@ -550,6 +550,14 @@ describe('breakdown', () => {
       ['corners', 1],
     ])
     expect(keysAndN(breakdown(all, 'period'))).toEqual([['FT', 15]])
+    const timing = breakdown(
+      all.map((bet, i) => ({ ...bet, live: i < 4 })),
+      'timing',
+    )
+    expect(keysAndN(timing)).toEqual([
+      ['prematch', 11],
+      ['live', 4],
+    ])
   })
 
   // Betano 1 2 6 8 12 16: won 1 12 of 1 2 8 12 16 → .4; P/L 1 − 2 − 4 + 2 − 1 = −4; staked 8.5.

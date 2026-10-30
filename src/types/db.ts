@@ -79,6 +79,8 @@ export interface PredictionRow {
   line: number | null
   odd: number
   confidence: number
+  /** Logged with the game already under way. */
+  is_live: boolean
   /** Probability of the confidence level when the prediction was logged. */
   probability: number
   is_punter: boolean
@@ -144,6 +146,7 @@ export type PredictionInsert = Insert<
   PredictionRow,
   | 'market_id'
   | 'line'
+  | 'is_live'
   | 'is_punter'
   | 'stake_units'
   | 'bookmaker'

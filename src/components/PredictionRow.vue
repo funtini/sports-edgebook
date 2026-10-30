@@ -104,7 +104,15 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
   >
     <div class="flex items-start justify-between gap-3" :class="line && 'lg:contents'">
       <div class="min-w-0">
-        <div class="text-xs text-eb-muted">{{ market }}</div>
+        <div class="text-xs text-eb-muted">
+          {{ market
+          }}<span
+            v-if="prediction.is_live"
+            class="ml-1.5 rounded bg-eb-neg-soft px-1.5 py-px text-[11px] font-bold text-eb-neg"
+            data-live
+            >{{ t('timing.live') }}</span
+          >
+        </div>
         <div class="text-[15px] font-semibold break-words">{{ selection }}</div>
       </div>
       <div class="text-lg font-bold" :class="line && 'lg:text-right'">

@@ -36,6 +36,7 @@ const predictionFields = z.object({
     .int('validation.confidenceRange')
     .min(1, 'validation.confidenceRange')
     .max(5, 'validation.confidenceRange'),
+  is_live: z.boolean().default(false),
   is_punter: z.boolean().default(false),
   stake_units: z.number('validation.stakeInvalid').positive('validation.stakePositive').nullish(),
   bookmaker: optionalText,

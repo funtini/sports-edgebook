@@ -109,6 +109,12 @@ const ptPT = {
     units: 'unidades',
     bookmaker: 'Casa de apostas',
   },
+  recentEvents: {
+    today: 'Hoje',
+    title: 'Recentes',
+    predictions: 'nº de prognósticos',
+    count: '{n} prognóstico | {n} prognósticos',
+  },
   gamePicker: {
     kept: 'Mesmo evento',
     game: 'Evento',
@@ -193,6 +199,7 @@ const ptPT = {
       betType: 'Mercado e tipo',
       market: 'Mercado',
       period: 'Período',
+      timing: 'Pré-jogo / Live',
       league: 'Liga',
       team: 'Equipa',
       oddsBand: 'Faixa de odd',
@@ -286,6 +293,7 @@ const ptPT = {
     market: 'Mercado',
     type: 'Tipo',
     period: 'Período',
+    timing: 'Momento',
     selection: 'Seleção',
     selectionPlaceholder: 'Ex.: Benfica marca primeiro',
     line: 'Linha',
@@ -340,6 +348,11 @@ const ptPT = {
     bankrollNegative: 'A banca inicial não pode ser negativa',
     goalsInvalid: 'Golos inválidos',
     bothGoalsRequired: 'Indica os golos das duas equipas',
+  },
+  /** When a prediction was logged: before kickoff or with the game under way. */
+  timing: {
+    prematch: 'Pré-jogo',
+    live: 'Live',
   },
   /** Market catalogue (src/domain/markets.ts): stored as codes, shown with these labels. */
   catalogue: {

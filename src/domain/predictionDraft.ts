@@ -14,6 +14,8 @@ export interface PredictionDraft {
   line: string
   odd: string
   confidence: ConfidenceLevel | null
+  /** Logged with the game already under way. */
+  isLive: boolean
   isPunter: boolean
   stake: string
   bookmaker: string
@@ -29,6 +31,7 @@ export function emptyPredictionDraft(): PredictionDraft {
     line: '',
     odd: '',
     confidence: null,
+    isLive: false,
     isPunter: false,
     stake: '',
     bookmaker: '',
@@ -61,6 +64,7 @@ export function predictionInput(draft: PredictionDraft): Record<keyof Prediction
     ...toStoredPick(draft.betType, draft.pick.trim(), line),
     odd: parseDecimal(draft.odd) ?? undefined,
     confidence: draft.confidence ?? undefined,
+    is_live: draft.isLive,
     is_punter: draft.isPunter,
     stake_units: draft.isPunter ? parseDecimal(draft.stake) : null,
     bookmaker: draft.isPunter ? draft.bookmaker.trim() || null : null,
