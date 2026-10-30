@@ -48,7 +48,7 @@ The Dashboard has its own **Unidades / €** toggle. It starts from `user_settin
 
 ## Breakdowns
 
-Market and type, market, period, pre-match or live, league, team involved (a bet counts for both teams), odds band, confidence level, value-index band, bookmaker, weekday (local). Breakdowns are for singles; a bet without a value for the dimension (no league, no bookmaker) is left out of it.
+Market and type (split by period: a first-half 1X2 is its own segment), market, period, pre-match or live, league, team involved (a bet counts for both teams), odds band, confidence level, value-index band, bookmaker, weekday (local). Breakdowns are for singles; a bet without a value for the dimension (no league, no bookmaker) is left out of it.
 
 Default odds bands (configurable in `user_settings.odds_bands`, which holds the lower bounds 1.50, 1.80, 2.20, 3.00, 5.00): 1.01–1.49, 1.50–1.79, 1.80–2.19, 2.20–2.99, 3.00–4.99, 5.00+. A bound opens its band (2.20 is in 2.20–2.99).
 
