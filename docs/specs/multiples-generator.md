@@ -30,14 +30,14 @@ swapLeg(current: GeneratedMultiple, legId: string, candidates: Candidate[], para
 windowRange(window: 'today' | 'tomorrow' | 'next3' | { from, to }, now: Date): { from, to }
 ```
 
-- `Candidate`: a pending prediction (`id`, `event_id`, `kickoff_at`, `league_id`, `market_id`, `odd`, the stored `probability`, `confidence`, `is_punter`).
-- `GeneratorParams`: `mode`, `legs` (legs to add: 2–10, or 1–6 with `fixed`), `targetOdd`, `tolerance` (default 0.10), `minConfidence`, `minOdd`, `maxOdd`, `leagueIds`, `marketIds`, `pool` (`all` default, or `non_punter`), `seed`, `fixed` (legs already in the multiple), `avoid` (candidate ids to try not to pick).
+- `Candidate`: a pending prediction (`id`, `event_id`, `kickoff_at`, `league_id`, `market`, `odd`, the stored `probability`, `confidence`, `is_punter`).
+- `GeneratorParams`: `mode`, `legs` (legs to add: 2–10, or 1–6 with `fixed`), `targetOdd`, `tolerance` (default 0.10), `minConfidence`, `minOdd`, `maxOdd`, `leagueIds`, `markets`, `pool` (`all` default, or `non_punter`), `seed`, `fixed` (legs already in the multiple), `avoid` (candidate ids to try not to pick).
 - `GeneratedMultiple`: `legs` (`fixed` first, in order, then the new legs), `totalOdd` (`multipleOdd`), `probability` (product of leg probabilities), `ev` (`valueIndex(probability, totalOdd) − 1`), `withinTolerance`; all over the whole multiple, fixed legs included.
 - `windowRange`: inclusive range of local `YYYY-MM-DD` days for the Jogos choice.
 
 Rules:
 
-1. **Filters first**: confidence ≥ `minConfidence`; `minOdd` ≤ odd ≤ `maxOdd` (inclusive); league in `leagueIds` (a prediction with no league is left out when the filter is set); market in `marketIds`; `non_punter` drops punter predictions.
+1. **Filters first**: confidence ≥ `minConfidence`; `minOdd` ≤ odd ≤ `maxOdd` (inclusive); league in `leagueIds` (a prediction with no league is left out when the filter is set); market in `markets`; `non_punter` drops punter predictions.
 2. **One leg per event**: ordering and random modes keep the first candidate of each event in their order; `target_odd` never combines two of the same event.
 3. **Ordering**: `confidence` (level desc, odd desc), `value` (p × odd desc), `highest_odds`, `lowest_odds`. Ties: earlier kickoff, then id ascending, so results are deterministic.
 4. **Random**: candidates sorted by kickoff and id, then a Fisher–Yates shuffle with mulberry32 seeded by `seed` (`Math.random` without one). Same seed and same candidates give the same multiple, whatever order they come in.

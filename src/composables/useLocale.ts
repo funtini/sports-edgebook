@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { seedNameKey, storedMarketName } from '@/domain/markets'
+import { numberFormat } from '@/domain/intl'
+import { pickParts, type PickSummary } from '@/domain/markets'
 import { setLocale } from '@/i18n'
 import { INTL_LOCALES, LOCALES, type AppLocale } from '@/lib/preferences'
 
@@ -18,15 +19,14 @@ export function useLocale() {
     return te(keyOrText) ? t(keyOrText) : keyOrText
   }
 
-  /** A market name or category: seeded ones in the active language, typed ones as they are. */
-  function marketName(name: string): string {
-    const key = seedNameKey(name)
-    return key ? t(key) : name
-  }
-
-  /** Inverse of `marketName`: a typed or picked label as the name to store and match. */
-  function storedName(label: string): string {
-    return storedMarketName(label, (key) => t(key))
+  /** A bet's market, type, period and selection labels, in the active language (`pickParts`). */
+  function betParts(bet: PickSummary) {
+    const lineFormat = numberFormat(intlLocale.value, { maximumFractionDigits: 2 })
+    return pickParts(
+      bet,
+      (key) => t(key),
+      (line) => lineFormat.format(line),
+    )
   }
 
   /** Next language in `LOCALES`, wrapping round. */
@@ -34,5 +34,5 @@ export function useLocale() {
     setLocale(LOCALES[(LOCALES.indexOf(locale.value) + 1) % LOCALES.length]!)
   }
 
-  return { t, locale, intlLocale, message, marketName, storedName, setLocale, toggleLocale }
+  return { t, locale, intlLocale, message, betParts, setLocale, toggleLocale }
 }

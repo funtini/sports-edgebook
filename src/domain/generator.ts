@@ -1,5 +1,6 @@
 import type { ConfidenceLevel } from './confidence'
 import { addDays, fromDayKey, startOfDay, toDayKey } from './days'
+import type { Market } from './markets'
 import { multipleOdd } from './settlement'
 import { valueIndex } from './value'
 
@@ -10,7 +11,7 @@ export interface Candidate {
   event_id: string
   kickoff_at: string
   league_id: string | null
-  market_id: string
+  market: Market
   odd: number
   /** Stored on the prediction at logging time. */
   probability: number
@@ -40,7 +41,7 @@ export interface GeneratorParams {
   minOdd?: number
   maxOdd?: number
   leagueIds?: string[]
-  marketIds?: string[]
+  markets?: Market[]
   /** Default `all`. */
   pool?: 'all' | 'non_punter'
   /** `random` only: same seed, same result. */
@@ -197,14 +198,14 @@ function validate(params: GeneratorParams): void {
 }
 
 function applyFilters(candidates: Candidate[], params: GeneratorParams): Candidate[] {
-  const { minConfidence, minOdd, maxOdd, leagueIds, marketIds, pool = 'all' } = params
+  const { minConfidence, minOdd, maxOdd, leagueIds, markets, pool = 'all' } = params
   return candidates.filter(
     (c) =>
       (minConfidence === undefined || c.confidence >= minConfidence) &&
       (minOdd === undefined || c.odd >= minOdd) &&
       (maxOdd === undefined || c.odd <= maxOdd) &&
       (leagueIds === undefined || (c.league_id !== null && leagueIds.includes(c.league_id))) &&
-      (marketIds === undefined || marketIds.includes(c.market_id)) &&
+      (markets === undefined || markets.includes(c.market)) &&
       (pool === 'all' || !c.is_punter),
   )
 }

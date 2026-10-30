@@ -3,7 +3,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import { argsOf, fakeSupabase, has, type Responder } from './fakeSupabase'
 import { useSettingsStore } from '../settings'
 import { DEFAULT_CONFIDENCE_ANCHORS } from '@/domain/confidence'
-import { DEFAULT_MARKETS } from '@/domain/markets'
 
 const mocked = vi.hoisted(() => ({ client: null as unknown }))
 vi.mock('@/lib/supabase', () => ({
@@ -40,7 +39,7 @@ describe('settings store', () => {
     expect(store.confidenceAnchors).toEqual(DEFAULT_CONFIDENCE_ANCHORS)
   })
 
-  it('loads an existing row without seeding markets', async () => {
+  it('loads an existing row', async () => {
     const queries = setup(() => ({ data: row }))
     const store = useSettingsStore()
     await store.load()
@@ -50,15 +49,12 @@ describe('settings store', () => {
     expect(store.confidenceAnchors[1]).toBe(0.45)
   })
 
-  it('creates the row and seeds the default markets on first load', async () => {
+  it('creates the row with defaults on first load', async () => {
     const queries = setup((q) => ({ data: has(q, 'maybeSingle') ? null : row }))
     await useSettingsStore().load()
 
-    expect(queries.map((q) => q.table)).toEqual(['user_settings', 'user_settings', 'markets'])
+    expect(queries.map((q) => q.table)).toEqual(['user_settings', 'user_settings'])
     expect(argsOf(queries[1]!, 'insert')).toEqual([{}])
-    const [markets, options] = argsOf(queries[2]!, 'upsert') as [unknown[], object]
-    expect(markets).toEqual(DEFAULT_MARKETS)
-    expect(options).toMatchObject({ ignoreDuplicates: true })
   })
 
   it('loads only once across concurrent callers', async () => {

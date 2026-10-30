@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useLocale } from '@/composables/useLocale'
-import { numberFormat } from '@/domain/intl'
 import type { ConfidenceLevel } from '@/domain/confidence'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
@@ -25,7 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ settle: [status: BetStatus] }>()
 
-const { t, intlLocale, marketName } = useLocale()
+const { t, intlLocale, betParts } = useLocale()
 
 const outcomes: { status: Exclude<BetStatus, 'pending'>; active: string }[] = [
   { status: 'won', active: 'border-eb-pos bg-eb-pos text-eb-on-fill' },
@@ -40,17 +39,10 @@ const resultClasses: Record<BetStatus, string> = {
   void: 'bg-eb-surface-2 text-eb-muted',
 }
 
-const market = computed(() => {
-  const { category, name } = props.prediction.market
-  return category === name ? marketName(name) : `${marketName(category)} · ${marketName(name)}`
-})
-
-const selection = computed(() => {
-  const { selection, line: value } = props.prediction
-  return value == null
-    ? selection
-    : `${selection} ${numberFormat(intlLocale.value, { maximumFractionDigits: 2 }).format(value)}`
-})
+/** Mercado - Tipo - Período above, the selection below: together the bet's summary. */
+const parts = computed(() => betParts(props.prediction))
+const market = computed(() => parts.value.slice(0, 3).join(' - '))
+const selection = computed(() => parts.value[3])
 
 const value = computed(() => {
   const index = valueIndex(props.prediction.probability, props.prediction.odd)

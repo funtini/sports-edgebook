@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../en'
 import ptPT from '../pt-PT'
-import { DEFAULT_MARKETS, seedNameKey } from '@/domain/markets'
+import { BET_TYPES, MARKETS, PICKS } from '@/domain/markets'
 
 /** Every leaf key path, e.g. `app.nav.today`. */
 function keys(messages: object, prefix = ''): string[] {
@@ -34,15 +34,11 @@ describe('locale messages', () => {
   })
 })
 
-describe('seeded market names', () => {
-  it('have a key whose PT-PT text is the stored name', () => {
-    const names = new Set(DEFAULT_MARKETS.flatMap((m) => [m.category, m.name]))
-    names.delete('1X2')
-    for (const name of names) {
-      const key = seedNameKey(name)
-      expect(key).not.toBeNull()
-      const [, slug] = key!.split('.') as [string, keyof typeof ptPT.markets]
-      expect(ptPT.markets[slug]).toBe(name)
-    }
+describe('market catalogue', () => {
+  it('has a label for every market, bet type and side', () => {
+    expect(Object.keys(ptPT.catalogue.market).sort()).toEqual([...MARKETS].sort())
+    expect(Object.keys(ptPT.catalogue.betType).sort()).toEqual([...BET_TYPES].sort())
+    const picks = new Set(Object.values(PICKS).flat())
+    expect(Object.keys(ptPT.catalogue.pick).sort()).toEqual([...picks].sort())
   })
 })

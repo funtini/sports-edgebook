@@ -3,7 +3,6 @@ import {
   confidenceAnchorsSchema,
   eventCreateSchema,
   eventScoreSchema,
-  marketFormSchema,
   newGameFormSchema,
   predictionCreateSchema,
   predictionFormSchema,
@@ -12,13 +11,14 @@ import {
 } from '../schemas'
 
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
-const MARKET_ID = '6a1e2f3d-4c5b-4a69-8b7c-0d1e2f3a4b5c'
 const BENFICA = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
 const PORTO = '2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a'
 
 const prediction = {
   event_id: EVENT_ID,
-  market_id: MARKET_ID,
+  market: 'result',
+  bet_type: 'other',
+  period: 'FT',
   selection: 'Benfica',
   odd: 1.8,
   confidence: 3,
@@ -119,9 +119,9 @@ describe('confidenceAnchorsSchema', () => {
 })
 
 describe('predictionFormSchema', () => {
-  const { event_id: _event, market_id: _market, ...fields } = prediction
+  const { event_id: _event, ...fields } = prediction
 
-  it('validates the prediction fields without game or market ids', () => {
+  it('validates the prediction fields without the game id', () => {
     expect(predictionFormSchema.safeParse(fields).success).toBe(true)
     expect(issuePaths(predictionFormSchema.safeParse({ ...fields, is_punter: true }))).toEqual([
       'stake_units',
@@ -129,7 +129,8 @@ describe('predictionFormSchema', () => {
   })
 
   it('asks for the confidence and odd when missing, as message keys', () => {
-    const result = predictionFormSchema.safeParse({ selection: 'Benfica' })
+    const { odd: _odd, confidence: _confidence, ...rest } = fields
+    const result = predictionFormSchema.safeParse(rest)
     expect(result.error?.issues.map((i) => i.message)).toEqual([
       'validation.oddInvalid',
       'validation.confidenceRequired',
@@ -137,15 +138,46 @@ describe('predictionFormSchema', () => {
   })
 })
 
-describe('marketFormSchema', () => {
-  it('tidies names and requires both', () => {
-    expect(marketFormSchema.parse({ category: ' Golos ', name: 'Mais  de' })).toEqual({
-      category: 'Golos',
-      name: 'Mais de',
-    })
-    expect(issuePaths(marketFormSchema.safeParse({ category: ' ', name: '' }))).toEqual([
-      'category',
-      'name',
+describe('predictionFormSchema pick', () => {
+  const base = { odd: 1.8, confidence: 3, period: 'HT' } as const
+  const check = (pick: Record<string, unknown>) =>
+    issuePaths(predictionFormSchema.safeParse({ ...base, ...pick }))
+
+  it('accepts the catalogue picks', () => {
+    expect(check({ market: 'result', bet_type: '1x2', selection: 'home' })).toEqual([])
+    expect(check({ market: 'goals', bet_type: 'total', selection: 'over', line: 2.5 })).toEqual([])
+    expect(
+      check({ market: 'corners', bet_type: 'team_total', selection: 'home_over', line: 1.5 }),
+    ).toEqual([])
+    expect(
+      check({ market: 'result', bet_type: 'result_total', selection: 'x2_under', line: 4.5 }),
+    ).toEqual([])
+    expect(check({ market: 'corners', bet_type: 'handicap', selection: 'away', line: -1 })).toEqual(
+      [],
+    )
+  })
+
+  it('rejects a type the market does not offer and an unknown period', () => {
+    expect(check({ market: 'goals', bet_type: '1x2', selection: 'home' })).toEqual(['bet_type'])
+    expect(check({ market: 'result', bet_type: '1x2', selection: 'home', period: '1H' })).toEqual([
+      'period',
+    ])
+  })
+
+  it('requires a side of the type', () => {
+    expect(check({ market: 'result', bet_type: '1x2', selection: '' })).toEqual(['selection'])
+    expect(check({ market: 'result', bet_type: '1x2', selection: 'over' })).toEqual(['selection'])
+    expect(check({ market: 'result', bet_type: 'other', selection: ' ' })).toEqual(['selection'])
+  })
+
+  it('requires a line in steps of 0.5 for totals and handicaps', () => {
+    expect(check({ market: 'goals', bet_type: 'total', selection: '' })).toEqual(['line'])
+    expect(check({ market: 'result', bet_type: 'handicap', selection: 'home' })).toEqual(['line'])
+    expect(
+      check({ market: 'result', bet_type: 'handicap', selection: 'home', line: -1.25 }),
+    ).toEqual(['line'])
+    expect(check({ market: 'goals', bet_type: 'total', selection: 'over', line: 0 })).toEqual([
+      'line',
     ])
   })
 })

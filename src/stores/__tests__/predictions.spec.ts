@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { argsOf, fakeSupabase, type Query, type Responder } from './fakeSupabase'
 import { usePredictionsStore } from '../predictions'
 import { useSettingsStore } from '../settings'
+import type { PredictionCreate } from '@/domain/schemas'
 
 const mocked = vi.hoisted(() => ({ client: null as unknown }))
 vi.mock('@/lib/supabase', () => ({
@@ -11,10 +12,12 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
-const input = {
+const input: PredictionCreate = {
   event_id: '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60',
-  market_id: '6a1e2f3d-4c5b-4a69-8b7c-0d1e2f3a4b5c',
-  selection: 'Benfica',
+  market: 'result',
+  bet_type: '1x2',
+  period: 'FT',
+  selection: 'home',
   odd: 1.8,
   confidence: 3,
 }

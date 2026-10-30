@@ -21,7 +21,6 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
-const MARKET_ID = '6a1e2f3d-4c5b-4a69-8b7c-0d1e2f3a4b5c'
 
 const settingsRow = {
   user_id: 'u',
@@ -47,8 +46,6 @@ function backend(options: { failPrediction?: () => boolean } = {}): Responder {
         return { data: settingsRow }
       case 'teams':
         return insert ? { data: team(String(insert.name)) } : { data: [] }
-      case 'markets':
-        return insert ? { data: { id: MARKET_ID, ...insert } } : { data: [] }
       case 'events':
         return {
           data: {
@@ -103,9 +100,8 @@ async function fillNewGame(wrapper: VueWrapper) {
 }
 
 async function fillPrediction(wrapper: VueWrapper) {
-  await wrapper.get('#category').setValue('Golos')
-  await wrapper.get('#market-name').setValue('Mais de')
-  await wrapper.get('#selection').setValue('Mais de 2,5')
+  await button(wrapper, 'Golos').trigger('click')
+  await button(wrapper, 'Total').trigger('click')
   await wrapper.get('#line').setValue('2,5')
   await wrapper.get('#odd').setValue('1,85')
   await button(wrapper, '3Boa').trigger('click')
@@ -129,7 +125,7 @@ describe('PredictionsView', () => {
     await submit(wrapper)
 
     expect(wrapper.text()).toContain('Escolhe o jogo ou cria um novo')
-    expect(wrapper.text()).toContain('Indica o mercado')
+    expect(wrapper.text()).toContain('Indica a seleção')
     expect(wrapper.text()).toContain('Odd inválida')
     expect(wrapper.text()).toContain('Escolhe a confiança')
     expect(inserted(queries, 'predictions')).toHaveLength(0)
@@ -145,8 +141,10 @@ describe('PredictionsView', () => {
 
     expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
       event_id: EVENT_ID,
-      market_id: MARKET_ID,
-      selection: 'Mais de 2,5',
+      market: 'goals',
+      bet_type: 'total',
+      period: 'FT',
+      selection: 'over',
       line: 2.5,
       odd: 1.85,
       confidence: 3,
@@ -157,7 +155,8 @@ describe('PredictionsView', () => {
     expect(wrapper.text()).toContain('Mesmo jogo')
     expect(wrapper.text()).toContain('Benfica – Porto')
     expect((wrapper.get('#odd').element as HTMLInputElement).value).toBe('')
-    expect(wrapper.find('[aria-pressed="true"]').exists()).toBe(false)
+    expect(button(wrapper, '3Boa').attributes('aria-pressed')).toBe('false')
+    expect(button(wrapper, 'Resultado').attributes('aria-pressed')).toBe('true')
 
     // Another market for the same game: no new event.
     await fillPrediction(wrapper)
@@ -216,6 +215,8 @@ describe('PredictionsView', () => {
   it('flips the sign of the line for keyboards without a minus key', async () => {
     setup(backend())
     const wrapper = await render()
+    expect(wrapper.find('#line').exists()).toBe(false)
+    await button(wrapper, 'Handicap').trigger('click')
     const line = wrapper.get('#line')
     await line.setValue('1,5')
 
@@ -223,7 +224,23 @@ describe('PredictionsView', () => {
     expect((line.element as HTMLInputElement).value).toBe('-1,5')
   })
 
-  it('in English, saves a translated seeded market under its stored PT-PT name', async () => {
+  it('offers the types of the market and only the sides of the type', async () => {
+    setup(backend())
+    const wrapper = await render()
+    const labels = () => wrapper.findAll('[role="group"] button').map((b) => b.text())
+
+    expect(labels()).toEqual(expect.arrayContaining(['1X2', 'Dupla hipótese', 'Casa', 'Empate']))
+    await button(wrapper, 'Golos').trigger('click')
+    expect(labels()).not.toContain('1X2')
+    expect(labels()).not.toContain('Casa')
+    expect(labels()).toContain('Ambas marcam')
+
+    await button(wrapper, 'Outro').trigger('click')
+    expect(wrapper.find('#selection').exists()).toBe(true)
+    expect(wrapper.find('#line').exists()).toBe(false)
+  })
+
+  it('in English, saves the catalogue codes', async () => {
     i18n.global.locale.value = 'en'
     const queries = setup(backend())
     const wrapper = await render()
@@ -231,19 +248,23 @@ describe('PredictionsView', () => {
     await wrapper.get('#new-time').setValue('20:00')
     await wrapper.get('#new-home').setValue('Benfica')
     await wrapper.get('#new-away').setValue('Porto')
-    await wrapper.get('#category').setValue('Goals')
-    await wrapper.get('#market-name').setValue('over')
-    await wrapper.get('#selection').setValue('Over 2.5')
+    await button(wrapper, 'Corners').trigger('click')
+    await button(wrapper, 'Team total').trigger('click')
+    await button(wrapper, 'HT').trigger('click')
+    await button(wrapper, 'Away').trigger('click')
+    await wrapper.get('#line').setValue('-1.5')
     await wrapper.get('#odd').setValue('1.85')
     await button(wrapper, '3Good').trigger('click')
 
     await submit(wrapper)
 
-    const lookups = queries.filter((q) => q.table === 'markets' && has(q, 'ilike'))
-    expect(lookups.map((q) => argsOf(q, 'ilike'))).toContainEqual(['category', 'Golos'])
-    expect(argsOf(inserted(queries, 'markets')[0]!, 'insert')?.[0]).toEqual({
-      category: 'Golos',
-      name: 'Mais de',
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      market: 'corners',
+      bet_type: 'team_total',
+      period: 'HT',
+      selection: 'away_under',
+      line: 1.5,
     })
+    expect(inserted(queries, 'markets')).toHaveLength(0)
   })
 })

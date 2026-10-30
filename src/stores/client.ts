@@ -32,4 +32,4 @@ export function cleanName(name: string): string {
 export const EVENT_SELECT =
   '*, home_team:teams!events_home_team_id_fkey(*), away_team:teams!events_away_team_id_fkey(*), league:leagues(*)'
 
-export const PREDICTION_SELECT = `*, event:events!inner(${EVENT_SELECT}), market:markets(*)`
+export const PREDICTION_SELECT = `*, event:events!inner(${EVENT_SELECT})`

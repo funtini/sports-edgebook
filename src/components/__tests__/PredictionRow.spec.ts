@@ -10,7 +10,10 @@ const prediction = (overrides: Partial<PredictionWithRelations> = {}) =>
   ({
     id: 'p',
     event_id: 'e',
-    selection: 'Mais de',
+    market: 'goals',
+    bet_type: 'total',
+    period: 'FT',
+    selection: 'over',
     line: 2.5,
     odd: 1.9,
     confidence: 3,
@@ -18,7 +21,6 @@ const prediction = (overrides: Partial<PredictionWithRelations> = {}) =>
     is_punter: true,
     stake_units: 2,
     status: 'pending',
-    market: { id: 'm', user_id: 'u', category: 'Golos', name: 'Mais de' },
     ...overrides,
   }) as PredictionWithRelations
 
@@ -111,12 +113,14 @@ describe('PredictionRow', () => {
 })
 
 describe('PredictionRow in English', () => {
-  it('translates labels, seeded market names and numbers live', async () => {
+  it('translates labels, the bet summary and numbers live', async () => {
     const wrapper = mountRow('won', {}, 'euros')
-    expect(wrapper.text()).toContain('Golos · Mais de')
+    expect(wrapper.text()).toContain('Golos - Total - FT')
+    expect(wrapper.text()).toContain('+2,5')
     i18n.global.locale.value = 'en'
     await nextTick()
-    expect(wrapper.text()).toContain('Goals · Over')
+    expect(wrapper.text()).toContain('Goals - Total - FT')
+    expect(wrapper.text()).toContain('+2.5')
     expect(box(wrapper, 'stake').text()).toBe('Staked€20.00')
     expect(box(wrapper, 'result').text()).toBe('Profit+€18.00')
     expect(wrapper.get('[data-confidence-badge]').attributes('aria-label')).toBe(
@@ -124,8 +128,6 @@ describe('PredictionRow in English', () => {
     )
     expect(wrapper.get('[data-band]').text()).toContain('Favourable 1.23')
     expect(button(wrapper, 'Won').attributes('aria-pressed')).toBe('true')
-    // The selection is user data: never translated.
-    expect(wrapper.text()).toContain('Mais de 2.5')
   })
 
   it('stacks by default and becomes one grid line from lg with layout="line"', () => {

@@ -1,24 +1,21 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { LeagueRow, MarketRow, TeamRow } from '@/types/db'
+import type { LeagueRow, TeamRow } from '@/types/db'
 import { cleanName, escapeLike, requireSupabase, unwrap } from './client'
 
-/** Leagues, teams and markets: the lists the logging form autocompletes from. */
+/** Leagues and teams: the lists the logging form autocompletes from. */
 export const useReferenceStore = defineStore('reference', () => {
   const leagues = ref<LeagueRow[]>([])
   const teams = ref<TeamRow[]>([])
-  const markets = ref<MarketRow[]>([])
 
   async function load() {
     const db = requireSupabase()
-    const [l, t, m] = await Promise.all([
+    const [l, t] = await Promise.all([
       db.from('leagues').select('*').order('name'),
       db.from('teams').select('*').order('name'),
-      db.from('markets').select('*').order('category').order('name'),
     ])
     leagues.value = unwrap<LeagueRow[]>(l)
     teams.value = unwrap<TeamRow[]>(t)
-    markets.value = unwrap<MarketRow[]>(m)
   }
 
   /** Existing league with this name (any case), or a new one. */
@@ -51,26 +48,5 @@ export const useReferenceStore = defineStore('reference', () => {
     return created
   }
 
-  /** Existing market with this category and name (any case), or a new one. */
-  async function ensureMarket(category: string, name: string): Promise<MarketRow> {
-    const cleanCategory = cleanName(category)
-    const clean = cleanName(name)
-    const db = requireSupabase()
-    const found = unwrap<MarketRow[]>(
-      await db
-        .from('markets')
-        .select('*')
-        .ilike('category', escapeLike(cleanCategory))
-        .ilike('name', escapeLike(clean))
-        .limit(1),
-    )
-    if (found[0]) return found[0]
-    const created = unwrap<MarketRow>(
-      await db.from('markets').insert({ category: cleanCategory, name: clean }).select().single(),
-    )
-    markets.value.push(created)
-    return created
-  }
-
-  return { leagues, teams, markets, load, ensureLeague, ensureTeam, ensureMarket }
+  return { leagues, teams, load, ensureLeague, ensureTeam }
 })

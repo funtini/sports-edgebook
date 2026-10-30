@@ -16,7 +16,9 @@ const prediction = (overrides: Partial<BetPrediction> = {}): BetPrediction => ({
     away_team: { name: 'Porto' },
     league: { name: 'Liga Portugal' },
   },
-  market: { category: 'Golos', name: 'Mais de' },
+  market: 'goals',
+  bet_type: 'total',
+  period: 'HT',
   ...overrides,
 })
 
@@ -30,8 +32,9 @@ describe('betFromPrediction', () => {
       real: true,
       probability: 0.65,
       date: '2026-10-27T20:00:00Z',
-      marketCategory: 'Golos',
-      marketName: 'Mais de',
+      market: 'goals',
+      betType: 'total',
+      period: 'HT',
       leagueName: 'Liga Portugal',
       teams: ['Benfica', 'Porto'],
       confidence: 3,

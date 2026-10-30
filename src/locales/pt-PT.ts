@@ -1,6 +1,6 @@
 /**
  * PT-PT messages: the source of truth. `en.ts` must have exactly the same keys (enforced by its
- * type and by a test). User data (leagues, teams, markets typed by the user, notes) is never
+ * type and by a test). User data (leagues, teams, selections typed for bet type `other`, notes) is never
  * translated; see docs/specs/ui.md.
  */
 const ptPT = {
@@ -190,7 +190,9 @@ const ptPT = {
     smallSampleNote: 'Menos de 30 apostas: lê com cautela.',
     segments: 'Desempenho por segmento',
     dimension: {
+      betType: 'Mercado e tipo',
       market: 'Mercado',
+      period: 'Período',
       league: 'Liga',
       team: 'Equipa',
       oddsBand: 'Faixa de odd',
@@ -283,9 +285,13 @@ const ptPT = {
     prediction: 'Prognóstico',
     market: 'Mercado',
     type: 'Tipo',
-    selection: 'Aposta',
+    period: 'Período',
+    selection: 'Seleção',
+    selectionPlaceholder: 'Ex.: Benfica marca primeiro',
     line: 'Linha',
-    linePlaceholder: '2,5',
+    lineTotalPlaceholder: '+2,5',
+    lineHandicapPlaceholder: '-1,5',
+    lineTotalHint: '+ é mais de (over), − é menos de (under)',
     toggleSign: 'Trocar o sinal da linha',
     odd: 'Odd',
     oddPlaceholder: '1,85',
@@ -312,6 +318,8 @@ const ptPT = {
     oddAboveOne: 'A odd tem de ser maior que 1',
     selectionRequired: 'Indica a seleção',
     lineInvalid: 'Linha inválida',
+    lineRequired: 'Indica a linha',
+    lineStep: 'A linha vai de 0,5 em 0,5 (0,5, 1, 1,5…)',
     confidenceRequired: 'Escolhe a confiança',
     confidenceRange: 'A confiança vai de 1 a 5',
     stakeInvalid: 'Stake inválido',
@@ -319,8 +327,9 @@ const ptPT = {
     punterStakeRequired: 'Indica o stake (unidades) de uma aposta punter',
     kickoffInvalid: 'Data/hora inválida',
     teamsDifferent: 'A equipa da casa e a de fora têm de ser diferentes',
-    marketRequired: 'Indica o mercado',
-    typeRequired: 'Indica o tipo',
+    marketRequired: 'Escolhe o mercado',
+    typeRequired: 'Escolhe o tipo',
+    periodRequired: 'Escolhe o período',
     gameDateRequired: 'Indica a data do jogo',
     gameTimeRequired: 'Indica a hora do jogo',
     homeRequired: 'Indica a equipa da casa',
@@ -332,19 +341,35 @@ const ptPT = {
     goalsInvalid: 'Golos inválidos',
     bothGoalsRequired: 'Indica os golos das duas equipas',
   },
-  /** Seeded market names (src/domain/markets.ts), shown translated; stored values stay PT. */
-  markets: {
-    home: 'Casa',
-    draw: 'Empate',
-    away: 'Fora',
-    doubleChance: 'Dupla hipótese',
-    goals: 'Golos',
-    over: 'Mais de',
-    under: 'Menos de',
-    btts: 'Ambas marcam',
-    corners: 'Cantos',
-    cards: 'Cartões',
-    handicap: 'Handicap',
+  /** Market catalogue (src/domain/markets.ts): stored as codes, shown with these labels. */
+  catalogue: {
+    market: {
+      result: 'Resultado',
+      goals: 'Golos',
+      corners: 'Cantos',
+      yellow_cards: 'Cartões amarelos',
+      cards: 'Cartões',
+    },
+    betType: {
+      '1x2': '1X2',
+      double_chance: 'Dupla hipótese',
+      handicap: 'Handicap',
+      result_total: 'Resultado + Total',
+      total: 'Total',
+      team_total: 'Total da equipa',
+      btts: 'Ambas marcam',
+      other: 'Outro',
+    },
+    pick: {
+      home: 'Casa',
+      draw: 'Empate',
+      away: 'Fora',
+      '1x': '1X',
+      x2: 'X2',
+      '12': '12',
+      yes: 'Sim',
+      no: 'Não',
+    },
   },
   primevue: {
     today: 'Hoje',

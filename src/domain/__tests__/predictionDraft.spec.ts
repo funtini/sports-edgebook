@@ -1,17 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import {
-  emptyNewGame,
-  emptyPredictionDraft,
-  marketInput,
-  predictionInput,
-} from '../predictionDraft'
+import { emptyNewGame, emptyPredictionDraft, predictionInput } from '../predictionDraft'
 import { predictionFormSchema } from '../schemas'
 
 const draft = {
   ...emptyPredictionDraft(),
-  category: 'Handicap',
-  marketName: 'Handicap',
-  selection: 'Benfica',
+  market: 'result' as const,
+  betType: 'handicap' as const,
+  pick: 'home',
   line: '−1,5',
   odd: '2,10',
   confidence: 3 as const,
@@ -21,6 +16,22 @@ describe('predictionInput', () => {
   it('parses typed numbers and validates', () => {
     const parsed = predictionFormSchema.parse(predictionInput(draft))
     expect(parsed).toMatchObject({ line: -1.5, odd: 2.1, confidence: 3, is_punter: false })
+    expect(parsed).toMatchObject({ market: 'result', bet_type: 'handicap', period: 'FT' })
+  })
+
+  it("stores a total's sign as over / under", () => {
+    const total = { ...draft, market: 'goals' as const, betType: 'total' as const, pick: '' }
+    expect(predictionInput({ ...total, line: '2,5' })).toMatchObject({
+      selection: 'over',
+      line: 2.5,
+    })
+    expect(
+      predictionInput({ ...total, betType: 'team_total', pick: 'away', line: '-1.5' }),
+    ).toMatchObject({ selection: 'away_under', line: 1.5 })
+  })
+
+  it('drops the line of a type without one', () => {
+    expect(predictionInput({ ...draft, betType: '1x2', line: '2' }).line).toBeNull()
   })
 
   it('sends stake and bookmaker only for a punter bet', () => {
@@ -37,12 +48,6 @@ describe('predictionInput', () => {
     expect(input.odd).toBeUndefined()
     expect(input.confidence).toBeUndefined()
     expect(input.notes).toBeNull()
-  })
-})
-
-describe('marketInput', () => {
-  it('maps the market fields', () => {
-    expect(marketInput(draft)).toEqual({ category: 'Handicap', name: 'Handicap' })
   })
 })
 
