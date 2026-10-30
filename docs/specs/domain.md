@@ -36,20 +36,20 @@ What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`)
 
 | Tipo | Seleção (stored) | Linha |
 | --- | --- | --- |
-| 1X2 (`1x2`) | Casa / Empate / Fora (`home`, `draw`, `away`) | none |
+| 1X2 (`1x2`) | V1 / X / V2 (`home`, `draw`, `away`; EN W1 / X / W2) | none |
 | Dupla hipótese (`double_chance`) | 1X / X2 / 12 (`1x`, `x2`, `12`) | none |
-| Handicap (`handicap`) | Casa / Fora | signed, steps of 0.5 (−1.5, 1, 0.5…); a whole line that ends level is settled Nulo |
+| Handicap (`handicap`) | V1 / V2 | signed, steps of 0.5 (−1.5, 1, 0.5…); a whole line that ends level is settled Nulo |
 | Resultado + Total (`result_total`) | 1, X, 2, 1X, X2 or 12 with over / under of the goals line (`x2_under`) | the total, steps of 0.5 |
 | Total (`total`) | over / under, from the line's sign | steps of 0.5 |
-| Total da equipa (`team_total`) | Casa / Fora with over / under (`home_over`) | steps of 0.5 |
+| Total da equipa (`team_total`) | V1 / V2 with over / under (`home_over`) | steps of 0.5 |
 | Ambas marcam (`btts`) | Sim / Não (`yes`, `no`) | none |
 | Outro (`other`) | free text | none |
 
-- **Período** (`period`): FT (regular time), HT (first half), 2P (second half). It applies to every type, so "home team winning at half time" is Resultado · 1X2 · HT · Casa and "corner winner in the first half" is Cantos · 1X2 · HT · Casa.
-- **Team 1 / 2** is in the selection (Casa / Fora); there is no team field.
+- **Período** (`period`): FT (regular time), HT (first half), 2P (second half). It applies to every type, so "home team winning at half time" is Resultado · 1X2 · HT · V1 and "corner winner in the first half" is Cantos · 1X2 · HT · V1.
+- **Team 1 / 2** is in the selection (V1 / V2); there is no team field.
 - **Totals** are typed signed and stored unsigned: +2.5 is over and −2.5 under (`toStoredPick` / `fromStoredPick`). Handicap lines keep their sign.
-- **Summary** of a bet, used on prediction rows: Mercado - Tipo - Período - Seleção (`pickSummary`), e.g. "Resultado - 1X2 - HT - Casa", "Golos - Total - FT - +2,5", "Resultado - Handicap - FT - Casa −1,5", "Resultado - Resultado + Total - FT - X2 −4,5".
-- Bookmaker slips follow the same split: market and period in the event name ("Corners Chelsea - Corners Manchester United 1st half"), type and selection in the bet ("1X2: W1"), which is Cantos · 1X2 · HT · Casa. This is what a future slip reader maps to.
+- **Summary** of a bet, used on prediction rows: Mercado - Tipo - Período - Seleção (`pickSummary`), e.g. "Resultado - 1X2 - HT - V1", "Golos - Total - FT - +2,5", "Resultado - Handicap - FT - V1 −1,5", "Resultado - Resultado + Total - FT - X2 −4,5".
+- Bookmaker slips follow the same split: market and period in the event name ("Corners Chelsea - Corners Manchester United 1st half"), type and selection in the bet ("1X2: W1"), which is Cantos · 1X2 · HT · V1. This is what a future slip reader maps to.
 
 ## Confidence levels
 
