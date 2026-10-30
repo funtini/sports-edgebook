@@ -29,7 +29,7 @@ import { useSettingsStore } from '@/stores/settings'
 
 const betsStore = useBetsStore()
 const settings = useSettingsStore()
-const { t, intlLocale, message, marketName } = useLocale()
+const { t, intlLocale, message } = useLocale()
 
 const period = ref<Period>('month')
 const betScope = ref<Scope>('punter')
@@ -137,7 +137,10 @@ const versus = computed(() =>
 )
 
 const DIMENSIONS = [
+  'betType',
   'market',
+  'period',
+  'timing',
   'league',
   'team',
   'oddsBand',
@@ -147,7 +150,7 @@ const DIMENSIONS = [
   'weekday',
 ] as const satisfies readonly Dimension[]
 type TableDimension = (typeof DIMENSIONS)[number]
-const dimension = ref<TableDimension>('market')
+const dimension = ref<TableDimension>('betType')
 
 const rows = computed(() =>
   breakdown(scoped.value, dimension.value, { oddsBands: [...settings.oddsBands] }),
@@ -157,7 +160,13 @@ const rows = computed(() =>
 function segmentLabel(key: string): string {
   switch (dimension.value) {
     case 'market':
-      return key.split(' · ').map(marketName).join(' · ')
+      return t(`catalogue.market.${key}`)
+    case 'timing':
+      return t(`timing.${key}`)
+    case 'betType': {
+      const [market, betType] = key.split(' · ')
+      return `${t(`catalogue.market.${market}`)} - ${t(`catalogue.betType.${betType}`)}`
+    }
     case 'oddsBand': {
       const band = oddsBands([...settings.oddsBands]).find((b) => b.key === key)
       if (!band) return key

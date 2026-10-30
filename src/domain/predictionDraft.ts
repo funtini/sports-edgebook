@@ -1,16 +1,21 @@
 import type { ConfidenceLevel } from './confidence'
 import { parseDecimal } from './decimal'
-import type { MarketForm, NewGameForm, PredictionForm } from './schemas'
+import { lineKind, toStoredPick, type BetType, type Market, type MatchPeriod } from './markets'
+import type { NewGameForm, PredictionForm } from './schemas'
 
 /** The logging form's prediction fields as typed, before validation. */
 export interface PredictionDraft {
-  category: string
-  marketName: string
-  selection: string
-  /** Typed with comma or dot; parsed on save. */
+  market: Market
+  betType: BetType
+  period: MatchPeriod
+  /** Side picked from the catalogue, or the selection typed for type `other`. */
+  pick: string
+  /** Typed with comma or dot, signed (a total's sign is over / under); parsed on save. */
   line: string
   odd: string
   confidence: ConfidenceLevel | null
+  /** Logged with the game already under way. */
+  isLive: boolean
   isPunter: boolean
   stake: string
   bookmaker: string
@@ -19,12 +24,14 @@ export interface PredictionDraft {
 
 export function emptyPredictionDraft(): PredictionDraft {
   return {
-    category: '',
-    marketName: '',
-    selection: '',
+    market: 'result',
+    betType: '1x2',
+    period: 'FT',
+    pick: '',
     line: '',
     odd: '',
     confidence: null,
+    isLive: false,
     isPunter: false,
     stake: '',
     bookmaker: '',
@@ -44,17 +51,20 @@ export function emptyNewGame(now = new Date()): NewGameForm {
   }
 }
 
-export function marketInput(draft: PredictionDraft): MarketForm {
-  return { category: draft.category, name: draft.marketName }
-}
-
-/** Input for `predictionFormSchema`; stake and bookmaker only count for a punter bet. */
+/**
+ * Input for `predictionFormSchema`: the pick as stored (see `toStoredPick`), the line only for
+ * types that have one; stake and bookmaker only count for a punter bet.
+ */
 export function predictionInput(draft: PredictionDraft): Record<keyof PredictionForm, unknown> {
+  const line = lineKind(draft.betType) ? parseDecimal(draft.line) : null
   return {
-    selection: draft.selection,
-    line: parseDecimal(draft.line),
+    market: draft.market,
+    bet_type: draft.betType,
+    period: draft.period,
+    ...toStoredPick(draft.betType, draft.pick.trim(), line),
     odd: parseDecimal(draft.odd) ?? undefined,
     confidence: draft.confidence ?? undefined,
+    is_live: draft.isLive,
     is_punter: draft.isPunter,
     stake_units: draft.isPunter ? parseDecimal(draft.stake) : null,
     bookmaker: draft.isPunter ? draft.bookmaker.trim() || null : null,

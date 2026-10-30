@@ -9,6 +9,7 @@ import { formatPercent } from '@/domain/intl'
 import { breakdown, cumulativeSeries, scope, summary, type Bet } from '@/domain/metrics'
 import { formatMoney } from '@/domain/money'
 import type { BetStatus } from '@/domain/settlement'
+import type { BetType, Market } from '@/domain/markets'
 import DashboardView from '../DashboardView.vue'
 
 const mocked = vi.hoisted(() => ({ client: null as unknown }))
@@ -34,7 +35,7 @@ function prediction(
   status: BetStatus,
   odd: number,
   stake: number | null,
-  market: [string, string] = ['Golos', 'Mais de'],
+  market: [Market, BetType] = ['goals', 'total'],
 ): BetPrediction & { id: string } {
   return {
     id: `p${++id}`,
@@ -45,24 +46,27 @@ function prediction(
     probability: 0.65,
     confidence: 3,
     bookmaker: stake != null ? 'Betano' : null,
+    is_live: false,
     event: {
       kickoff_at: `2026-10-${day}T19:00:00Z`,
       home_team: { name: 'Benfica' },
       away_team: { name: 'Porto' },
       league: { name: 'Liga Portugal' },
     },
-    market: { category: market[0], name: market[1] },
+    market: market[0],
+    bet_type: market[1],
+    period: 'FT',
   }
 }
 
 // October 2026: four punter bets, two virtual ones, one void.
 const predictions = [
   prediction('05', 'won', 1.9, 2),
-  prediction('07', 'lost', 2.1, 1, ['1X2', 'Casa']),
+  prediction('07', 'lost', 2.1, 1, ['result', '1x2']),
   prediction('12', 'won', 1.6, 1.5),
   prediction('20', 'void', 1.8, 1),
   prediction('21', 'won', 2.4, null),
-  prediction('26', 'lost', 1.7, null, ['1X2', 'Casa']),
+  prediction('26', 'lost', 1.7, null, ['result', '1x2']),
 ]
 
 const multiples = [
@@ -185,11 +189,11 @@ describe('DashboardView', () => {
   it('lists segments from breakdown, dimmed below 30 bets', async () => {
     setup()
     const wrapper = await render()
-    const expected = breakdown(scope(bets, 'punter'), 'market')
+    const expected = breakdown(scope(bets, 'punter'), 'betType')
     const rows = wrapper.findAll('[data-segment]')
 
     expect(rows).toHaveLength(expected.length)
-    expect(rows[0]!.text()).toContain('Golos · Mais de')
+    expect(rows[0]!.text()).toContain('Golos - Total')
     expect(rows[0]!.text()).toContain('amostra pequena')
     expect(rows[0]!.classes()).toContain('text-eb-muted')
     expect(rows[0]!.text()).toContain(formatMoney(expected[0]!.profit, 20, 'units'))

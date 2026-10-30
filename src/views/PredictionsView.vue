@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 import AppIcon from '@/components/AppIcon.vue'
+import ChipGroup from '@/components/ChipGroup.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import PunterFields from '@/components/PunterFields.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
 import { useLocale } from '@/composables/useLocale'
 import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
@@ -16,11 +17,17 @@ import { parseDecimal, toggleSign } from '@/domain/decimal'
 import { formatPercent } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
-import { toSearchResult, type EventSearchResult } from '@/domain/eventSource'
-import { suggestNames } from '@/domain/names'
-import { emptyPredictionDraft, marketInput, predictionInput } from '@/domain/predictionDraft'
+import { toSearchResult, type EventSearchResult, type RecentEvent } from '@/domain/eventSource'
 import {
-  marketFormSchema,
+  BET_TYPES_BY_MARKET,
+  lineKind,
+  MARKETS,
+  MATCH_PERIODS,
+  PICKS,
+  type BetType,
+} from '@/domain/markets'
+import { emptyPredictionDraft, predictionInput } from '@/domain/predictionDraft'
+import {
   newGameFormSchema,
   predictionFormSchema,
   type NewGameForm,
@@ -37,7 +44,7 @@ const props = defineProps<{
   eventId?: string
 }>()
 
-type ErrorKey = 'game' | keyof NewGameForm | 'category' | 'marketName' | keyof PredictionForm
+type ErrorKey = 'game' | keyof NewGameForm | keyof PredictionForm
 type FieldErrors = Partial<Record<ErrorKey, string>>
 
 const events = useEventsStore()
@@ -45,13 +52,14 @@ const predictions = usePredictionsStore()
 const reference = useReferenceStore()
 const settings = useSettingsStore()
 const toast = useToast()
-const { t, intlLocale, message, marketName, storedName } = useLocale()
+const { t, intlLocale, message } = useLocale()
 
 const loading = ref(true)
 const saving = ref(false)
 const error = ref<string | null>(null)
 const errors = ref<FieldErrors>({})
 const bookmakers = ref<string[]>([])
+const recent = ref<RecentEvent[]>([])
 
 const game = ref<EventSearchResult | null>(null)
 const newGame = ref<NewGameForm | null>(null)
@@ -60,9 +68,7 @@ const keptEventId = ref<string | null>(null)
 const draft = reactive(emptyPredictionDraft())
 const showNotes = ref(false)
 
-const categorySuggestions = ref<string[]>([])
-const marketNameSuggestions = ref<string[]>([])
-
+const hasEvent = computed(() => !!game.value || !!newGame.value)
 const kept = computed(() => !!game.value && game.value.eventId === keptEventId.value)
 const probability = computed(() =>
   draft.confidence == null ? null : probabilityFor(draft.confidence, settings.confidenceAnchors),
@@ -76,26 +82,64 @@ const probabilityLabel = computed(() => {
   })
 })
 
-// Suggestions show seeded markets in the active language; `storedName` maps them back on save.
-const completeCategory = (event: AutoCompleteCompleteEvent) =>
-  (categorySuggestions.value = suggestNames(
-    reference.markets.map((m) => marketName(m.category)),
-    event.query,
-  ))
-const completeMarketName = (event: AutoCompleteCompleteEvent) => {
-  const category = draft.category.trim() ? storedName(draft.category).toLowerCase() : ''
-  const markets = category
-    ? reference.markets.filter((m) => m.category.toLowerCase() === category)
-    : reference.markets
-  marketNameSuggestions.value = suggestNames(
-    markets.map((m) => marketName(m.name)),
-    event.query,
-  )
+const marketOptions = computed(() =>
+  MARKETS.map((value) => ({ value, label: t(`catalogue.market.${value}`) })),
+)
+const betTypeOptions = computed(() =>
+  BET_TYPES_BY_MARKET[draft.market].map((value) => ({
+    value,
+    label: t(`catalogue.betType.${value}`),
+  })),
+)
+const periodOptions = MATCH_PERIODS.map((value) => ({ value, label: value }))
+const timingOptions = computed(() => [
+  { value: 'prematch' as const, label: t('timing.prematch') },
+  { value: 'live' as const, label: t('timing.live') },
+])
+const timing = computed({
+  get: () => (draft.isLive ? 'live' : 'prematch'),
+  set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
+})
+
+/** Kickoff of the picked or new event; null while it is not known. */
+const kickoff = computed(() => {
+  if (game.value) return new Date(game.value.kickoffAt)
+  if (!newGame.value?.date || !newGame.value.time) return null
+  const typed = new Date(`${newGame.value.date}T${newGame.value.time}`)
+  return Number.isNaN(typed.getTime()) ? null : typed
+})
+
+/** Live by default once the event has kicked off. */
+function defaultTiming() {
+  draft.isLive = !!kickoff.value && kickoff.value.getTime() <= Date.now()
 }
+watch(kickoff, defaultTiming)
+const pickOptions = computed(() =>
+  PICKS[draft.betType].map((value) => ({ value, label: t(`catalogue.pick.${value}`) })),
+)
+const line = computed(() => lineKind(draft.betType))
+
+// A type the new market does not offer falls back to its first; a side only fits its own type.
+watch(
+  () => draft.market,
+  (market) => {
+    if (!BET_TYPES_BY_MARKET[market].includes(draft.betType)) {
+      draft.betType = BET_TYPES_BY_MARKET[market][0] as BetType
+    }
+  },
+)
+watch(
+  () => draft.betType,
+  () => {
+    draft.pick = ''
+    if (!lineKind(draft.betType)) draft.line = ''
+  },
+)
 
 /** Clears everything about the prediction but keeps the game. */
 function resetPrediction() {
   Object.assign(draft, emptyPredictionDraft())
+  defaultTiming()
   showNotes.value = false
   errors.value = {}
 }
@@ -117,17 +161,11 @@ async function save() {
   const found: FieldErrors = {}
   if (!game.value && !newGame.value) found.game = 'logging.pickGame'
   const gameResult = newGame.value ? newGameFormSchema.safeParse(newGame.value) : null
-  const typedMarket = marketInput(draft)
-  const marketResult = marketFormSchema.safeParse({
-    category: storedName(typedMarket.category),
-    name: storedName(typedMarket.name),
-  })
   const predictionResult = predictionFormSchema.safeParse(predictionInput(draft))
   collect(found, gameResult)
-  collect(found, marketResult, { name: 'marketName' })
   collect(found, predictionResult)
   errors.value = found
-  if (Object.keys(found).length > 0 || !marketResult.success || !predictionResult.success) return
+  if (Object.keys(found).length > 0 || !predictionResult.success) return
 
   saving.value = true
   try {
@@ -149,8 +187,7 @@ async function save() {
     }
     const eventId = game.value?.eventId
     if (!eventId) throw new UserError('logging.gameNotSaved')
-    const market = await reference.ensureMarket(marketResult.data.category, marketResult.data.name)
-    await predictions.create({ ...predictionResult.data, event_id: eventId, market_id: market.id })
+    await predictions.create({ ...predictionResult.data, event_id: eventId })
 
     const usedBookmaker = predictionResult.data.bookmaker
     if (usedBookmaker && !bookmakers.value.includes(usedBookmaker)) {
@@ -179,10 +216,15 @@ async function preselect(eventId: string) {
 onMounted(async () => {
   if (props.eventId) void preselect(props.eventId)
   try {
-    // Settings first: a new user's first load seeds the default markets.
+    // Settings first: a new user's first load creates their settings row.
     await settings.ensureLoaded()
-    const [, used] = await Promise.all([reference.load(), predictions.listBookmakers()])
+    const [, used, recentEvents] = await Promise.all([
+      reference.load(),
+      predictions.listBookmakers(),
+      predictions.listRecentEvents(),
+    ])
     bookmakers.value = used
+    recent.value = recentEvents
   } catch (e) {
     error.value = userMessage(e, 'logging.loadFailed')
   } finally {
@@ -198,62 +240,85 @@ onMounted(async () => {
     <form class="flex flex-col gap-[18px]" novalidate @submit.prevent="save">
       <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
         <legend class="sr-only">{{ t('logging.game') }}</legend>
-        <GamePicker v-model:game="game" v-model:new-game="newGame" :errors="errors" :kept="kept" />
+        <GamePicker
+          v-model:game="game"
+          v-model:new-game="newGame"
+          :errors="errors"
+          :kept="kept"
+          :recent="recent"
+        />
       </fieldset>
 
-      <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend class="sr-only">{{ t('logging.prediction') }}</legend>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex min-w-0 flex-col gap-1">
-            <label for="category" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.market')
-            }}</label>
-            <AutoComplete
-              v-model="draft.category"
-              input-id="category"
-              :suggestions="categorySuggestions"
-              input-class="min-h-12 w-full"
-              :invalid="!!errors.category"
-              dropdown
-              fluid
-              @complete="completeCategory"
+      <!-- The rest of the form appears once an event is picked or being created. -->
+      <template v-if="hasEvent">
+        <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
+          <legend class="sr-only">{{ t('logging.prediction') }}</legend>
+          <SegmentedControl
+            v-model="timing"
+            :options="timingOptions"
+            :label="t('logging.timing')"
+          />
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.market') }}</span>
+            <ChipGroup
+              v-model="draft.market"
+              :options="marketOptions"
+              :label="t('logging.market')"
             />
-            <small v-if="errors.category" class="text-eb-neg">{{ message(errors.category) }}</small>
           </div>
-          <div class="flex min-w-0 flex-col gap-1">
-            <label for="market-name" class="text-[13px] font-semibold text-eb-muted">{{
-              t('logging.type')
-            }}</label>
-            <AutoComplete
-              v-model="draft.marketName"
-              input-id="market-name"
-              :suggestions="marketNameSuggestions"
-              input-class="min-h-12 w-full"
-              :invalid="!!errors.marketName"
-              dropdown
-              fluid
-              @complete="completeMarketName"
-            />
-            <small v-if="errors.marketName" class="text-eb-neg">{{
-              message(errors.marketName)
-            }}</small>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-[minmax(0,1fr)_8rem] gap-3">
-          <div class="flex min-w-0 flex-col gap-1">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.type') }}</span>
+            <ChipGroup
+              v-model="draft.betType"
+              :options="betTypeOptions"
+              :label="t('logging.type')"
+              :invalid="!!errors.bet_type"
+            />
+            <small v-if="errors.bet_type" class="text-eb-neg">{{ message(errors.bet_type) }}</small>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.period') }}</span>
+            <SegmentedControl
+              v-model="draft.period"
+              :options="periodOptions"
+              :label="t('logging.period')"
+            />
+          </div>
+
+          <div v-if="draft.betType === 'other'" class="flex flex-col gap-1">
             <label for="selection" class="text-[13px] font-semibold text-eb-muted">{{
               t('logging.selection')
             }}</label>
             <InputText
               id="selection"
-              v-model="draft.selection"
+              v-model="draft.pick"
               autocomplete="off"
+              :placeholder="t('logging.selectionPlaceholder')"
               class="min-h-12 w-full"
               :invalid="!!errors.selection"
             />
+            <small v-if="errors.selection" class="text-eb-neg">{{
+              message(errors.selection)
+            }}</small>
           </div>
-          <div class="flex min-w-0 flex-col gap-1">
+          <div v-else-if="pickOptions.length > 0" class="flex flex-col gap-1.5">
+            <span class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.selection')
+            }}</span>
+            <ChipGroup
+              v-model="draft.pick"
+              :options="pickOptions"
+              :label="t('logging.selection')"
+              :invalid="!!errors.selection"
+            />
+            <small v-if="errors.selection" class="text-eb-neg">{{
+              message(errors.selection)
+            }}</small>
+          </div>
+
+          <div v-if="line" class="flex flex-col gap-1">
             <label for="line" class="text-[13px] font-semibold text-eb-muted">{{
               t('logging.line')
             }}</label>
@@ -262,7 +327,13 @@ onMounted(async () => {
                 id="line"
                 v-model="draft.line"
                 inputmode="decimal"
-                :placeholder="t('logging.linePlaceholder')"
+                :placeholder="
+                  t(
+                    line === 'total'
+                      ? 'logging.lineTotalPlaceholder'
+                      : 'logging.lineHandicapPlaceholder',
+                  )
+                "
                 autocomplete="off"
                 class="min-h-12 w-full min-w-0"
                 :invalid="!!errors.line"
@@ -277,99 +348,99 @@ onMounted(async () => {
                 @click="draft.line = toggleSign(draft.line)"
               />
             </div>
+            <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
+            <small v-else-if="line === 'total'" class="text-eb-muted">{{
+              t('logging.lineTotalHint')
+            }}</small>
           </div>
-          <small v-if="errors.selection" class="col-span-2 text-eb-neg">
-            {{ message(errors.selection) }}
-          </small>
-          <small v-if="errors.line" class="col-span-2 text-eb-neg">{{
-            message(errors.line)
+
+          <div class="flex flex-col gap-1">
+            <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.odd')
+            }}</label>
+            <InputText
+              id="odd"
+              v-model="draft.odd"
+              inputmode="decimal"
+              :placeholder="t('logging.oddPlaceholder')"
+              autocomplete="off"
+              class="min-h-12 w-full text-xl font-bold tabular-nums"
+              :invalid="!!errors.odd"
+            />
+            <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
+          </div>
+        </fieldset>
+
+        <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
+          <legend
+            class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
+          >
+            <span>{{ t('logging.confidence') }}</span>
+            <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
+          </legend>
+          <div class="grid grid-cols-5 gap-2">
+            <button
+              v-for="level in CONFIDENCE_LEVELS"
+              :key="level"
+              type="button"
+              class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
+              :class="
+                draft.confidence === level
+                  ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
+                  : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
+              "
+              :aria-pressed="draft.confidence === level"
+              @click="draft.confidence = level"
+            >
+              <span class="text-xl leading-none font-bold">{{ level }}</span>
+              <span class="text-center text-[11px] leading-tight font-semibold">
+                {{ t(`confidence.${level}`) }}
+              </span>
+            </button>
+          </div>
+          <small v-if="errors.confidence" class="text-eb-neg">{{
+            message(errors.confidence)
           }}</small>
-        </div>
+          <ValueIndex :odd="parsedOdd" :probability="probability" />
+        </fieldset>
+
+        <PunterFields
+          v-model:is-punter="draft.isPunter"
+          v-model:stake="draft.stake"
+          v-model:bookmaker="draft.bookmaker"
+          :bookmakers="bookmakers"
+          :stake-error="errors.stake_units"
+          :unit-value="settings.unitValue"
+          :money-display="settings.moneyDisplay"
+        />
 
         <div class="flex flex-col gap-1">
-          <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
-            t('logging.odd')
-          }}</label>
-          <InputText
-            id="odd"
-            v-model="draft.odd"
-            inputmode="decimal"
-            :placeholder="t('logging.oddPlaceholder')"
-            autocomplete="off"
-            class="min-h-12 w-full text-xl font-bold tabular-nums"
-            :invalid="!!errors.odd"
-          />
-          <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
-        </div>
-      </fieldset>
-
-      <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">
-        <legend
-          class="mb-2 flex w-full justify-between gap-3 p-0 text-[13px] font-semibold text-eb-muted"
-        >
-          <span>{{ t('logging.confidence') }}</span>
-          <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
-        </legend>
-        <div class="grid grid-cols-5 gap-2">
           <button
-            v-for="level in CONFIDENCE_LEVELS"
-            :key="level"
+            v-if="!showNotes"
             type="button"
-            class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
-            :class="
-              draft.confidence === level
-                ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
-                : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
-            "
-            :aria-pressed="draft.confidence === level"
-            @click="draft.confidence = level"
+            class="flex min-h-11 items-center gap-1.5 self-start text-[15px] font-semibold text-eb-accent-text"
+            @click="showNotes = true"
           >
-            <span class="text-xl leading-none font-bold">{{ level }}</span>
-            <span class="text-center text-[11px] leading-tight font-semibold">
-              {{ t(`confidence.${level}`) }}
-            </span>
+            <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+            {{ t('logging.addNotes') }}
           </button>
+          <template v-else>
+            <label for="notes" class="text-[13px] font-semibold text-eb-muted">{{
+              t('logging.notes')
+            }}</label>
+            <Textarea id="notes" v-model="draft.notes" rows="3" auto-resize class="w-full" />
+          </template>
         </div>
-        <small v-if="errors.confidence" class="text-eb-neg">{{ message(errors.confidence) }}</small>
-        <ValueIndex :odd="parsedOdd" :probability="probability" />
-      </fieldset>
 
-      <PunterFields
-        v-model:is-punter="draft.isPunter"
-        v-model:stake="draft.stake"
-        v-model:bookmaker="draft.bookmaker"
-        :bookmakers="bookmakers"
-        :stake-error="errors.stake_units"
-        :unit-value="settings.unitValue"
-        :money-display="settings.moneyDisplay"
-      />
-
-      <div class="flex flex-col gap-1">
-        <button
-          v-if="!showNotes"
-          type="button"
-          class="flex min-h-11 items-center gap-1.5 self-start text-[15px] font-semibold text-eb-accent-text"
-          @click="showNotes = true"
-        >
-          <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-          {{ t('logging.addNotes') }}
-        </button>
-        <template v-else>
-          <label for="notes" class="text-[13px] font-semibold text-eb-muted">{{
-            t('logging.notes')
-          }}</label>
-          <Textarea id="notes" v-model="draft.notes" rows="3" auto-resize class="w-full" />
-        </template>
-      </div>
-
-      <Message v-if="error" severity="error">{{ message(error) }}</Message>
-      <Button
-        type="submit"
-        :label="t('logging.submit')"
-        :loading="saving"
-        :disabled="loading"
-        class="min-h-[52px] !rounded-[14px] !text-base !font-bold"
-      />
+        <Message v-if="error" severity="error">{{ message(error) }}</Message>
+        <Button
+          type="submit"
+          :label="t('logging.submit')"
+          :loading="saving"
+          :disabled="loading"
+          class="min-h-[52px] !rounded-[14px] !text-base !font-bold"
+        />
+      </template>
     </form>
   </div>
 </template>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConfidenceLevel } from '../confidence'
+import type { BetType, Market } from '../markets'
 import {
   breakdown,
   cumulativeSeries,
@@ -40,7 +41,7 @@ const single = (
   probability: number,
   confidence: ConfidenceLevel,
   valueBand: ValueBand,
-  market: [string, string],
+  market: [Market, BetType],
   leagueName: string | null,
   teams: [string, string],
   bookmaker: string | null = null,
@@ -52,8 +53,9 @@ const single = (
   real,
   probability,
   date: day(d),
-  marketCategory: market[0],
-  marketName: market[1],
+  market: market[0],
+  betType: market[1],
+  period: 'FT',
   leagueName,
   teams,
   confidence,
@@ -70,9 +72,9 @@ const multiple = (
   probability: number,
 ): Bet => ({ kind: 'multiple', status, odd, stake, real, probability, date: day(d) })
 
-const OVER = ['Golos', 'Mais de'] as [string, string]
-const HOME = ['1X2', 'Casa'] as [string, string]
-const AWAY = ['1X2', 'Fora'] as [string, string]
+const OVER: [Market, BetType] = ['goals', 'total']
+const HOME: [Market, BetType] = ['result', '1x2']
+const AWAY: [Market, BetType] = ['result', 'handicap']
 
 /*
  * The Phase 2 gate: 21 bets, every number below worked out by hand.
@@ -141,10 +143,10 @@ const fixture: Bet[] = [
   single('05', false, 'won', 1.8, 1, 0.65, 3, 'favourable', OVER, 'Liga', ['Benfica', 'Porto']),
   single('06', true, 'won', 2.5, 1, 0.4, 1, 'neutral', AWAY, 'Premier', ['Arsenal', 'Chelsea'], 'Bet365'),
   single('06', false, 'lost', 2, 1, 0.55, 2, 'favourable', OVER, 'Premier', ['Arsenal', 'Chelsea']),
-  single('06', true, 'void', 1.9, 1, 0.55, 2, 'neutral', ['Cantos', 'Mais de'], 'Liga', ['Benfica', 'Braga'], 'Betano'),
+  single('06', true, 'void', 1.9, 1, 0.55, 2, 'neutral', ['corners', 'total'], 'Liga', ['Benfica', 'Braga'], 'Betano'),
   single('07', true, 'lost', 3, 1, 0.4, 1, 'favourable', AWAY, 'Liga', ['Porto', 'Sporting'], 'Bet365'),
   single('07', true, 'lost', 1.25, 4, 0.75, 4, 'reduced', HOME, 'Liga', ['Porto', 'Sporting'], 'Betano'),
-  single('07', false, 'won', 1.4, 1, 0.75, 4, 'neutral', ['Golos', 'Menos de'], 'Premier', ['Liverpool', 'Arsenal']),
+  single('07', false, 'won', 1.4, 1, 0.75, 4, 'neutral', ['goals', 'btts'], 'Premier', ['Liverpool', 'Arsenal']),
   single('08', true, 'won', 1.6, 2, 0.65, 3, 'neutral', HOME, 'Premier', ['Liverpool', 'Arsenal'], 'Bet365'),
   single('08', false, 'pending', 2.2, 1, 0.55, 2, 'favourable', OVER, 'Premier', ['Arsenal', 'Chelsea']),
   single('09', true, 'won', 5, 0.5, 0.4, 1, 'banger', AWAY, null, ['Braga', 'Benfica'], 'Betano'),
@@ -528,24 +530,33 @@ describe('breakdown', () => {
     expect(rows[1]!.expectedHitRate).toBeCloseTo(0.65)
   })
 
-  it('groups by value band, market and market category', () => {
+  it('groups by value band, market and type, market and period', () => {
     expect(keysAndN(breakdown(all, 'valueBand'))).toEqual([
       ['favourable', 8],
       ['neutral', 5],
       ['banger', 1],
       ['reduced', 1],
     ])
-    expect(keysAndN(breakdown(all, 'market'))).toEqual([
-      ['Golos · Mais de', 6],
-      ['1X2 · Casa', 4],
-      ['1X2 · Fora', 3],
-      ['Cantos · Mais de', 1],
-      ['Golos · Menos de', 1],
+    expect(keysAndN(breakdown(all, 'betType'))).toEqual([
+      ['goals · total', 6],
+      ['result · 1x2', 4],
+      ['result · handicap', 3],
+      ['corners · total', 1],
+      ['goals · btts', 1],
     ])
-    expect(keysAndN(breakdown(all, 'marketCategory'))).toEqual([
-      ['1X2', 7],
-      ['Golos', 7],
-      ['Cantos', 1],
+    expect(keysAndN(breakdown(all, 'market'))).toEqual([
+      ['goals', 7],
+      ['result', 7],
+      ['corners', 1],
+    ])
+    expect(keysAndN(breakdown(all, 'period'))).toEqual([['FT', 15]])
+    const timing = breakdown(
+      all.map((bet, i) => ({ ...bet, live: i < 4 })),
+      'timing',
+    )
+    expect(keysAndN(timing)).toEqual([
+      ['prematch', 11],
+      ['live', 4],
     ])
   })
 

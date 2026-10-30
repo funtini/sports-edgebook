@@ -2,6 +2,15 @@ import { z } from 'zod'
 
 // Issue messages are vue-i18n keys (`src/locales/`); the UI translates them when shown.
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
+import {
+  BET_TYPES,
+  BET_TYPES_BY_MARKET,
+  isHalfStep,
+  isValidSelection,
+  lineKind,
+  MARKETS,
+  MATCH_PERIODS,
+} from './markets'
 import { MONEY_DISPLAYS } from './money'
 import { sameName, tidyName } from './names'
 
@@ -12,9 +21,14 @@ const optionalText = z.string().trim().min(1, 'validation.textEmpty').nullish()
 /** Odds are decimal and must pay more than the stake back. */
 const odd = z.number('validation.oddInvalid').gt(1, 'validation.oddAboveOne')
 
-/** What the user fills in for a prediction; the game and market ids come from elsewhere. */
+/** What the user fills in for a prediction; the game id comes from elsewhere. */
 const predictionFields = z.object({
-  selection: z.string().trim().min(1, 'validation.selectionRequired'),
+  market: z.enum(MARKETS, 'validation.marketRequired'),
+  bet_type: z.enum(BET_TYPES, 'validation.typeRequired'),
+  period: z.enum(MATCH_PERIODS, 'validation.periodRequired'),
+  /** Selection code from the catalogue, or free text for type `other`. */
+  selection: z.string().trim(),
+  /** Unsigned for totals (the selection says over / under), signed for handicaps. */
   line: z.number('validation.lineInvalid').nullish(),
   odd,
   confidence: z
@@ -22,12 +36,40 @@ const predictionFields = z.object({
     .int('validation.confidenceRange')
     .min(1, 'validation.confidenceRange')
     .max(5, 'validation.confidenceRange'),
+  is_live: z.boolean().default(false),
   is_punter: z.boolean().default(false),
   stake_units: z.number('validation.stakeInvalid').positive('validation.stakePositive').nullish(),
   bookmaker: optionalText,
   closing_odd: odd.nullish(),
   notes: optionalText,
 })
+
+type PredictionFields = z.output<typeof predictionFields>
+
+/** The catalogue's rules: a type of the market, a selection of the type, a line where it has one. */
+function checkPick(p: PredictionFields, ctx: z.RefinementCtx) {
+  const issue = (message: string, path: keyof PredictionFields) =>
+    ctx.addIssue({ code: 'custom', message, path: [path] })
+  if (!BET_TYPES_BY_MARKET[p.market].includes(p.bet_type))
+    issue('validation.typeRequired', 'bet_type')
+  const kind = lineKind(p.bet_type)
+  if (kind && p.line == null) issue('validation.lineRequired', 'line')
+  else if (kind && (!isHalfStep(p.line!) || (kind === 'total' && p.line! <= 0))) {
+    issue('validation.lineStep', 'line')
+  }
+  // A total's side is the line's sign, so a missing line already says what is wrong.
+  const sideFromLine = p.bet_type === 'total' && p.line == null
+  if (!sideFromLine && !isValidSelection(p.bet_type, p.selection)) {
+    issue('validation.selectionRequired', 'selection')
+  }
+}
+
+/** Runs `checkPick` once the pick's own fields are valid, whatever else is still missing. */
+const PICK_FIELDS: PropertyKey[] = ['market', 'bet_type', 'period', 'selection', 'line']
+const pickFieldsValid = {
+  when: (payload: { issues: readonly { path?: PropertyKey[] }[] }) =>
+    !payload.issues.some((issue) => PICK_FIELDS.includes(issue.path?.[0] ?? '')),
+}
 
 const punterHasStake = (p: { is_punter: boolean; stake_units?: number | null }) =>
   !p.is_punter || p.stake_units != null
@@ -36,13 +78,16 @@ const punterStakeIssue = {
   path: ['stake_units'],
 }
 
-/** The logging form's prediction fields, validated before the game and market exist. */
-export const predictionFormSchema = predictionFields.refine(punterHasStake, punterStakeIssue)
+/** The logging form's prediction fields, validated before the game exists. */
+export const predictionFormSchema = predictionFields
+  .superRefine(checkPick, pickFieldsValid)
+  .refine(punterHasStake, punterStakeIssue)
 
 export type PredictionForm = z.input<typeof predictionFormSchema>
 
 export const predictionCreateSchema = predictionFields
-  .extend({ event_id: id, market_id: id })
+  .extend({ event_id: id })
+  .superRefine(checkPick, pickFieldsValid)
   .refine(punterHasStake, punterStakeIssue)
 
 export type PredictionCreate = z.input<typeof predictionCreateSchema>
@@ -65,14 +110,6 @@ export type EventCreate = z.input<typeof eventCreateSchema>
 /** A name typed by hand: tidied, and required. */
 const typedName = (message: string) =>
   z.string().transform(tidyName).pipe(z.string().min(1, message))
-
-/** Market typed in the logging form; created on save if new. */
-export const marketFormSchema = z.object({
-  category: typedName('validation.marketRequired'),
-  name: typedName('validation.typeRequired'),
-})
-
-export type MarketForm = z.input<typeof marketFormSchema>
 
 /** Cross-field checks run only once each field is valid on its own. */
 const fieldsValid = (payload: { issues: readonly unknown[] }) => payload.issues.length === 0

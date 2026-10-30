@@ -4,6 +4,7 @@
  * Postgres `numeric` columns arrive as numbers and `timestamptz` as ISO strings.
  */
 
+import type { BetType, Market, MatchPeriod } from '@/domain/markets'
 import type { MoneyDisplay } from '@/domain/money'
 import type { BetStatus } from '@/domain/settlement'
 
@@ -55,6 +56,7 @@ export interface EventRow {
   created_at: string
 }
 
+/** Legacy free-text markets, replaced by `predictions.market` / `bet_type`; no longer read. */
 export interface MarketRow {
   id: string
   user_id: string
@@ -66,11 +68,19 @@ export interface PredictionRow {
   id: string
   user_id: string
   event_id: string
-  market_id: string
+  /** Legacy free-text market; null from the market catalogue on. */
+  market_id: string | null
+  market: Market
+  bet_type: BetType
+  period: MatchPeriod
+  /** Selection code (`home`, `over`, `x2_under`…), or free text for bet type `other`. */
   selection: string
+  /** Unsigned for totals (the selection says over / under), signed for handicaps. */
   line: number | null
   odd: number
   confidence: number
+  /** Logged with the game already under way. */
+  is_live: boolean
   /** Probability of the confidence level when the prediction was logged. */
   probability: number
   is_punter: boolean
@@ -132,10 +142,11 @@ export type EventInsert = Insert<
   EventRow,
   'league_id' | 'home_score' | 'away_score' | 'source' | 'external_id'
 >
-export type MarketInsert = Insert<MarketRow>
 export type PredictionInsert = Insert<
   PredictionRow,
+  | 'market_id'
   | 'line'
+  | 'is_live'
   | 'is_punter'
   | 'stake_units'
   | 'bookmaker'
@@ -161,8 +172,7 @@ export interface EventWithTeams extends EventRow {
   league: LeagueRow | null
 }
 
-/** A prediction with its event (and teams) and market embedded. */
+/** A prediction with its event (and teams) embedded. */
 export interface PredictionWithRelations extends PredictionRow {
   event: EventWithTeams
-  market: MarketRow
 }

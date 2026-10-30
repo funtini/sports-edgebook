@@ -53,12 +53,20 @@ describe('useLocale', () => {
     expect(message('Email rate limit exceeded')).toBe('Email rate limit exceeded')
   })
 
-  it('translates seeded market names only', () => {
-    const { marketName, setLocale } = setup()
-    expect(marketName('Golos')).toBe('Golos')
+  it('labels a bet in the active language', () => {
+    const { betParts, setLocale } = setup()
+    const bet = {
+      market: 'goals',
+      bet_type: 'total',
+      period: 'HT',
+      selection: 'over',
+      line: 1.5,
+    } as const
+    expect(betParts(bet)).toEqual(['Golos', 'Total', 'HT', '+1,5'])
     setLocale('en')
-    expect(marketName('Golos')).toBe('Goals')
-    expect(marketName('Mais de')).toBe('Over')
-    expect(marketName('Remates')).toBe('Remates')
+    expect(betParts(bet)).toEqual(['Goals', 'Total', 'HT', '+1.5'])
+    expect(betParts({ ...bet, bet_type: 'other', selection: 'Benfica marca', line: null })).toEqual(
+      ['Goals', 'Other', 'HT', 'Benfica marca'],
+    )
   })
 })

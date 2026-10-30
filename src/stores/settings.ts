@@ -1,7 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
-import { DEFAULT_MARKETS } from '@/domain/markets'
 import { DEFAULT_ODDS_BANDS } from '@/domain/metrics'
 import { DEFAULT_MONEY_DISPLAY, DEFAULT_UNIT_VALUE, type MoneyDisplay } from '@/domain/money'
 import {
@@ -30,7 +29,7 @@ export const useSettingsStore = defineStore('settings', () => {
     return parsed.success ? parsed.data : DEFAULT_CONFIDENCE_ANCHORS
   })
 
-  /** Loads `user_settings`; on first use creates the row with defaults and seeds the default markets. */
+  /** Loads `user_settings`; on first use creates the row with defaults. */
   async function load(): Promise<UserSettingsRow> {
     const db = requireSupabase()
     let row = unwrap<UserSettingsRow | null>(
@@ -38,12 +37,6 @@ export const useSettingsStore = defineStore('settings', () => {
     )
     if (!row) {
       row = unwrap<UserSettingsRow>(await db.from('user_settings').insert({}).select().single())
-      unwrap(
-        await db.from('markets').upsert([...DEFAULT_MARKETS], {
-          onConflict: 'user_id,category,name',
-          ignoreDuplicates: true,
-        }),
-      )
     }
     settings.value = row
     return row

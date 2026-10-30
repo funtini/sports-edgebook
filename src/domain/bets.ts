@@ -1,4 +1,5 @@
 import type { ConfidenceLevel } from './confidence'
+import type { BetType, Market, MatchPeriod } from './markets'
 import type { Bet } from './metrics'
 import {
   isPunterBet,
@@ -10,7 +11,7 @@ import {
 } from './settlement'
 import { valueBand, valueIndex } from './value'
 
-/** The fields of a prediction (with its event and market) that a `Bet` reads. */
+/** The fields of a prediction (with its event) that a `Bet` reads. */
 export interface BetPrediction {
   odd: number
   status: BetStatus
@@ -19,16 +20,19 @@ export interface BetPrediction {
   probability: number
   confidence: number
   bookmaker: string | null
+  is_live: boolean
   event: {
     kickoff_at: string
     home_team: { name: string }
     away_team: { name: string }
     league: { name: string } | null
   }
-  market: { category: string; name: string }
+  market: Market
+  bet_type: BetType
+  period: MatchPeriod
 }
 
-/** A single as the metrics read it: stake from `stakeFor`, dimensions from its event and market. */
+/** A single as the metrics read it: stake from `stakeFor`, dimensions from its event and pick. */
 export function betFromPrediction(prediction: BetPrediction): Bet {
   return {
     kind: 'single',
@@ -38,8 +42,10 @@ export function betFromPrediction(prediction: BetPrediction): Bet {
     real: isPunterBet(prediction),
     probability: prediction.probability,
     date: prediction.event.kickoff_at,
-    marketCategory: prediction.market.category,
-    marketName: prediction.market.name,
+    market: prediction.market,
+    betType: prediction.bet_type,
+    period: prediction.period,
+    live: prediction.is_live,
     leagueName: prediction.event.league?.name ?? null,
     teams: [prediction.event.home_team.name, prediction.event.away_team.name],
     confidence: prediction.confidence as ConfidenceLevel,

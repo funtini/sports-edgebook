@@ -17,7 +17,7 @@ const pick = (overrides: Partial<Candidate> = {}): Candidate => {
     event_id: `e-${id}`,
     kickoff_at: '2026-10-28T20:00:00Z',
     league_id: 'liga',
-    market_id: '1x2',
+    market: 'result',
     odd: 2,
     probability: 0.55,
     confidence: 2,
@@ -99,11 +99,11 @@ describe('generateMultiple: one leg per event', () => {
 
 describe('generateMultiple: filters', () => {
   const pool = [
-    pick({ id: 'a', confidence: 4, odd: 1.4, league_id: 'pt', market_id: 'btts' }),
-    pick({ id: 'b', confidence: 2, odd: 2.1, league_id: 'pt', market_id: '1x2', is_punter: true }),
-    pick({ id: 'c', confidence: 3, odd: 1.8, league_id: 'es', market_id: 'btts' }),
-    pick({ id: 'd', confidence: 5, odd: 3.5, league_id: null, market_id: 'ou' }),
-    pick({ id: 'e', confidence: 1, odd: 1.2, league_id: 'es', market_id: '1x2' }),
+    pick({ id: 'a', confidence: 4, odd: 1.4, league_id: 'pt', market: 'goals' }),
+    pick({ id: 'b', confidence: 2, odd: 2.1, league_id: 'pt', market: 'result', is_punter: true }),
+    pick({ id: 'c', confidence: 3, odd: 1.8, league_id: 'es', market: 'goals' }),
+    pick({ id: 'd', confidence: 5, odd: 3.5, league_id: null, market: 'corners' }),
+    pick({ id: 'e', confidence: 1, odd: 1.2, league_id: 'es', market: 'result' }),
   ]
   const sorted = (params: Omit<GeneratorParams, 'mode' | 'legs'>, legs = 2) =>
     ids(generateMultiple(pool, { mode: 'lowest_odds', legs, ...params }))?.sort()
@@ -121,7 +121,7 @@ describe('generateMultiple: filters', () => {
   })
 
   it('markets', () => {
-    expect(sorted({ marketIds: ['btts'] })).toEqual(['a', 'c'])
+    expect(sorted({ markets: ['goals'] })).toEqual(['a', 'c'])
   })
 
   it('non-punter pool', () => {

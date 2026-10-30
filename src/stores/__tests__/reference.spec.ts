@@ -40,14 +40,11 @@ describe('reference store', () => {
     expect(store.teams).toEqual([created])
   })
 
-  it('matches markets on category and name, escaping wildcards', async () => {
-    const queries = setup((q) => ({ data: has(q, 'insert') ? { id: 'm1' } : [] }))
-    await useReferenceStore().ensureMarket('Golos', 'Mais_de 100%')
+  it('escapes wildcards when matching names', async () => {
+    const queries = setup((q) => ({ data: has(q, 'insert') ? { id: 't1' } : [] }))
+    await useReferenceStore().ensureTeam('Sub_23 100%', null)
 
-    expect(queries[0]!.ops.filter(([m]) => m === 'ilike').map(([, args]) => args)).toEqual([
-      ['category', 'Golos'],
-      ['name', 'Mais\\_de 100\\%'],
-    ])
+    expect(argsOf(queries[0]!, 'ilike')).toEqual(['name', 'Sub\\_23 100\\%'])
   })
 
   it('rejects empty names', async () => {

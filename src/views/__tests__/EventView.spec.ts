@@ -39,7 +39,10 @@ const event = (overrides: Record<string, unknown> = {}) => ({
 const prediction = {
   id: 'p1',
   event_id: EVENT_ID,
-  selection: 'Benfica',
+  market: 'result',
+  bet_type: '1x2',
+  period: 'FT',
+  selection: 'home',
   line: null,
   odd: 2,
   confidence: 3,
@@ -48,7 +51,6 @@ const prediction = {
   stake_units: 1,
   status: 'pending',
   created_at: '2026-10-27T10:00:00Z',
-  market: { id: 'm', user_id: 'u', category: '1X2', name: '1X2' },
   event: event(),
 }
 

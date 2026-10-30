@@ -70,11 +70,18 @@ describe('GamePicker', () => {
     expect(wrapper.text()).not.toContain('Failed to fetch')
   })
 
-  it('marks the game kept after a save as "Mesmo jogo"', async () => {
+  it('marks the game kept after a save as "Mesmo evento"', async () => {
     const wrapper = render(controlledSource().source)
     await wrapper.setProps({ game: result('Benfica'), kept: true })
-    expect(wrapper.text()).toContain('Mesmo jogo')
+    expect(wrapper.text()).toContain('Mesmo evento')
     await wrapper.setProps({ kept: false })
-    expect(wrapper.text()).not.toContain('Mesmo jogo')
+    expect(wrapper.text()).not.toContain('Mesmo evento')
+  })
+
+  it('opens a new event from the link beside the search', async () => {
+    const wrapper = render(controlledSource().source)
+    const link = wrapper.findAll('button').find((b) => b.text() === 'Novo evento')!
+    await link.trigger('click')
+    expect(wrapper.emitted('update:newGame')?.[0]?.[0]).toMatchObject({ home: '' })
   })
 })

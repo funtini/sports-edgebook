@@ -25,7 +25,9 @@ const prediction = (id: number) => ({
     away_team: { name: 'Porto' },
     league: null,
   },
-  market: { category: '1X2', name: 'Casa' },
+  market: 'result',
+  bet_type: '1x2',
+  period: 'FT',
 })
 
 beforeEach(() => {

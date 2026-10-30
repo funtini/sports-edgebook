@@ -1,6 +1,7 @@
 import type { ConfidenceLevel } from './confidence'
 import { addDays, fromDayKey, toDayKey } from './days'
 import { betProfit, type BetStatus } from './settlement'
+import type { BetType, Market, MatchPeriod } from './markets'
 import type { ValueBand } from './value'
 
 /** won ÷ (won + lost); voids and pending excluded. Null when nothing counts yet. */
@@ -25,8 +26,11 @@ export interface Bet {
   /** Event kickoff (singles) or first leg kickoff (multiples), ISO. */
   date: string
   // Dimensions: singles only, left out on multiples.
-  marketCategory?: string
-  marketName?: string
+  market?: Market
+  betType?: BetType
+  period?: MatchPeriod
+  /** Logged with the game under way. */
+  live?: boolean
   leagueName?: string | null
   teams?: string[]
   confidence?: ConfidenceLevel
@@ -218,8 +222,10 @@ export function oddsBandOf(odd: number, bands: OddsBand[]): OddsBand | undefined
 }
 
 export type Dimension =
-  | 'marketCategory'
   | 'market'
+  | 'betType'
+  | 'period'
+  | 'timing'
   | 'league'
   | 'team'
   | 'oddsBand'
@@ -233,7 +239,7 @@ export const SMALL_SAMPLE = 30
 
 export interface BreakdownRow {
   /**
-   * Segment: the name as stored (market is `category · name`), the odds band's `key`, the
+   * Segment: the code or name as stored (bet type is `market · bet_type`, timing `prematch` or `live`), the odds band's `key`, the
    * confidence level or value band, or the local weekday `0` (Sunday) to `6`.
    */
   key: string
@@ -253,12 +259,14 @@ function keysOf(bet: Bet, dimension: Dimension, bands: OddsBand[]): string[] {
   const present = (value: string | number | null | undefined) =>
     value == null || value === '' ? [] : [String(value)]
   switch (dimension) {
-    case 'marketCategory':
-      return present(bet.marketCategory)
     case 'market':
-      return bet.marketCategory && bet.marketName
-        ? [`${bet.marketCategory} · ${bet.marketName}`]
-        : []
+      return present(bet.market)
+    case 'betType':
+      return bet.market && bet.betType ? [`${bet.market} · ${bet.betType}`] : []
+    case 'period':
+      return present(bet.period)
+    case 'timing':
+      return bet.live == null ? [] : [bet.live ? 'live' : 'prematch']
     case 'league':
       return present(bet.leagueName)
     case 'team':

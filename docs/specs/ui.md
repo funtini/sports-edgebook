@@ -43,7 +43,7 @@ Code: `src/App.vue`.
 
 Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 
-1. Market (12px, muted) and selection with its line (15px semibold) on the left; odd (18px bold) on the right.
+1. Mercado - Tipo - Período (12px, muted, followed by a "Live" tag in `neg-soft` / `neg` for live predictions) and the selection with its signed line (15px semibold) on the left, together the bet's summary (see [Markets](domain.md#markets)); odd (18px bold) on the right.
 2. Two half-width boxes:
    - **Apostado** + amount in the info colours (`info-soft` / `info`), pending rows included. Non-punter rows: "Sem aposta" + "—" on `surface-2` / `muted`.
    - Result: pending "Por resolver" + "—" (`surface-2` / `muted`); won "Lucro" (`pos-soft` / `pos`); lost "Prejuízo" (`neg-soft` / `neg`); void "Nulo" (`surface-2` / `muted`). Non-punter results use the same colours plus a small muted "virtual" tag (1 virtual unit).
@@ -75,8 +75,8 @@ With `layout="line"` the row keeps this stacked layout below 1024px and becomes 
 
 ### Registo
 
-- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour.
-- **Desktop**: title "Novo prognóstico", two columns: left card with the game (or "Mesmo jogo" chip), Mercado / Tipo / Linha / Odd in one row of four, Aposta, Confiança (five buttons) and "Adicionar notas"; right column (max 380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado".
+- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right), the search and, under it, **Recentes** show: one card with a 64px row per event (teams; day · time · league; the prediction count in a pill, `accent-soft` when the game is today; chevron). On desktop Recentes is three tiles side by side (league in caps and "N prognósticos" pill on top, teams 16px bold, day · time). Recentes hides while something is typed.
+- **Desktop**: title "Novo prognóstico", two columns: left card with the event (or "Mesmo evento" chip), the Mercado / Tipo / Período / Seleção chips, Linha (totals and handicaps only) and Odd, Confiança (five buttons) and "Adicionar notas"; right column (max 380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado".
 
 ### Múltiplas
 
@@ -112,7 +112,7 @@ Desktop-first; usable at 390px with no page-level horizontal scroll. Metrics and
 - **KPI cards** (grid `auto-fit minmax(220px, 1fr)`, 2 columns on phone): **Lucro** (+ "29,50 unidades apostadas"), **Yield** ("Lucro ÷ apostado"), **Taxa de acerto** ("18 de 30 · nulos excluídos"), **Edge** in percentage points ("+10,8 pp", "break-even 49,2%"). Percentages with one decimal; signed values in `pos` / `neg`; a metric with nothing to measure shows "—".
 - **Lucro acumulado**: ECharts line chart (`src/components/ProfitChart.vue`), one point per day of the period. The singles line follows the scope (Punter, or Todos) in `accent`; Múltiplas in `info`; dashed zero line; y axis and tooltip in units or € per the toggle. Colours are read from the `--eb-*` tokens and read again when the theme switches.
 - **Punter vs múltiplas**: beside the chart on desktop, under it on phone (two columns). For each: count, P/L, yield, hit rate, and "Menos de 30 apostas: lê com cautela." when n < 30.
-- **Desempenho por segmento**: tabs Mercado, Liga, Equipa, Faixa de odd, Confiança, Índice de valor, Casa de apostas, Dia da semana (the tab row scrolls on phone). Table: Segmento, Apostas, Acerto, Odd média, Yield (diverging bar, `neg` left and `pos` right of the centre, ±20% fills its side, plus the number), Lucro. Rows with n < 30 are `muted` with an "amostra pequena" tag. Segment labels: seeded markets and confidence and value-band labels in the active language, odds bands as "1,80–2,19" / "5,00+", weekdays by name; everything else as stored. The table scrolls horizontally inside its card on phones. With scope Múltiplas the table is replaced by "Os segmentos contam só prognósticos simples: escolhe Punter ou Todos."
+- **Desempenho por segmento**: tabs Mercado e tipo, Mercado, Período, Pré-jogo / Live, Liga, Equipa, Faixa de odd, Confiança, Índice de valor, Casa de apostas, Dia da semana (the tab row scrolls on phone). Table: Segmento, Apostas, Acerto, Odd média, Yield (diverging bar, `neg` left and `pos` right of the centre, ±20% fills its side, plus the number), Lucro. Rows with n < 30 are `muted` with an "amostra pequena" tag. Segment labels: catalogue markets and types and confidence and value-band labels in the active language, odds bands as "1,80–2,19" / "5,00+", weekdays by name; everything else as stored. The table scrolls horizontally inside its card on phones. With scope Múltiplas the table is replaced by "Os segmentos contam só prognósticos simples: escolhe Punter ou Todos."
 - **Empty state**: "Sem apostas liquidadas neste período." when the scope has no settled bet in the period.
 - Calibration, CLV, drawdown and the calendar come in Phase 4.
 
@@ -128,7 +128,7 @@ Cards on `surface` with the same type scale.
 - **Strings**: every UI string is a key in `src/locales/pt-PT.ts`; `src/locales/en.ts` is typed from it and a test checks both have the same keys. Group keys by screen or component (`today.*`, `event.*`, `logging.*`, `settings.*`, `predictionRow.*`...), shared ones under `common.*`. Components use `useLocale()` (`src/composables/useLocale.ts`) for `t`, the `Intl` locale and the helpers below.
 - **Errors**: Zod issue messages in `src/domain/schemas.ts`, `UserError` messages and `userMessage` fallbacks are keys (`validation.*`, `errors.*`, `<screen>.loadFailed`...). Views keep the key and show it with `message()`, which translates keys and shows any other text (e.g. a Supabase auth error) as is.
 - **Numbers and dates** follow the language: `src/domain` formatters take the locale as a parameter (default `pt-PT`); EN uses `en-GB` for `Intl` (27/10/2026, `+€36.20`). PrimeVue day/month names and button labels follow too (`src/i18n/primevue.ts`).
-- **User data is never translated**: league, team and market names typed by the user, selections, bookmakers and notes show as stored. Two display-only exceptions with stored values unchanged: confidence labels (`confidence.1`–`5`) and the seeded market names and categories (`markets.*`, mapped in `seedNameKey`). On Registo the market autocomplete shows seeded names in the active language, and what is typed or picked is mapped back to the stored PT-PT name before saving (`storedMarketName`), so typing "Goals" in EN uses the seeded "Golos" instead of creating a duplicate.
+- **User data is never translated**: league and team names, selections typed for type Outro, bookmakers and notes show as stored. Confidence labels (`confidence.1`–`5`) and the market catalogue (`catalogue.*`: markets, types and sides, stored as codes) show in the active language.
 
 ## Theme
 

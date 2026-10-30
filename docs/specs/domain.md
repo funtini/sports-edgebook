@@ -2,26 +2,54 @@
 
 ## Prediction
 
-A prediction is one pick on one event: event (kickoff, league, home team, away team), market (category + name), selection, optional line (e.g. 2.5 goals, 9.5 corners), odd, confidence level, punter flag, optional notes.
+A prediction is one pick on one event: event (kickoff, league, home team, away team), market, bet type, period, selection and line from the [market catalogue](#markets), pre-match or live, odd, confidence level, punter flag, optional notes.
 
 - **Punter on**: a single bet was placed. Requires `stake_units` and optionally `bookmaker`. Counts toward real profit.
 - **Punter off**: history only, available to build multiples. Evaluated with a virtual stake of 1 unit.
 - Both count toward hit rate.
 - **Status**: `pending`, `won`, `lost`, `void`. Half-won/half-lost (Asian lines) is out of scope for now.
 - **Closing odd** (optional): odd near kickoff, used for CLV.
+- **Pré-jogo / Live** (`is_live`): whether the prediction was logged before kickoff or with the game under way. Predictions logged before this field existed are pre-match.
 
-Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues, teams and markets from history; "duplicate" to add another market for the same game.
+Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues and teams from history; "duplicate" to add another market for the same game.
 
 ### Logging form (`/registo`)
 
-1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
-2. **Mercado** (category) + **Tipo** (name), autocompleted from the user's markets; a new pair is created on save.
-3. **Aposta** (selection) and optional **Linha**; **Odd** with a decimal keyboard, comma or dot. Linha has a ± button because the iOS decimal keypad has no minus key (handicap lines are often negative).
+1. **Evento**: search through `LocalEventSource`. Until an event is picked or being created, only this step shows. **Novo evento** is offered in two places: at the end of the search results (and when nothing is found) as "+ Novo evento «typed text»", and as a link on the right of the "Evento" label. It opens date, time, league (optional), home and away team (the home team prefilled with what was typed), each autocompleted from history. Under the search, until something is typed, **Recentes** offers the 3 events with the most recently logged predictions that have no result yet, each with its prediction count (highlighted when the game is today); a tap picks it (`recentEvents`, `listRecentEvents`). The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
+2. **Pré-jogo / Live** (two-way switch): Live by default when the event's kickoff has passed, Pré-jogo otherwise; set again after each save. Then **Mercado** (chips, Resultado by default) → **Tipo** (chips: the types of that market, 1X2 by default; changing the market keeps the type when the market offers it, else picks its first) → **Período** (FT / HT / 2P, FT by default) → **Seleção** (chips with the sides of the type; a text field for type Outro; none for Total, whose side is the line's sign) → **Linha**, shown only for totals and handicaps, with a ± button because the iOS decimal keypad has no minus key. For totals the hint says "+ é mais de (over), − é menos de (under)". Changing the type clears the selection, and the line when the new type has none. See [Markets](#markets).
+3. **Odd** with a decimal keyboard, comma or dot.
 4. **Confiança**: five buttons with the level labels; the chosen level's probability and fair odd show beside the title. The **Índice de valor** card shows live once odd and confidence are set: band pill (short label, see Value index), the index, "odd X vs justa Y" and a bar from 0,80 to 1,30 with the neutral zone marked. The card takes the band's soft background and colour (neutral: surface + border).
 5. **Aposta real (punter)**: when on, **Valor apostado** (typed in units, starts at 1, shown in the info colour; in euros mode its euro value shows beside it) and **Casa de apostas** (autocompleted from bookmakers used before).
 6. **Notas**, collapsed by default.
 
-Errors show inline, from `predictionFormSchema`, `marketFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the game, marked "Mesmo jogo", so the next market for the same game is one tap away; "Outro jogo" clears it.
+Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the event, marked "Mesmo evento", so the next market for the same game is one tap away; "Outro evento" clears it.
+
+## Markets
+
+What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`), stored as codes in `predictions.market`, `bet_type`, `period`, `selection` and `line` and shown through `catalogue.*` messages. Only the selection of type **Outro** is free text.
+
+| Mercado (`market`) | Tipos (`bet_type`) |
+| --- | --- |
+| Resultado (`result`): who wins | 1X2, Dupla hipótese, Handicap, Resultado + Total, Outro |
+| Golos (`goals`): how many goals | Total, Total da equipa, Ambas marcam, Outro |
+| Cantos (`corners`), Cartões amarelos (`yellow_cards`), Cartões (`cards`) | 1X2, Handicap, Total, Total da equipa, Outro |
+
+| Tipo | Seleção (stored) | Linha |
+| --- | --- | --- |
+| 1X2 (`1x2`) | Casa / Empate / Fora (`home`, `draw`, `away`) | none |
+| Dupla hipótese (`double_chance`) | 1X / X2 / 12 (`1x`, `x2`, `12`) | none |
+| Handicap (`handicap`) | Casa / Fora | signed, steps of 0.5 (−1.5, 1, 0.5…); a whole line that ends level is settled Nulo |
+| Resultado + Total (`result_total`) | 1, X, 2, 1X, X2 or 12 with over / under of the goals line (`x2_under`) | the total, steps of 0.5 |
+| Total (`total`) | over / under, from the line's sign | steps of 0.5 |
+| Total da equipa (`team_total`) | Casa / Fora with over / under (`home_over`) | steps of 0.5 |
+| Ambas marcam (`btts`) | Sim / Não (`yes`, `no`) | none |
+| Outro (`other`) | free text | none |
+
+- **Período** (`period`): FT (regular time), HT (first half), 2P (second half). It applies to every type, so "home team winning at half time" is Resultado · 1X2 · HT · Casa and "corner winner in the first half" is Cantos · 1X2 · HT · Casa.
+- **Team 1 / 2** is in the selection (Casa / Fora); there is no team field.
+- **Totals** are typed signed and stored unsigned: +2.5 is over and −2.5 under (`toStoredPick` / `fromStoredPick`). Handicap lines keep their sign.
+- **Summary** of a bet, used on prediction rows: Mercado - Tipo - Período - Seleção (`pickSummary`), e.g. "Resultado - 1X2 - HT - Casa", "Golos - Total - FT - +2,5", "Resultado - Handicap - FT - Casa −1,5", "Resultado - Resultado + Total - FT - X2 −4,5".
+- Bookmaker slips follow the same split: market and period in the event name ("Corners Chelsea - Corners Manchester United 1st half"), type and selection in the bet ("1X2: W1"), which is Cantos · 1X2 · HT · Casa. This is what a future slip reader maps to.
 
 ## Confidence levels
 
@@ -104,6 +132,8 @@ Code: `src/views/EventView.vue`, `eventScoreSchema` / `scoreFormSchema` in `src/
 
 ## Data model
 
-See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets`, `predictions`, `multiples`, `multiple_legs`, `user_settings`. There are no SQL views for metrics: the dashboard computes them in TypeScript from the rows it loads (see [metrics.md](metrics.md#engine)).
+See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets` (legacy, see below), `predictions`, `multiples`, `multiple_legs`, `user_settings`. There are no SQL views for metrics: the dashboard computes them in TypeScript from the rows it loads (see [metrics.md](metrics.md#engine)).
 
-A new user's first settings load creates their `user_settings` row with defaults and seeds the default markets (`src/domain/markets.ts`): 1X2 (Casa, Empate, Fora), Dupla hipótese, Golos (Mais de, Menos de), Ambas marcam, Cantos (Mais de, Menos de), Cartões (Mais de, Menos de), Handicap. Leagues, teams and markets typed by hand reuse an existing row when the name matches ignoring case and extra spaces.
+A new user's first settings load creates their `user_settings` row with defaults. Leagues and teams typed by hand reuse an existing row when the name matches ignoring case and extra spaces.
+
+`markets` and `predictions.market_id` held the free-text markets (category + name) used before the [market catalogue](#markets). Migration `20261030000000_market_catalogue` converted every existing prediction to the catalogue (a pick it could not read with certainty became type Outro, with the old category, name and selection as its text); new predictions leave `market_id` empty and nothing reads `markets` any more. Both are dropped in a later migration once the conversion is checked.

@@ -21,7 +21,6 @@ vi.mock('@/lib/supabase', () => ({
 }))
 
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
-const MARKET_ID = '6a1e2f3d-4c5b-4a69-8b7c-0d1e2f3a4b5c'
 
 const settingsRow = {
   user_id: 'u',
@@ -47,8 +46,6 @@ function backend(options: { failPrediction?: () => boolean } = {}): Responder {
         return { data: settingsRow }
       case 'teams':
         return insert ? { data: team(String(insert.name)) } : { data: [] }
-      case 'markets':
-        return insert ? { data: { id: MARKET_ID, ...insert } } : { data: [] }
       case 'events':
         return {
           data: {
@@ -96,16 +93,15 @@ const button = (wrapper: VueWrapper, label: string) =>
   wrapper.findAll('button').find((b) => b.text() === label)!
 
 async function fillNewGame(wrapper: VueWrapper) {
-  await button(wrapper, 'Novo jogo').trigger('click')
+  await button(wrapper, 'Novo evento').trigger('click')
   await wrapper.get('#new-time').setValue('20:00')
   await wrapper.get('#new-home').setValue('Benfica')
   await wrapper.get('#new-away').setValue('Porto')
 }
 
 async function fillPrediction(wrapper: VueWrapper) {
-  await wrapper.get('#category').setValue('Golos')
-  await wrapper.get('#market-name').setValue('Mais de')
-  await wrapper.get('#selection').setValue('Mais de 2,5')
+  await button(wrapper, 'Golos').trigger('click')
+  await button(wrapper, 'Total').trigger('click')
   await wrapper.get('#line').setValue('2,5')
   await wrapper.get('#odd').setValue('1,85')
   await button(wrapper, '3Boa').trigger('click')
@@ -122,14 +118,25 @@ beforeEach(() => {
 })
 
 describe('PredictionsView', () => {
-  it('shows inline PT-PT errors and saves nothing when the form is empty', async () => {
-    const queries = setup(backend())
+  it('shows only the event search until an event is picked', async () => {
+    setup(backend())
     const wrapper = await render()
+
+    expect(wrapper.find('#game').exists()).toBe(true)
+    expect(wrapper.find('#odd').exists()).toBe(false)
+    expect(button(wrapper, 'Resultado')).toBeUndefined()
+
+    await button(wrapper, 'Novo evento').trigger('click')
+    expect(wrapper.find('#odd').exists()).toBe(true)
+  })
+
+  it('shows inline PT-PT errors and saves nothing when the prediction is empty', async () => {
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
 
     await submit(wrapper)
 
-    expect(wrapper.text()).toContain('Escolhe o jogo ou cria um novo')
-    expect(wrapper.text()).toContain('Indica o mercado')
+    expect(wrapper.text()).toContain('Indica a seleção')
     expect(wrapper.text()).toContain('Odd inválida')
     expect(wrapper.text()).toContain('Escolhe a confiança')
     expect(inserted(queries, 'predictions')).toHaveLength(0)
@@ -145,8 +152,10 @@ describe('PredictionsView', () => {
 
     expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
       event_id: EVENT_ID,
-      market_id: MARKET_ID,
-      selection: 'Mais de 2,5',
+      market: 'goals',
+      bet_type: 'total',
+      period: 'FT',
+      selection: 'over',
       line: 2.5,
       odd: 1.85,
       confidence: 3,
@@ -154,10 +163,11 @@ describe('PredictionsView', () => {
       is_punter: false,
       stake_units: null,
     })
-    expect(wrapper.text()).toContain('Mesmo jogo')
+    expect(wrapper.text()).toContain('Mesmo evento')
     expect(wrapper.text()).toContain('Benfica – Porto')
     expect((wrapper.get('#odd').element as HTMLInputElement).value).toBe('')
-    expect(wrapper.find('[aria-pressed="true"]').exists()).toBe(false)
+    expect(button(wrapper, '3Boa').attributes('aria-pressed')).toBe('false')
+    expect(button(wrapper, 'Resultado').attributes('aria-pressed')).toBe('true')
 
     // Another market for the same game: no new event.
     await fillPrediction(wrapper)
@@ -165,7 +175,7 @@ describe('PredictionsView', () => {
     expect(inserted(queries, 'events')).toHaveLength(1)
     expect(inserted(queries, 'predictions')).toHaveLength(2)
 
-    await button(wrapper, 'Outro jogo').trigger('click')
+    await button(wrapper, 'Outro evento').trigger('click')
     expect(wrapper.find('#game').exists()).toBe(true)
   })
 
@@ -180,7 +190,7 @@ describe('PredictionsView', () => {
     expect(wrapper.text()).toContain('Não foi possível guardar o prognóstico.')
     expect(wrapper.text()).not.toContain('permission denied')
     expect(wrapper.text()).toContain('Benfica – Porto')
-    expect(wrapper.text()).not.toContain('Mesmo jogo')
+    expect(wrapper.text()).not.toContain('Mesmo evento')
     // The prediction stays filled in for the retry.
     expect((wrapper.get('#odd').element as HTMLInputElement).value).toBe('1,85')
 
@@ -188,7 +198,7 @@ describe('PredictionsView', () => {
     await submit(wrapper)
     expect(inserted(queries, 'events')).toHaveLength(1)
     expect(inserted(queries, 'predictions')).toHaveLength(2)
-    expect(wrapper.text()).toContain('Mesmo jogo')
+    expect(wrapper.text()).toContain('Mesmo evento')
   })
 
   it('preselects the game from ?evento', async () => {
@@ -215,7 +225,9 @@ describe('PredictionsView', () => {
 
   it('flips the sign of the line for keyboards without a minus key', async () => {
     setup(backend())
-    const wrapper = await render()
+    const wrapper = await render({ eventId: EVENT_ID })
+    expect(wrapper.find('#line').exists()).toBe(false)
+    await button(wrapper, 'Handicap').trigger('click')
     const line = wrapper.get('#line')
     await line.setValue('1,5')
 
@@ -223,27 +235,100 @@ describe('PredictionsView', () => {
     expect((line.element as HTMLInputElement).value).toBe('-1,5')
   })
 
-  it('in English, saves a translated seeded market under its stored PT-PT name', async () => {
+  it('defaults to pre-match for an upcoming event and to live once it has started', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-27T19:00:00Z') })
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    expect(button(wrapper, 'Pré-jogo').attributes('aria-pressed')).toBe('true')
+
+    vi.setSystemTime(new Date('2026-10-27T20:30:00Z'))
+    await button(wrapper, 'Outro evento').trigger('click')
+    await fillNewGame(wrapper)
+    await wrapper.get('#new-date').setValue('2026-10-27')
+    await wrapper.get('#new-time').setValue('00:00')
+    expect(button(wrapper, 'Live').attributes('aria-pressed')).toBe('true')
+
+    await fillPrediction(wrapper)
+    await submit(wrapper)
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      is_live: true,
+    })
+    vi.useRealTimers()
+  })
+
+  it('picks a recent event without searching', async () => {
+    const respond = backend()
+    setup((q) => {
+      if (q.table === 'predictions' && has(q, 'limit')) {
+        return {
+          data: [
+            {
+              created_at: '2026-10-27T10:00:00Z',
+              event: {
+                id: EVENT_ID,
+                kickoff_at: '2026-10-27T20:00:00Z',
+                home_score: null,
+                source: 'manual',
+                external_id: null,
+                home_team: team('Benfica'),
+                away_team: team('Porto'),
+                league: null,
+              },
+            },
+          ],
+        }
+      }
+      return respond(q)
+    })
+    const wrapper = await render()
+
+    await wrapper.findAll('[data-recent-events] button')[0]!.trigger('click')
+    expect(wrapper.text()).toContain('Benfica – Porto')
+    expect(wrapper.find('#game').exists()).toBe(false)
+    expect(wrapper.find('#odd').exists()).toBe(true)
+  })
+
+  it('offers the types of the market and only the sides of the type', async () => {
+    setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    const labels = () => wrapper.findAll('[role="group"] button').map((b) => b.text())
+
+    expect(labels()).toEqual(expect.arrayContaining(['1X2', 'Dupla hipótese', 'Casa', 'Empate']))
+    await button(wrapper, 'Golos').trigger('click')
+    expect(labels()).not.toContain('1X2')
+    expect(labels()).not.toContain('Casa')
+    expect(labels()).toContain('Ambas marcam')
+
+    await button(wrapper, 'Outro').trigger('click')
+    expect(wrapper.find('#selection').exists()).toBe(true)
+    expect(wrapper.find('#line').exists()).toBe(false)
+  })
+
+  it('in English, saves the catalogue codes', async () => {
     i18n.global.locale.value = 'en'
     const queries = setup(backend())
     const wrapper = await render()
-    await button(wrapper, 'New game').trigger('click')
+    await button(wrapper, 'New event').trigger('click')
     await wrapper.get('#new-time').setValue('20:00')
     await wrapper.get('#new-home').setValue('Benfica')
     await wrapper.get('#new-away').setValue('Porto')
-    await wrapper.get('#category').setValue('Goals')
-    await wrapper.get('#market-name').setValue('over')
-    await wrapper.get('#selection').setValue('Over 2.5')
+    await button(wrapper, 'Corners').trigger('click')
+    await button(wrapper, 'Team total').trigger('click')
+    await button(wrapper, 'HT').trigger('click')
+    await button(wrapper, 'Away').trigger('click')
+    await wrapper.get('#line').setValue('-1.5')
     await wrapper.get('#odd').setValue('1.85')
     await button(wrapper, '3Good').trigger('click')
 
     await submit(wrapper)
 
-    const lookups = queries.filter((q) => q.table === 'markets' && has(q, 'ilike'))
-    expect(lookups.map((q) => argsOf(q, 'ilike'))).toContainEqual(['category', 'Golos'])
-    expect(argsOf(inserted(queries, 'markets')[0]!, 'insert')?.[0]).toEqual({
-      category: 'Golos',
-      name: 'Mais de',
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      market: 'corners',
+      bet_type: 'team_total',
+      period: 'HT',
+      selection: 'away_under',
+      line: 1.5,
     })
+    expect(inserted(queries, 'markets')).toHaveLength(0)
   })
 })
