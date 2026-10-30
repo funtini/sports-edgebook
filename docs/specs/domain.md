@@ -14,14 +14,14 @@ Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues
 
 ### Logging form (`/registo`)
 
-1. **Jogo**: search through `LocalEventSource`; "Novo jogo" opens date, time, league (optional), home and away team, each autocompleted from history. The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
+1. **Evento**: search through `LocalEventSource`. Until an event is picked or being created, only this step shows. **Novo evento** is offered in two places: at the end of the search results (and when nothing is found) as "+ Novo evento «typed text»", and as a link on the right of the "Evento" label. It opens date, time, league (optional), home and away team (the home team prefilled with what was typed), each autocompleted from history. The game, league and teams are created on save (`ensure*`). `?evento=<id>` preselects that game (used by the event screen); an unknown id is ignored.
 2. **Mercado** (chips, Resultado by default) → **Tipo** (chips: the types of that market, 1X2 by default; changing the market keeps the type when the market offers it, else picks its first) → **Período** (FT / HT / 2P, FT by default) → **Seleção** (chips with the sides of the type; a text field for type Outro; none for Total, whose side is the line's sign) → **Linha**, shown only for totals and handicaps, with a ± button because the iOS decimal keypad has no minus key. For totals the hint says "+ é mais de (over), − é menos de (under)". Changing the type clears the selection, and the line when the new type has none. See [Markets](#markets).
 3. **Odd** with a decimal keyboard, comma or dot.
 4. **Confiança**: five buttons with the level labels; the chosen level's probability and fair odd show beside the title. The **Índice de valor** card shows live once odd and confidence are set: band pill (short label, see Value index), the index, "odd X vs justa Y" and a bar from 0,80 to 1,30 with the neutral zone marked. The card takes the band's soft background and colour (neutral: surface + border).
 5. **Aposta real (punter)**: when on, **Valor apostado** (typed in units, starts at 1, shown in the info colour; in euros mode its euro value shows beside it) and **Casa de apostas** (autocompleted from bookmakers used before).
 6. **Notas**, collapsed by default.
 
-Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the game, marked "Mesmo jogo", so the next market for the same game is one tap away; "Outro jogo" clears it.
+Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the event, marked "Mesmo evento", so the next market for the same game is one tap away; "Outro evento" clears it.
 
 ## Markets
 

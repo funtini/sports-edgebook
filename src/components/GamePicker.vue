@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import AutoComplete, { type AutoCompleteCompleteEvent } from 'primevue/autocomplete'
 import Button from 'primevue/button'
 import AppIcon from './AppIcon.vue'
@@ -27,7 +27,7 @@ const props = defineProps<{
 
 /** The chosen game; null while searching or creating one. */
 const game = defineModel<EventSearchResult | null>('game', { required: true })
-/** The "Novo jogo" fields; null while searching. */
+/** The "Novo evento" fields; null while searching. */
 const newGame = defineModel<NewGameForm | null>('newGame', { required: true })
 
 const reference = useReferenceStore()
@@ -76,9 +76,11 @@ function pick(result: EventSearchResult) {
   query.value = ''
 }
 
+/** What is typed in the search, offered as the home team of a new event. */
+const typed = computed(() => (typeof query.value === 'string' ? query.value.trim() : ''))
+
 function startNewGame() {
-  const typed = typeof query.value === 'string' ? query.value.trim() : ''
-  newGame.value = { ...emptyNewGame(), home: typed }
+  newGame.value = { ...emptyNewGame(), home: typed.value }
 }
 
 /** "Outro jogo" and "Procurar jogo existente": back to search. */
@@ -123,7 +125,19 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
   </div>
 
   <template v-else-if="!newGame">
-    <label for="game" class="sr-only">{{ t('gamePicker.search') }}</label>
+    <div class="flex items-center justify-between gap-3">
+      <label for="game" class="text-[13px] font-semibold text-eb-muted">{{
+        t('gamePicker.game')
+      }}</label>
+      <button
+        type="button"
+        class="inline-flex min-h-11 items-center gap-1 px-1 text-sm font-semibold text-eb-accent-text"
+        @click="startNewGame"
+      >
+        <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+        {{ t('gamePicker.newGame') }}
+      </button>
+    </div>
     <AutoComplete
       v-model="query"
       input-id="game"
@@ -145,17 +159,23 @@ const completeTeam = (event: AutoCompleteCompleteEvent) =>
       <template #empty>
         <span class="text-sm text-eb-muted">{{ t('gamePicker.empty') }}</span>
       </template>
+      <template #footer>
+        <button
+          v-if="typed"
+          type="button"
+          data-new-event
+          class="flex min-h-11 w-full items-center gap-1.5 border-t border-eb-border px-3 text-left text-[15px] font-semibold text-eb-accent-text hover:bg-eb-surface-2"
+          @mousedown.prevent
+          @click="startNewGame"
+        >
+          <AppIcon name="plus" class="size-4 shrink-0" stroke-width="2.5" />
+          <span class="truncate">{{ t('gamePicker.newGameFrom', { name: typed }) }}</span>
+        </button>
+      </template>
     </AutoComplete>
     <small v-if="searchError || errors.game" class="text-eb-neg">
       {{ message(searchError ?? errors.game ?? '') }}
     </small>
-    <Button
-      type="button"
-      :label="t('gamePicker.newGame')"
-      text
-      class="min-h-11 self-start"
-      @click="startNewGame"
-    />
   </template>
 
   <div v-else class="flex flex-col gap-3">

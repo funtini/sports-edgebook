@@ -93,7 +93,7 @@ const button = (wrapper: VueWrapper, label: string) =>
   wrapper.findAll('button').find((b) => b.text() === label)!
 
 async function fillNewGame(wrapper: VueWrapper) {
-  await button(wrapper, 'Novo jogo').trigger('click')
+  await button(wrapper, 'Novo evento').trigger('click')
   await wrapper.get('#new-time').setValue('20:00')
   await wrapper.get('#new-home').setValue('Benfica')
   await wrapper.get('#new-away').setValue('Porto')
@@ -118,13 +118,24 @@ beforeEach(() => {
 })
 
 describe('PredictionsView', () => {
-  it('shows inline PT-PT errors and saves nothing when the form is empty', async () => {
-    const queries = setup(backend())
+  it('shows only the event search until an event is picked', async () => {
+    setup(backend())
     const wrapper = await render()
+
+    expect(wrapper.find('#game').exists()).toBe(true)
+    expect(wrapper.find('#odd').exists()).toBe(false)
+    expect(button(wrapper, 'Resultado')).toBeUndefined()
+
+    await button(wrapper, 'Novo evento').trigger('click')
+    expect(wrapper.find('#odd').exists()).toBe(true)
+  })
+
+  it('shows inline PT-PT errors and saves nothing when the prediction is empty', async () => {
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
 
     await submit(wrapper)
 
-    expect(wrapper.text()).toContain('Escolhe o jogo ou cria um novo')
     expect(wrapper.text()).toContain('Indica a seleção')
     expect(wrapper.text()).toContain('Odd inválida')
     expect(wrapper.text()).toContain('Escolhe a confiança')
@@ -152,7 +163,7 @@ describe('PredictionsView', () => {
       is_punter: false,
       stake_units: null,
     })
-    expect(wrapper.text()).toContain('Mesmo jogo')
+    expect(wrapper.text()).toContain('Mesmo evento')
     expect(wrapper.text()).toContain('Benfica – Porto')
     expect((wrapper.get('#odd').element as HTMLInputElement).value).toBe('')
     expect(button(wrapper, '3Boa').attributes('aria-pressed')).toBe('false')
@@ -164,7 +175,7 @@ describe('PredictionsView', () => {
     expect(inserted(queries, 'events')).toHaveLength(1)
     expect(inserted(queries, 'predictions')).toHaveLength(2)
 
-    await button(wrapper, 'Outro jogo').trigger('click')
+    await button(wrapper, 'Outro evento').trigger('click')
     expect(wrapper.find('#game').exists()).toBe(true)
   })
 
@@ -179,7 +190,7 @@ describe('PredictionsView', () => {
     expect(wrapper.text()).toContain('Não foi possível guardar o prognóstico.')
     expect(wrapper.text()).not.toContain('permission denied')
     expect(wrapper.text()).toContain('Benfica – Porto')
-    expect(wrapper.text()).not.toContain('Mesmo jogo')
+    expect(wrapper.text()).not.toContain('Mesmo evento')
     // The prediction stays filled in for the retry.
     expect((wrapper.get('#odd').element as HTMLInputElement).value).toBe('1,85')
 
@@ -187,7 +198,7 @@ describe('PredictionsView', () => {
     await submit(wrapper)
     expect(inserted(queries, 'events')).toHaveLength(1)
     expect(inserted(queries, 'predictions')).toHaveLength(2)
-    expect(wrapper.text()).toContain('Mesmo jogo')
+    expect(wrapper.text()).toContain('Mesmo evento')
   })
 
   it('preselects the game from ?evento', async () => {
@@ -214,7 +225,7 @@ describe('PredictionsView', () => {
 
   it('flips the sign of the line for keyboards without a minus key', async () => {
     setup(backend())
-    const wrapper = await render()
+    const wrapper = await render({ eventId: EVENT_ID })
     expect(wrapper.find('#line').exists()).toBe(false)
     await button(wrapper, 'Handicap').trigger('click')
     const line = wrapper.get('#line')
@@ -226,7 +237,7 @@ describe('PredictionsView', () => {
 
   it('offers the types of the market and only the sides of the type', async () => {
     setup(backend())
-    const wrapper = await render()
+    const wrapper = await render({ eventId: EVENT_ID })
     const labels = () => wrapper.findAll('[role="group"] button').map((b) => b.text())
 
     expect(labels()).toEqual(expect.arrayContaining(['1X2', 'Dupla hipótese', 'Casa', 'Empate']))
@@ -244,7 +255,7 @@ describe('PredictionsView', () => {
     i18n.global.locale.value = 'en'
     const queries = setup(backend())
     const wrapper = await render()
-    await button(wrapper, 'New game').trigger('click')
+    await button(wrapper, 'New event').trigger('click')
     await wrapper.get('#new-time').setValue('20:00')
     await wrapper.get('#new-home').setValue('Benfica')
     await wrapper.get('#new-away').setValue('Porto')

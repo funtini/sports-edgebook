@@ -75,8 +75,8 @@ With `layout="line"` the row keeps this stacked layout below 1024px and becomes 
 
 ### Registo
 
-- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour.
-- **Desktop**: title "Novo prognóstico", two columns: left card with the game (or "Mesmo jogo" chip), the Mercado / Tipo / Período / Seleção chips, Linha (totals and handicaps only) and Odd, Confiança (five buttons) and "Adicionar notas"; right column (max 380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado".
+- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right) and the search show.
+- **Desktop**: title "Novo prognóstico", two columns: left card with the event (or "Mesmo evento" chip), the Mercado / Tipo / Período / Seleção chips, Linha (totals and handicaps only) and Odd, Confiança (five buttons) and "Adicionar notas"; right column (max 380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado".
 
 ### Múltiplas
 
