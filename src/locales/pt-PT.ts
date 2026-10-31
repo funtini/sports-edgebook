@@ -426,7 +426,7 @@ const ptPT = {
     },
     levels: {
       title: 'Níveis de confiança',
-      help: 'Probabilidade que cada nível representa. A edição chega com a calibração (Fase 4).',
+      help: 'Probabilidade que cada nível representa. A edição chega com a calibração (Fase 5).',
       level: 'Nível',
       probability: 'Probabilidade',
       fairOdd: 'Odd justa',

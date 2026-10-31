@@ -8,5 +8,6 @@ The full plan (in Portuguese) is the source document: [Bet Performing — Plano 
 | [ui.md](ui.md) | Design tokens (light and dark), phone and desktop layouts of every screen, languages (PT/EN), theme toggle, header and tab bar, prediction row |
 | [metrics.md](metrics.md) | Dashboard metric definitions and breakdowns |
 | [multiples-generator.md](multiples-generator.md) | Generator modes, parameters and rules |
+| [slip-import.md](slip-import.md) | Importing a bet slip from an image: reading, event and duplicate matching, confirmation window, saving |
 | [roadmap.md](roadmap.md) | Phases, deliverables and gates |
 | [future-integrations.md](future-integrations.md) | Fixtures/odds API and Game Analyser, and what the MVP reserves for them |

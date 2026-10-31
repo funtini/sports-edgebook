@@ -1,6 +1,6 @@
 # UI
 
-The approved design for every screen up to Phase 3 (Hoje, Registo, Evento, Definições, Múltiplas, Dashboard), on phone and desktop. Design canvas (owner only): [Edgebook design](https://claude.ai/artifact/FSQPYVsrXWufBYNVNXj1tD). This file is the reference; don't depend on opening the canvas.
+The approved design for every screen up to Phase 4 (Hoje, Registo, Importar, Evento, Definições, Múltiplas, Dashboard), on phone and desktop. Design canvas (owner only): [Edgebook design](https://claude.ai/artifact/FSQPYVsrXWufBYNVNXj1tD). This file is the reference; don't depend on opening the canvas.
 
 All user-facing text goes through vue-i18n, PT-PT by default (see [Languages](#languages)). Mobile-first for logging screens, desktop-first for the dashboard. Touch targets ≥ 44px; no horizontal scroll at 390px.
 
@@ -82,6 +82,21 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 - **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right), the search and, under it, **Recentes** show: one card with a 64px row per event (teams; day · time · league; the prediction count in a pill, `accent-soft` when the game is today; chevron). On desktop Recentes is three tiles side by side (league in caps and "N prognósticos" pill on top, teams 16px bold, day · time). Recentes hides while something is typed. Linha is `[Over | Under] [−] [field] [+]` for totals and `[−] [field] [+] [±]` for handicaps, 48px buttons, the number centred. Every enabled button shows the pointer cursor on hover (base rule in `main.css`; Tailwind 4 resets it).
 - **Desktop**: title "Novo prognóstico" (26px). Until an event is picked, one full-width card with the event search and the Recentes tiles. Then two columns: left card with the event (or "Mesmo evento" chip), the Pré-jogo / Live switch (max 320px), the Mercado and Tipo chips, Período and Seleção side by side, Linha (totals and handicaps only) and Odd side by side, Confiança (five buttons) and "Adicionar notas"; right column (380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado" (desktop only). Tab order follows the columns: left card, then the right column.
 
+- **Importar** (Phase 4, [slip-import.md](slip-import.md)): in the search state, a dashed tile "Importar de uma imagem" under Recentes on phone, and an "Importar aposta" button next to the title on desktop. Both open `/registo/importar`.
+
+### Importar
+
+Route `/registo/importar`. Behaviour, matching and saving rules: [slip-import.md](slip-import.md).
+
+- **Enviar**: "‹ Registo", title "Importar aposta", a dashed drop zone ("Escolhe uma imagem do boletim · PNG, JPEG ou WebP"; on phone, "Tirar foto" and "Escolher da galeria"), and the note "A imagem não é guardada."
+- **A ler**: the image as a thumbnail and a progress line ("A ler o boletim…").
+- **Confirmar aposta**:
+  - Desktop: a modal over a scrim. The image is on the left (about 420px, scrolls on its own); the right column holds the Boletim card, then one card per prediction.
+  - Phone: a full-screen sheet with "Ver imagem" at the top.
+  - Prediction cards: the event question uses `amber-soft` with an `amber` border; "Campos a confirmar" is an amber block; the linked-event and duplicate notes use `accent-soft`; the new-event note uses `surface-2`.
+  - Footer: sticky on both layouts. It holds the missing-items line, "Cancelar" and the save button (disabled until everything is answered).
+  - Touch targets are 44px or more.
+
 ### Múltiplas
 
 Two tabs: **Criar** and **Guardadas** (segmented, next to the "Múltiplas" title). Behaviour of the generator itself: [multiples-generator.md](multiples-generator.md). `?vista=guardadas` opens Guardadas (the tab switch keeps the URL in step).
@@ -109,7 +124,7 @@ Code: `src/views/MultiplesView.vue`, `src/components/MultipleGenerator.vue`, `Mu
 - **Banca inicial**: in units, with its value in euros under it.
 - **Save**: one full-width primary button, "Sem alterações" and dimmed until something changes, then "Guardar alterações"; after saving, a `pos-soft` "Definições guardadas." line.
 - **Aparência**: Idioma (Português | English) and Tema (Claro | Escuro), segmented, applied at once and kept per device like the header toggles ("Também os trocas no cabeçalho, em qualquer ecrã.").
-- **Níveis de confiança**: read-only table with the confidence badge + label, probability and fair odd; "A edição chega com a calibração (Fase 4)."
+- **Níveis de confiança**: read-only table with the confidence badge + label, probability and fair odd; "A edição chega com a calibração (Fase 5)."
 - **Conta**: email and "Terminar sessão" (outlined).
 - The header gear is shown active (`accent-soft` / `accent-text`) on this screen; no tab is active on phone.
 
@@ -123,7 +138,7 @@ Desktop-first; usable at 390px with no page-level horizontal scroll. Metrics and
 - **Punter vs múltiplas**: beside the chart on desktop, under it on phone (two columns). For each: count, P/L, yield, hit rate, and "Menos de 30 apostas: lê com cautela." when n < 30.
 - **Desempenho por segmento**: tabs Mercado e tipo, Mercado, Período, Pré-jogo / Live, Liga, Equipa, Faixa de odd, Confiança, Índice de valor, Casa de apostas, Dia da semana (the tab row scrolls on phone). Table: Segmento, Apostas, Acerto, Odd média, Yield (diverging bar, `neg` left and `pos` right of the centre, ±20% fills its side, plus the number), Lucro. Rows with n < 30 are `muted` with an "amostra pequena" tag. Segment labels: catalogue markets and types (Mercado e tipo reads "Resultado - 1X2" for FT and puts the period after the market otherwise: "Resultado HT - 1X2", "Cartões 2P - Total") and confidence and value-band labels in the active language, odds bands as "1,80–2,19" / "5,00+", weekdays by name; everything else as stored. The table scrolls horizontally inside its card on phones. With scope Múltiplas the table is replaced by "Os segmentos contam só prognósticos simples: escolhe Punter ou Todos."
 - **Empty state**: "Sem apostas liquidadas neste período." when the scope has no settled bet in the period.
-- Calibration, CLV, drawdown and the calendar come in Phase 4.
+- Calibration, CLV, drawdown and the calendar come in Phase 5.
 
 Code: `src/views/DashboardView.vue`, `src/stores/bets.ts`, `src/domain/bets.ts`, `src/domain/periods.ts`.
 

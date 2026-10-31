@@ -257,7 +257,7 @@ async function saveScore() {
       </section>
 
       <!--
-        Reserved for the Game Analyser (phase 6, docs/specs/future-integrations.md): API stats,
+        Reserved for the Game Analyser (phase 7, docs/specs/future-integrations.md): API stats,
         AI summary and news for this game. A placeholder card until then.
       -->
       <section
