@@ -5,10 +5,9 @@ import type { ConfidenceLevel } from '@/domain/confidence'
 import { OVER_UNDER_MARK } from '@/domain/markets'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
-import { valueBand, valueIndex } from '@/domain/value'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
 import ConfidenceBadge from './ConfidenceBadge.vue'
-import { VALUE_BAND_STYLES, valueRowLabel } from './valueBands'
+import ValuePill from './ValuePill.vue'
 
 const props = defineProps<{
   prediction: PredictionWithRelations
@@ -46,17 +45,6 @@ const resultClasses: Record<BetStatus, string> = {
 const parts = computed(() => betParts(props.prediction))
 const market = computed(() => parts.value.slice(0, 3).join(' - '))
 const selection = computed(() => betSelection(props.prediction))
-
-const value = computed(() => {
-  const index = valueIndex(props.prediction.probability, props.prediction.odd)
-  const band = valueBand(index)
-  const label = valueRowLabel(
-    band,
-    t(`valueBand.row.${band}`),
-    formatDecimal(index, intlLocale.value),
-  )
-  return { band, label, ...VALUE_BAND_STYLES[band] }
-})
 
 const isPunter = computed(() => isPunterBet(props.prediction))
 
@@ -196,15 +184,7 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
         "
       >
         <ConfidenceBadge :level="prediction.confidence as ConfidenceLevel" />
-        <span
-          class="rounded-full px-2 py-0.5 text-xs font-bold"
-          :class="[value.text, value.soft]"
-          :title="t('predictionRow.valueTooltip')"
-          :data-band="value.band"
-        >
-          <span class="sr-only">{{ `${t('predictionRow.valueIndex')} ` }}</span
-          >{{ value.label }}
-        </span>
+        <ValuePill :probability="prediction.probability" :odd="prediction.odd" />
       </div>
 
       <div

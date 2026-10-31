@@ -132,7 +132,7 @@ Code: `src/views/EventView.vue`, `eventScoreSchema` / `scoreFormSchema` in `src/
 
 ## Data model
 
-See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets` (legacy, see below), `predictions`, `multiples`, `multiple_legs`, `user_settings`. There are no SQL views for metrics: the dashboard computes them in TypeScript from the rows it loads (see [metrics.md](metrics.md#engine)).
+See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets` (legacy, see below), `predictions`, `multiples` (`origin` `manual` / `generated` / `mixed`), `multiple_legs` (`origin` `manual` / `generated`, `odd_at_selection`), `user_settings`. There are no SQL views for metrics: the dashboard computes them in TypeScript from the rows it loads (see [metrics.md](metrics.md#engine)).
 
 A new user's first settings load creates their `user_settings` row with defaults. Leagues and teams typed by hand reuse an existing row when the name matches ignoring case and extra spaces.
 

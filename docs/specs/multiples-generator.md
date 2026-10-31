@@ -49,3 +49,14 @@ Rules:
 10. **Target odd with fixed legs**: the added legs are searched as in rule 5 towards log(target) − log(fixed total odd), so that fixed × added is closest to the target; with `legs` unset it tries 1–6 added legs. `withinTolerance` and the EV preference are about the whole multiple.
 11. **Avoid**: candidates whose id is in `avoid` are only used when too few others are left. Ordering and random modes rank as usual, then take the non-avoided legs first and fill the rest from the avoided ones in the same order; `target_odd` searches without the avoided ones when enough events remain, and over the whole pool otherwise. "Gerar outra" passes the unpinned legs it replaces as `fixed` = pinned legs and `avoid` = the replaced ones.
 12. **Date window**: `today` is today; `tomorrow` is tomorrow; `next3` is today … today + 2; a custom `{ from, to }` is clamped to today … today + 13 (at most 14 days). An invalid day, `from` after `to`, or a range wholly outside that span throws `RangeError`. Days are local dates of `now`.
+
+## Screen
+
+The Múltiplas screen ([ui.md](ui.md#múltiplas)) maps its state to the engine in `src/composables/useMultipleDraft.ts`:
+
+- Candidates are the window's pending predictions (`toCandidate` in `src/domain/multipleDraft.ts`); the screen loads today … today + 13 once and filters by window.
+- **Acrescentar**: `fixed` = every leg in the slip, `legs` = the stepper (Odd alvo: unset). The new legs are appended, unpinned, with origin `generated`.
+- **Gerar outra**: `fixed` = pinned legs, `avoid` = the unpinned ones, `legs` = how many are replaced (kept within 1–6, or 2–10 when nothing is pinned); Odd alvo leaves `legs` unset. Pinned legs move first, in order.
+- **Trocar**: `swapLeg` with the current mode and filters.
+- **Random**: each run draws a new `seed`, saved in `generator_params` so the pick can be reproduced.
+

@@ -4,16 +4,15 @@
  * Postgres `numeric` columns arrive as numbers and `timestamptz` as ISO strings.
  */
 
+import type { GeneratorMode } from '@/domain/generator'
 import type { BetType, Market, MatchPeriod } from '@/domain/markets'
 import type { MoneyDisplay } from '@/domain/money'
+import type { LegOrigin, MultipleOrigin } from '@/domain/multipleDraft'
 import type { BetStatus } from '@/domain/settlement'
 
-export type { BetStatus }
+export type { BetStatus, GeneratorMode, LegOrigin, MultipleOrigin }
 
 export type Source = 'manual' | 'api_football'
-
-export type GeneratorMode =
-  'confidence' | 'value' | 'highest_odds' | 'lowest_odds' | 'random' | 'target_odd'
 
 export interface LeagueRow {
   id: string
@@ -99,7 +98,8 @@ export interface PredictionRow {
 export interface MultipleRow {
   id: string
   user_id: string
-  origin: 'manual' | 'generated'
+  origin: MultipleOrigin
+  /** Mode and parameters of the last generation; null when no leg is generated. */
   generator_mode: GeneratorMode | null
   generator_params: Record<string, unknown> | null
   total_odd: number
@@ -115,6 +115,7 @@ export interface MultipleLegRow {
   prediction_id: string
   user_id: string
   odd_at_selection: number
+  origin: LegOrigin
 }
 
 export interface UserSettingsRow {
@@ -162,7 +163,7 @@ export type MultipleInsert = Insert<
   MultipleRow,
   'generator_mode' | 'generator_params' | 'stake_units' | 'is_placed' | 'status' | 'settled_at'
 >
-export type MultipleLegInsert = Insert<MultipleLegRow>
+export type MultipleLegInsert = Insert<MultipleLegRow, 'origin'>
 export type UserSettingsInsert = Partial<Omit<UserSettingsRow, 'user_id'>>
 
 /** An event with its teams and league embedded, as the stores return it. */

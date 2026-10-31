@@ -126,6 +126,23 @@ describe('predictions store', () => {
     ])
   })
 
+  it('lists pending predictions from one local day to another, both included', async () => {
+    const queries = setup(() => ({ data: [] }))
+    await usePredictionsStore().listPendingBetween(
+      new Date(2026, 9, 27, 13, 30),
+      new Date(2026, 10, 9, 8),
+    )
+    expect(argsOf(queries[0]!, 'eq')).toEqual(['status', 'pending'])
+    expect(argsOf(queries[0]!, 'gte')).toEqual([
+      'event.kickoff_at',
+      new Date(2026, 9, 27).toISOString(),
+    ])
+    expect(argsOf(queries[0]!, 'lt')).toEqual([
+      'event.kickoff_at',
+      new Date(2026, 10, 10).toISOString(),
+    ])
+  })
+
   it('lists bookmakers used before, most used first', async () => {
     const queries = setup(() => ({
       data: [{ bookmaker: 'Betclic' }, { bookmaker: 'Betano' }, { bookmaker: 'Betano' }],
