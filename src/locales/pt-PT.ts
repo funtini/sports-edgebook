@@ -297,10 +297,10 @@ const ptPT = {
     selection: 'Seleção',
     selectionPlaceholder: 'Ex.: Benfica marca primeiro',
     line: 'Linha',
-    lineTotalPlaceholder: '+2,5',
+    lineTotalPlaceholder: '2,5',
     lineHandicapPlaceholder: '-1,5',
-    lineTotalHint: '+ é mais de (over), − é menos de (under)',
     toggleSign: 'Trocar o sinal da linha',
+    overUnder: 'Lado da linha',
     lineDown: 'Descer a linha uma unidade',
     lineUp: 'Subir a linha uma unidade',
     odd: 'Odd',
@@ -375,6 +375,10 @@ const ptPT = {
       team_total: 'Total da equipa',
       btts: 'Ambas marcam',
       other: 'Outro',
+    },
+    overUnder: {
+      over: 'Over',
+      under: 'Under',
     },
     pick: {
       home: 'V1',

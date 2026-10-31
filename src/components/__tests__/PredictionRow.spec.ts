@@ -123,11 +123,12 @@ describe('PredictionRow in English', () => {
   it('translates labels, the bet summary and numbers live', async () => {
     const wrapper = mountRow('won', {}, 'euros')
     expect(wrapper.text()).toContain('Golos - Total - FT')
-    expect(wrapper.text()).toContain('+2,5')
+    expect(wrapper.get('[data-over-under]').text()).toBe('O')
+    expect(wrapper.get('[data-selection]').text()).toBe('OOver 2,5')
     i18n.global.locale.value = 'en'
     await nextTick()
     expect(wrapper.text()).toContain('Goals - Total - FT')
-    expect(wrapper.text()).toContain('+2.5')
+    expect(wrapper.get('[data-selection]').text()).toBe('OOver 2.5')
     expect(box(wrapper, 'stake').text()).toBe('Staked€20.00')
     expect(box(wrapper, 'result').text()).toBe('Profit+€18.00')
     expect(wrapper.get('[data-confidence-badge]').attributes('aria-label')).toBe(

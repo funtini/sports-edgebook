@@ -100,6 +100,12 @@ const timingOptions = computed(() => [
   { value: 'prematch' as const, label: t('timing.prematch') },
   { value: 'live' as const, label: t('timing.live') },
 ])
+const overUnderOptions = computed(() =>
+  (['over', 'under'] as const).map((value) => ({
+    value,
+    label: t(`catalogue.overUnder.${value}`),
+  })),
+)
 const timing = computed({
   get: () => (draft.isLive ? 'live' : 'prematch'),
   set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
@@ -372,6 +378,14 @@ onMounted(async () => {
                   t('logging.line')
                 }}</label>
                 <div class="flex gap-1">
+                  <!-- A total's side is picked here, so its line is never signed. -->
+                  <SegmentedControl
+                    v-if="line === 'total'"
+                    v-model="draft.overUnder"
+                    :options="overUnderOptions"
+                    :label="t('logging.overUnder')"
+                    class="mr-1 shrink-0 [&_button]:px-3"
+                  />
                   <Button
                     type="button"
                     :aria-label="t('logging.lineDown')"
@@ -412,6 +426,7 @@ onMounted(async () => {
                     <AppIcon name="plus" class="size-4" stroke-width="2.5" />
                   </Button>
                   <Button
+                    v-if="line === 'handicap'"
                     type="button"
                     label="±"
                     :aria-label="t('logging.toggleSign')"
@@ -422,9 +437,6 @@ onMounted(async () => {
                   />
                 </div>
                 <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
-                <small v-else-if="line === 'total'" class="text-eb-muted">{{
-                  t('logging.lineTotalHint')
-                }}</small>
               </div>
 
               <div class="flex flex-col gap-1">

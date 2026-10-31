@@ -19,15 +19,26 @@ describe('predictionInput', () => {
     expect(parsed).toMatchObject({ market: 'result', bet_type: 'handicap', period: 'FT' })
   })
 
-  it("stores a total's sign as over / under", () => {
+  it("stores a total's side as over / under, with the line unsigned", () => {
     const total = { ...draft, market: 'goals' as const, betType: 'total' as const, pick: '' }
     expect(predictionInput({ ...total, line: '2,5' })).toMatchObject({
       selection: 'over',
       line: 2.5,
     })
     expect(
-      predictionInput({ ...total, betType: 'team_total', pick: 'away', line: '-1.5' }),
+      predictionInput({
+        ...total,
+        betType: 'team_total',
+        pick: 'away',
+        line: '1.5',
+        overUnder: 'under',
+      }),
     ).toMatchObject({ selection: 'away_under', line: 1.5 })
+    // A typed sign does not pick the side.
+    expect(predictionInput({ ...total, line: '-2,5' })).toMatchObject({
+      selection: 'over',
+      line: 2.5,
+    })
   })
 
   it('drops the line of a type without one', () => {

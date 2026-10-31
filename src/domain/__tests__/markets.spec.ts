@@ -117,7 +117,7 @@ describe('pickSummary', () => {
     ).toBe('Resultado - 1X2 - HT - V1')
     expect(
       summary({ market: 'goals', bet_type: 'total', period: 'FT', selection: 'over', line: 2.5 }),
-    ).toBe('Golos - Total - FT - +2,5')
+    ).toBe('Golos - Total - FT - O 2,5')
     expect(
       summary({
         market: 'result',
@@ -135,7 +135,7 @@ describe('pickSummary', () => {
         selection: 'x2_under',
         line: 4.5,
       }),
-    ).toBe('Resultado - Resultado + Total - FT - X2 −4,5')
+    ).toBe('Resultado - Resultado + Total - FT - X2 U 4,5')
   })
 
   it('shows the typed selection of type Outro as it is', () => {

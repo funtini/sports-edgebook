@@ -253,9 +253,24 @@ describe('PredictionsView', () => {
     expect(value()).toBe('0,5')
     expect(wrapper.get('[data-line-down]').attributes('disabled')).toBeDefined()
 
-    await line.setValue('-4,5')
+    await line.setValue('4,5')
     await wrapper.get('[data-line-up]').trigger('click')
-    expect(value()).toBe('-5,5')
+    expect(value()).toBe('5,5')
+  })
+
+  it("picks a total's side with Over / Under instead of a sign", async () => {
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    await fillPrediction(wrapper)
+    expect(wrapper.find('[aria-label="Trocar o sinal da linha"]').exists()).toBe(false)
+    expect(button(wrapper, 'Over').attributes('aria-pressed')).toBe('true')
+
+    await button(wrapper, 'Under').trigger('click')
+    await submit(wrapper)
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      selection: 'under',
+      line: 2.5,
+    })
   })
 
   it('defaults to pre-match for an upcoming event and to live once it has started', async () => {
@@ -375,7 +390,8 @@ describe('PredictionsView', () => {
     await button(wrapper, 'Team total').trigger('click')
     await button(wrapper, 'HT').trigger('click')
     await button(wrapper, 'W2').trigger('click')
-    await wrapper.get('#line').setValue('-1.5')
+    await button(wrapper, 'Under').trigger('click')
+    await wrapper.get('#line').setValue('1.5')
     await wrapper.get('#odd').setValue('1.85')
     await button(wrapper, '3Good').trigger('click')
 

@@ -294,10 +294,10 @@ const en: Messages = {
     selection: 'Selection',
     selectionPlaceholder: 'E.g. Benfica to score first',
     line: 'Line',
-    lineTotalPlaceholder: '+2.5',
+    lineTotalPlaceholder: '2.5',
     lineHandicapPlaceholder: '-1.5',
-    lineTotalHint: '+ is over, − is under',
     toggleSign: 'Flip the line sign',
+    overUnder: 'Line side',
     lineDown: 'Lower the line by one',
     lineUp: 'Raise the line by one',
     odd: 'Odd',
@@ -371,6 +371,10 @@ const en: Messages = {
       team_total: 'Team total',
       btts: 'Both teams to score',
       other: 'Other',
+    },
+    overUnder: {
+      over: 'Over',
+      under: 'Under',
     },
     pick: {
       home: 'W1',
