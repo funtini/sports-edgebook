@@ -2,7 +2,7 @@ import type { EventWithTeams, Source } from '@/types/db'
 
 /** One game offered by search, whether it is already in the database or not. */
 export interface EventSearchResult {
-  /** Id in `events`; null for a game an external source offers that is not stored yet (phase 5). */
+  /** Id in `events`; null for a game an external source offers that is not stored yet (phase 6). */
   eventId: string | null
   source: Source
   externalId: string | null
@@ -12,7 +12,7 @@ export interface EventSearchResult {
   awayTeam: string
 }
 
-/** Game search used by the logging UI. Phase 5 adds an API-backed implementation. */
+/** Game search used by the logging UI. Phase 6 adds an API-backed implementation. */
 export interface EventSource {
   search(query: string): Promise<EventSearchResult[]>
 }

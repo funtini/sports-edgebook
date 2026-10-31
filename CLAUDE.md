@@ -39,7 +39,7 @@ CI runs all of the above on every PR. Run them before pushing.
 - Money is stored and computed in **units**; convert to currency only for display with `unit_value` from `user_settings`.
 - A prediction stores the `probability` of its confidence level at logging time; never recompute past rows from current anchors.
 - Every table has `user_id` + RLS policy `user_id = auth.uid()`. New tables must do the same.
-- Columns marked `-- future` are reserved for the results/odds API (phase 5); keep them nullable and unused until then.
+- Columns marked `-- future` are reserved for the results/odds API (phase 6); keep them nullable and unused until then.
 - Mobile-first for logging screens, desktop-first for the dashboard. Touch targets ≥ 44px.
 - Keep PRs small: one issue, one PR. Do not merge; the owner reviews and merges.
 - Never commit secrets. Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are used by the frontend; secret keys (`sb_secret_...`, legacy `service_role`) must never appear in this repo. `.env` holds the public URL and publishable key.

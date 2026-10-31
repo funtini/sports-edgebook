@@ -423,7 +423,7 @@ const en: Messages = {
     },
     levels: {
       title: 'Confidence levels',
-      help: 'Probability each level stands for. Editing comes with calibration (Phase 4).',
+      help: 'Probability each level stands for. Editing comes with calibration (Phase 5).',
       level: 'Level',
       probability: 'Probability',
       fairOdd: 'Fair odd',

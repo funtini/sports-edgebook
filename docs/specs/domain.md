@@ -92,7 +92,7 @@ Everything is stored and computed in units; the base stake is 1 unit, and a bet 
 
 `user_settings.money_display` (`units` by default, or `euros`) chooses how money is shown. Every amount shows **one** value: units mode shows the bare number (`+1,81`, no "u"); euros mode shows units × `unit_value` (`+36,20 €`). Signed for profit, unsigned for stakes and balances, in the active language's format (EN: `+1.81`, `+€36.20`). It applies to Hoje, Evento and Registo; the Dashboard has its own toggle (see [metrics.md](metrics.md)). Code: `formatMoney` in `src/domain/money.ts`.
 
-The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 4. It also holds Aparência (language and theme, same preferences as the header toggles) and "Terminar sessão" (sign out); layout in [ui.md](ui.md#definições). The header reaches it through a gear icon (see [ui.md](ui.md)).
+The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros" (`money_display`), `unit_value` (quick picks 10, 20, 30, 100 € or any value) and the optional `starting_bankroll_units` (empty or 0 both save `null`, negative is rejected), all saved with "Guardar", and shows the confidence anchors read-only; editing them comes with calibration in phase 5. It also holds Aparência (language and theme, same preferences as the header toggles) and "Terminar sessão" (sign out); layout in [ui.md](ui.md#definições). The header reaches it through a gear icon (see [ui.md](ui.md)).
 
 ## Settlement
 
@@ -121,11 +121,11 @@ Code: `src/views/TodayView.vue`, `src/components/PredictionRow.vue` and `src/com
 
 ## Event screen
 
-Route `/eventos/:id`, one game. Phase 6 adds the Game Analyser below (see [future-integrations.md](future-integrations.md)); until then a placeholder card (`data-slot="game-analyser"`) holds its place.
+Route `/eventos/:id`, one game. Phase 7 adds the Game Analyser below (see [future-integrations.md](future-integrations.md)); until then a placeholder card (`data-slot="game-analyser"`) holds its place.
 
 - **Back link** "‹ Hoje".
 - **Game card**: league, kickoff date and time, home and away teams with the score between them ("vs" until set), and the Resultado inputs.
-- **Resultado** ("Casa" / "Fora"): home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 5 fills it from the API. Saving the score does not settle predictions.
+- **Resultado** ("Casa" / "Fora"): home and away goals (whole numbers 0–99), saved to `events.home_score` / `away_score`. Both or neither: emptying both clears the score. Manual for now; phase 6 fills it from the API. Saving the score does not settle predictions.
 - **Prognósticos** (count and settled): the game's predictions in logging order, with the same row and one-tap settlement as the today view. A dashed "+ Novo prognóstico" button opens `/registo?evento=<id>`.
 - **Análise do jogo · Em breve**: placeholder card reserved for the Game Analyser.
 - **Unknown or malformed id**: "Jogo não encontrado" with a link back to today.

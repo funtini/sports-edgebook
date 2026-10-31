@@ -27,7 +27,7 @@ const props = defineProps<{
   errors: GamePickerErrors
   /** The selected game was kept after a save: shown as "Mesmo jogo". */
   kept: boolean
-  /** Where games are searched; local events by default, an API-backed source in phase 5. */
+  /** Where games are searched; local events by default, an API-backed source in phase 6. */
   source?: EventSource
   /** Events offered under the search before anything is typed. */
   recent?: RecentEvent[]
