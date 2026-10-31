@@ -22,6 +22,8 @@ export type IconName =
   | 'spark'
   | 'chevron-down'
   | 'search'
+  | 'copy'
+  | 'trash'
 
 defineProps<{ name: IconName }>()
 
@@ -62,6 +64,11 @@ const PATHS: Record<IconName, string[]> = {
   spark: ['M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z'],
   'chevron-down': ['M6 9l6 6 6-6'],
   search: ['M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z', 'M21 21l-4.3-4.3'],
+  copy: [
+    'M9 11a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z',
+    'M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1',
+  ],
+  trash: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6'],
 }
 </script>
 

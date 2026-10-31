@@ -177,3 +177,15 @@ export interface EventWithTeams extends EventRow {
 export interface PredictionWithRelations extends PredictionRow {
   event: EventWithTeams
 }
+
+/** A leg of a saved multiple with its prediction (and event) embedded. */
+export interface SavedMultipleLeg {
+  odd_at_selection: number
+  origin: LegOrigin
+  prediction: PredictionWithRelations
+}
+
+/** A saved multiple with its legs, as Guardadas reads it. */
+export interface SavedMultiple extends MultipleRow {
+  legs: SavedMultipleLeg[]
+}

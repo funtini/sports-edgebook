@@ -33,3 +33,18 @@ export const EVENT_SELECT =
   '*, home_team:teams!events_home_team_id_fkey(*), away_team:teams!events_away_team_id_fkey(*), league:leagues(*)'
 
 export const PREDICTION_SELECT = `*, event:events!inner(${EVENT_SELECT})`
+
+/** PostgREST returns at most this many rows per request. */
+const PAGE = 1000
+
+/** Every page of a query; `page(from, to)` builds it with `.range(from, to)`. */
+export async function allPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += PAGE) {
+    const batch = unwrap<T[]>(await page(from, from + PAGE - 1))
+    rows.push(...batch)
+    if (batch.length < PAGE) return rows
+  }
+}

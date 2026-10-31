@@ -3,27 +3,12 @@ import { betFromMultiple, betFromPrediction, type BetMultiple } from '@/domain/b
 import { addDays, startOfDay } from '@/domain/days'
 import type { Bet } from '@/domain/metrics'
 import type { MultipleRow, PredictionWithRelations } from '@/types/db'
-import { PREDICTION_SELECT, requireSupabase, unwrap } from './client'
-
-/** PostgREST returns at most this many rows per request. */
-const PAGE = 1000
+import { allPages, PREDICTION_SELECT, requireSupabase } from './client'
 
 const MULTIPLE_SELECT =
   '*, legs:multiple_legs(odd_at_selection, prediction:predictions(status, probability, event:events(kickoff_at)))'
 
 type MultipleWithLegs = MultipleRow & BetMultiple
-
-/** Every page of a query; `page(from, to)` builds it with `.range(from, to)`. */
-async function allPages<T>(
-  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
-): Promise<T[]> {
-  const rows: T[] = []
-  for (let from = 0; ; from += PAGE) {
-    const batch = unwrap<T[]>(await page(from, from + PAGE - 1))
-    rows.push(...batch)
-    if (batch.length < PAGE) return rows
-  }
-}
 
 /** Singles and multiples mapped to `Bet` for the dashboard metrics (`src/domain/metrics.ts`). */
 export const useBetsStore = defineStore('bets', () => {

@@ -10,22 +10,22 @@ All user-facing text goes through vue-i18n, PT-PT by default (see [Languages](#l
 
 CSS variables in `src/assets/main.css`: light on `:root`, dark under `.app-dark` (the class PrimeVue already uses for its dark scheme). Tailwind exposes them as `eb-*` colours (`bg-eb-surface`, `text-eb-muted`, `border-eb-border`, `bg-eb-pos-soft`...). Views use only these, never fixed palette shades (`bg-surface-0`, `text-green-700`), so setting `class="app-dark"` on `<html>` renders every screen in dark with no `dark:` variants.
 
-| Token | Light | Dark | Use |
-| --- | --- | --- | --- |
-| `bg` | #f5f6f8 | #0d1015 | page |
-| `surface` | #ffffff | #151920 | cards, header, tab bar |
-| `surface-2` | #eef0f3 | #1e232c | chips, neutral boxes |
-| `border` | #e1e4e9 | #2a313c | |
-| `text` | #12151a | #e9ecf0 | |
-| `muted` | #5a6370 | #9aa4b1 | secondary text, neutral |
-| `accent` / `on-accent` | #047857 / #ffffff | #34d399 / #06281c | primary buttons, active nav |
-| `accent-soft` / `accent-text` | #e3f4ec / #065f46 | #123326 / #6ee7b7 | "Mesmo jogo" chip, active links |
-| `pos` / `pos-soft` | #047857 / #e6f4ed | #34d399 / #10261d | profit, Ganho, Favorável |
-| `neg` / `neg-soft` | #c0262d / #fcebec | #f87171 / #2a1416 | loss, Perdido, Sem valor |
-| `info` / `info-soft` | #1d4fb8 / #e8f0fd | #8fbcff / #16243b | amount staked |
-| `purple` / `purple-soft` | #6d28d9 / #f1ebfd | #c4b5fd / #221a38 | Banger |
-| `amber` / `amber-soft` | #9a5800 / #fbf0dc | #f0b44c / #2b2111 | Valor reduzido, pending banner |
-| `on-fill` | #ffffff | #0d1015 | text on a filled pos / neg / muted button or pill |
+| Token                         | Light             | Dark              | Use                                               |
+| ----------------------------- | ----------------- | ----------------- | ------------------------------------------------- |
+| `bg`                          | #f5f6f8           | #0d1015           | page                                              |
+| `surface`                     | #ffffff           | #151920           | cards, header, tab bar                            |
+| `surface-2`                   | #eef0f3           | #1e232c           | chips, neutral boxes                              |
+| `border`                      | #e1e4e9           | #2a313c           |                                                   |
+| `text`                        | #12151a           | #e9ecf0           |                                                   |
+| `muted`                       | #5a6370           | #9aa4b1           | secondary text, neutral                           |
+| `accent` / `on-accent`        | #047857 / #ffffff | #34d399 / #06281c | primary buttons, active nav                       |
+| `accent-soft` / `accent-text` | #e3f4ec / #065f46 | #123326 / #6ee7b7 | "Mesmo jogo" chip, active links                   |
+| `pos` / `pos-soft`            | #047857 / #e6f4ed | #34d399 / #10261d | profit, Ganho, Favorável                          |
+| `neg` / `neg-soft`            | #c0262d / #fcebec | #f87171 / #2a1416 | loss, Perdido, Sem valor                          |
+| `info` / `info-soft`          | #1d4fb8 / #e8f0fd | #8fbcff / #16243b | amount staked                                     |
+| `purple` / `purple-soft`      | #6d28d9 / #f1ebfd | #c4b5fd / #221a38 | Banger                                            |
+| `amber` / `amber-soft`        | #9a5800 / #fbf0dc | #f0b44c / #2b2111 | Valor reduzido, pending banner                    |
+| `on-fill`                     | #ffffff           | #0d1015           | text on a filled pos / neg / muted button or pill |
 
 PrimeVue components follow the same tokens through the preset in `src/theme.ts` (Aura with emerald primary; form fields, overlays and text mapped to the `--eb-*` variables).
 
@@ -64,10 +64,10 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 ### Hoje
 
-- **Phone**: day switcher (‹ [calendar] Hoje · ter, 27 out ›, the middle opens a date picker), summary card, amber "pendentes de dias anteriores" banner, games grouped under a header (time chip, "Casa – Fora", league, chevron to the event) above a card of rows.
+- **Phone**: day switcher (‹ [calendar] Hoje · ter, 27 out ›, the middle opens a date picker), summary card (with the "Múltiplas do dia" line at its foot), amber "pendentes de dias anteriores" banner, games grouped under a header (time chip, "Casa – Fora", league, chevron to the event) above a card of rows.
 - **Desktop**, one column, top to bottom:
   1. Day switcher centred (date button at least 260px wide).
-  2. **Resumo do dia** strip (one card): "Lucro punter" big on the left (34px, `pos` / `neg`) with "N de M liquidados" under it, a vertical rule, then five tiles on `surface-2`: **Apostado** (value in `info`), **Prognósticos**, **Ganhos** (`pos` when above 0), **Taxa de acerto**, **Em aberto** (`amber` when above 0). Tile backgrounds stay neutral; only the numbers carry colour.
+  2. **Resumo do dia** strip (one card): "Lucro punter" big on the left (34px, `pos` / `neg`) with "N de M liquidados" under it, a vertical rule, then five tiles on `surface-2`: **Apostado** (value in `info`), **Prognósticos**, **Ganhos** (`pos` when above 0), **Taxa de acerto**, **Em aberto** (`amber` when above 0). Tile backgrounds stay neutral; only the numbers carry colour. Under "N de M liquidados", the "Múltiplas do dia" line.
   3. The amber pending banner, full width.
   4. "Prognósticos" title with the **Novo prognóstico** button on its right (primary, with a `N` key hint; pressing N anywhere on Hoje opens `/registo` unless focus is in a field).
   5. Games: header line as on phone (with "Ver jogo ›"), then a card whose rows are one grid line each: Prognóstico (market + selection) · Odd (76px column, right-aligned, 18px gap before the next column) · confidence badge + value pill · Apostado box · Resultado box · Ganho / Perdido / Nulo. No column header row.
@@ -84,7 +84,7 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 ### Múltiplas
 
-Two tabs: **Criar** and **Guardadas** (segmented, next to the "Múltiplas" title). Behaviour of the generator itself: [multiples-generator.md](multiples-generator.md). Until Guardadas is built (issue #26) its tab shows "As múltiplas guardadas aparecem aqui em breve."
+Two tabs: **Criar** and **Guardadas** (segmented, next to the "Múltiplas" title). Behaviour of the generator itself: [multiples-generator.md](multiples-generator.md). `?vista=guardadas` opens Guardadas (the tab switch keeps the URL in step).
 
 - **The multiple (slip)** starts empty: "Múltipla vazia · Adiciona prognósticos à mão, gera-os, ou as duas coisas." Header: title ("Múltipla · 5 prognósticos") and a summary line ("2 manuais · 3 gerados · 2 fixados · Melhor valor"); **Gerar outra (n)** on the right while there are unpinned legs.
 - **Leg row**: time · game (and league on desktop), an origin chip (**Manual** in `info` colours, **Gerado** on `surface-2`), market + selection, odd, confidence badge + value pill, and three 44px icon buttons: **fixar** (padlock, `aria-pressed`; pinned = `accent-soft` fill, `accent` border, closed padlock), **trocar** and **remover**. A pinned row has a 3px `accent` left border. Legs added by the generator or by "Gerar outra" get an `accent-soft` background until the next change, so the eye lands on them. **Trocar** replaces the leg in place with the generator's pick from another game, under the Gerador's current mode and filters (`swapLeg`); the new leg is **Gerado** and unpinned. When nothing fits, an `amber-soft` line under the legs says so ("Não há outro jogo para trocar este prognóstico.", or "Não há prognósticos suficientes com estes filtros." for the generator and Gerar outra).
@@ -95,9 +95,10 @@ Two tabs: **Criar** and **Guardadas** (segmented, next to the "Múltiplas" title
 - **Gerador**: Jogos (2×2: Hoje, Amanhã, 3 dias, **Personalizado**, each with its prediction count; Personalizado shows "De" / "Até" date inputs, today to today + 13, at most 14 days, and "N prognósticos em D dias"), Modo (six cards in 2 columns), "Prognósticos a gerar" stepper (1–6; 2–6 while the slip is empty, as the generator needs 2 legs to start a multiple) or, for Odd alvo, the target stepper and tolerance chips (±5 / 10 / 20%), Filtros (collapsed, "Filtros (n)" with n active: Confiança mínima Qualquer / 1+ … 5+, Odd mínima / máxima, Mercados and Ligas of the window as toggle chips, "Só prognósticos sem aposta", "Limpar filtros"), and the button "+ Acrescentar N prognósticos" (Odd alvo: "Completar até odd X"). Text: "Acrescenta prognósticos aos que já tens. "Gerar outra" usa estes jogos e este modo."
 - **Phone layout**: the slip card holds two half-width buttons at its top, **Adicionar** and **Gerador**; each opens its panel inside the card under them (one at a time, the open one filled `accent`). The predictions list scrolls inside the panel (max 328px). Generating closes the Gerador panel.
 - **Desktop layout**: two columns. Left (max 400px): the **Gerador** card, then the **Lista de prognósticos** card ("Prognósticos · hoje · entram já fixados", search, list scrolling at 394px ≈ 6 rows). Right: the slip. The Gerador card is collapsible and **starts minimized**: a header with the spark icon, "Gerador", a one-line summary ("Melhor valor · hoje · 3 prognósticos") and a 44px chevron button (`aria-expanded`); generating minimizes it again.
-Code: `src/views/MultiplesView.vue`, `src/components/MultipleGenerator.vue`, `MultiplePredictionList.vue`, `MultipleLegRow.vue`, `src/composables/useMultipleDraft.ts`, `src/stores/multiples.ts`, `src/domain/multipleDraft.ts`.
+  Code: `src/views/MultiplesView.vue`, `src/components/MultipleGenerator.vue`, `MultiplePredictionList.vue`, `MultipleLegRow.vue`, `src/composables/useMultipleDraft.ts`, `src/stores/multiples.ts`, `src/domain/multipleDraft.ts`.
 
-- **Guardadas**: filter chips Todas / Apostadas / Simuladas; cards with date · "N prognósticos", a chip with the origin and mode ("Manual", "Odd alvo", "Mista · Mais confiança"), a void note ("1 nula · odd 2,26"), total odd, the Apostado / result boxes as in the prediction row, and the legs with a status dot (✓ / ✕ / – / •). Phone: legs behind "Ver prognósticos"; desktop: a card grid (`auto-fill minmax(340px, 1fr)`) with legs always visible. Each card has **Reutilizar** (copy icon + text, 44px): opens Criar with those legs, all pinned, keeping each leg's origin, and an `info-soft` note "Cópia da múltipla de <data>. Vem toda fixada: desfixa o que queres gerar de novo." with a close button. Legs whose game has already started are left out and the note says how many.
+- **Guardadas** (loaded each time the tab opens): newest first, filter chips Todas / Apostadas / Simuladas. Each card: date · "N prognósticos", a chip with the origin and mode ("Manual" in `info` colours; "Odd alvo"; "Mista · Mais confiança"), a void note with the effective odd ("1 nula · odd 2,26"), total odd, the Apostado box (`info`, or "Simulada" + "—") and the result box as in the prediction row (Lucro / Prejuízo / Nulo / Por resolver, "virtual" for simulated, on 1 unit), and the legs (by kickoff) with a status dot (✓ / ✕ / – / •), game, market · selection and the odd at selection (void legs' odd muted and struck through). Status and profit always come from the legs (see [domain.md](domain.md#settlement)). Phone: legs behind "Ver prognósticos"; desktop: a card grid (`auto-fill minmax(340px, 1fr)`) with legs always visible. Each card has **Reutilizar** (copy icon + text, 44px): opens Criar with those legs, all pinned, keeping each leg's origin (and the saved generation, and the stake of a placed one), replacing the current draft, and an `info-soft` note "Cópia da múltipla de <data>. Vem toda fixada: desfixa o que queres gerar de novo." with a close button. Legs whose game has already started are left out and the note adds "N prognósticos ficaram de fora porque o jogo já começou." Simulated cards also have **Apagar**, confirmed inline ("Apagar esta múltipla simulada?" Cancelar / Apagar); placed multiples cannot be deleted.
+  Code: `src/components/SavedMultipleCard.vue`, `src/domain/savedMultiples.ts`, `src/stores/multiples.ts` (`list`, `removeSimulated`).
 
 ### Definições
 

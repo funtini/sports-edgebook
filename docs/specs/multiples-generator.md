@@ -59,4 +59,3 @@ The Múltiplas screen ([ui.md](ui.md#múltiplas)) maps its state to the engine i
 - **Gerar outra**: `fixed` = pinned legs, `avoid` = the unpinned ones, `legs` = how many are replaced (kept within 1–6, or 2–10 when nothing is pinned); Odd alvo leaves `legs` unset. Pinned legs move first, in order.
 - **Trocar**: `swapLeg` with the current mode and filters.
 - **Random**: each run draws a new `seed`, saved in `generator_params` so the pick can be reproduced.
-
