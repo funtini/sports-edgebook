@@ -13,19 +13,24 @@ import { daySummary, groupByEvent } from '@/domain/daySummary'
 import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '@/domain/days'
 import { formatPercent, formatTime } from '@/domain/intl'
 import { formatMoney } from '@/domain/money'
+import { dayMultiples } from '@/domain/savedMultiples'
 import { userMessage } from '@/lib/errors'
+import { useMultiplesStore } from '@/stores/multiples'
 import { usePredictionsStore } from '@/stores/predictions'
 import { useSettingsStore } from '@/stores/settings'
-import type { PredictionWithRelations } from '@/types/db'
+import type { PredictionWithRelations, SavedMultiple } from '@/types/db'
 
 const route = useRoute()
 const router = useRouter()
 const predictions = usePredictionsStore()
+const multiples = useMultiplesStore()
 const settings = useSettingsStore()
 const { t, intlLocale, message } = useLocale()
 
 const rows = ref<PredictionWithRelations[]>([])
 const pendingBefore = ref<PredictionWithRelations[]>([])
+/** Placed multiples, for "Múltiplas do dia"; empty if they fail to load. */
+const placedMultiples = ref<SavedMultiple[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const settlement = useSettlement(rows)
@@ -81,6 +86,7 @@ const groups = computed(() =>
 )
 
 const summary = computed(() => daySummary(rows.value))
+const multiplesOfDay = computed(() => dayMultiples(placedMultiples.value, dayKey.value))
 
 const money = (units: number, signed = true) =>
   formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed }, intlLocale.value)
@@ -114,6 +120,16 @@ const tiles = computed(() => {
       class: s.open > 0 ? 'text-eb-amber' : '',
     },
   ]
+})
+
+/** "2 apostadas · +1,50", or "Por resolver" until one is settled. */
+const multiplesLine = computed(() => {
+  const m = multiplesOfDay.value
+  return {
+    count: t('today.multiplesCount', m.count),
+    result: m.settled ? money(m.profit) : t('predictionRow.result.pending'),
+    class: m.settled ? profitClass(m.profit) : 'text-eb-muted',
+  }
 })
 
 const staked = computed(() => {
@@ -160,15 +176,18 @@ async function load() {
   error.value = null
   rows.value = []
   pendingBefore.value = []
+  placedMultiples.value = []
   try {
-    const [dayRows, pending] = await Promise.all([
+    const [dayRows, pending, placed] = await Promise.all([
       predictions.listByDate(day.value),
       predictions.listPendingBefore(pendingCutoff.value),
+      multiples.list({ placedOnly: true }).catch(() => []),
       settings.ensureLoaded(),
     ])
     if (!isLatest()) return
     rows.value = dayRows
     pendingBefore.value = pending
+    placedMultiples.value = placed
   } catch (e) {
     if (!isLatest()) return
     error.value = userMessage(e, 'today.loadFailed')
@@ -269,6 +288,18 @@ watch(
           <div class="mt-0.5 text-lg font-bold">{{ summary.total - summary.settled }}</div>
         </div>
       </div>
+      <RouterLink
+        v-if="multiplesOfDay.count"
+        :to="{ name: 'multiples', query: { vista: 'guardadas' } }"
+        class="mt-2.5 -mb-1.5 flex min-h-11 items-center gap-2 rounded-xl px-1 text-[13px] text-eb-muted hover:bg-eb-surface-2"
+        data-day-multiples
+      >
+        <AppIcon name="layers" class="size-4 shrink-0" />
+        <span class="font-semibold text-eb-text">{{ t('today.multiples') }}</span>
+        <span>· {{ multiplesLine.count }} ·</span>
+        <span class="font-bold" :class="multiplesLine.class">{{ multiplesLine.result }}</span>
+        <AppIcon name="chevron-right" class="ml-auto size-4 shrink-0" />
+      </RouterLink>
     </section>
 
     <section
@@ -288,6 +319,18 @@ watch(
         <div class="text-[13px] text-eb-muted">
           {{ t('today.settledOf', { settled: summary.settled, total: summary.total }) }}
         </div>
+        <RouterLink
+          v-if="multiplesOfDay.count"
+          :to="{ name: 'multiples', query: { vista: 'guardadas' } }"
+          class="-mx-1 mt-1 flex min-h-11 items-center gap-2 rounded-xl px-1 text-[13px] text-eb-muted hover:bg-eb-surface-2"
+          data-day-multiples
+        >
+          <AppIcon name="layers" class="size-4 shrink-0" />
+          <span class="font-semibold text-eb-text">{{ t('today.multiples') }}</span>
+          <span>· {{ multiplesLine.count }} ·</span>
+          <span class="font-bold" :class="multiplesLine.class">{{ multiplesLine.result }}</span>
+          <AppIcon name="chevron-right" class="ml-auto size-4 shrink-0" />
+        </RouterLink>
       </div>
       <div class="w-px self-stretch bg-eb-border" aria-hidden="true"></div>
       <div class="grid min-w-0 flex-1 grid-cols-5 gap-2">

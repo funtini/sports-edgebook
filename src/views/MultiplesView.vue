@@ -1,27 +1,36 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import AppIcon from '@/components/AppIcon.vue'
 import MultipleGenerator from '@/components/MultipleGenerator.vue'
 import MultipleLegRow from '@/components/MultipleLegRow.vue'
 import MultiplePredictionList from '@/components/MultiplePredictionList.vue'
+import ChipGroup from '@/components/ChipGroup.vue'
+import SavedMultipleCard from '@/components/SavedMultipleCard.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import StepperField from '@/components/StepperField.vue'
 import { profitClass } from '@/components/profitClass'
 import { useLocale } from '@/composables/useLocale'
 import { DESKTOP_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { useMultipleDraft } from '@/composables/useMultipleDraft'
-import { addDays, fromDayKey, startOfDay, toDayKey } from '@/domain/days'
+import { addDays, fromDayKey, shortDayLabel, startOfDay, toDayKey } from '@/domain/days'
 import { MAX_WINDOW_DAYS, type DayRange } from '@/domain/generator'
 import { dateTimeFormat, formatPercent } from '@/domain/intl'
 import { formatDecimal, formatMoney } from '@/domain/money'
 import { MIN_SAVED_LEGS, potentialProfit, withinTolerance } from '@/domain/multipleDraft'
+import {
+  matchesFilter,
+  reusableLegs,
+  SAVED_FILTERS,
+  type SavedFilter,
+} from '@/domain/savedMultiples'
 import { userMessage } from '@/lib/errors'
 import { useMultiplesStore } from '@/stores/multiples'
 import { usePredictionsStore } from '@/stores/predictions'
 import { useSettingsStore } from '@/stores/settings'
-import type { PredictionWithRelations } from '@/types/db'
+import type { PredictionWithRelations, SavedMultiple } from '@/types/db'
 
 const predictions = usePredictionsStore()
 const multiples = useMultiplesStore()
@@ -31,7 +40,24 @@ const toast = useToast()
 const { t, intlLocale, message } = useLocale()
 const desktop = useMediaQuery(DESKTOP_QUERY)
 
-const tab = ref<'create' | 'saved'>('create')
+const route = useRoute()
+const router = useRouter()
+
+/** `?vista=guardadas` opens Guardadas (Hoje's "Múltiplas do dia" links there). */
+const SAVED_VIEW = 'guardadas'
+const tab = ref<'create' | 'saved'>(route.query.vista === SAVED_VIEW ? 'saved' : 'create')
+watch(
+  () => route.query.vista,
+  (vista) => {
+    tab.value = vista === SAVED_VIEW ? 'saved' : 'create'
+  },
+)
+watch(tab, (value) => {
+  const vista = value === 'saved' ? SAVED_VIEW : undefined
+  if (route.query.vista !== vista) {
+    router.replace({ query: { ...route.query, vista } })
+  }
+})
 const tabs = computed(() =>
   (['create', 'saved'] as const).map((value) => ({ value, label: t(`multiples.tab.${value}`) })),
 )
@@ -137,6 +163,72 @@ const stake = computed({
 const money = (units: number, signed: boolean) =>
   formatMoney(units, settings.unitValue, settings.moneyDisplay, { signed }, intlLocale.value)
 
+/** Guardadas: loaded each time the tab opens, so settlement on Hoje shows up. */
+const saved = ref<SavedMultiple[]>([])
+const savedLoading = ref(false)
+const savedError = ref<string | null>(null)
+const filter = ref<SavedFilter>('all')
+const filters = computed(() =>
+  SAVED_FILTERS.map((value) => ({ value, label: t(`multiples.savedList.filter.${value}`) })),
+)
+const shownSaved = computed(() => saved.value.filter((m) => matchesFilter(m, filter.value)))
+const deleting = ref(new Set<string>())
+
+async function loadSaved() {
+  savedLoading.value = true
+  savedError.value = null
+  try {
+    const [rows] = await Promise.all([multiples.list(), settings.ensureLoaded()])
+    saved.value = rows
+  } catch (e) {
+    savedError.value = userMessage(e, 'multiples.savedList.loadFailed')
+  } finally {
+    savedLoading.value = false
+  }
+}
+
+watch(tab, (value) => value === 'saved' && loadSaved(), { immediate: true })
+
+async function removeSaved(multiple: SavedMultiple) {
+  savedError.value = null
+  deleting.value = new Set(deleting.value).add(multiple.id)
+  try {
+    await multiples.removeSimulated(multiple.id)
+    saved.value = saved.value.filter((m) => m.id !== multiple.id)
+  } catch (e) {
+    savedError.value = userMessage(e, 'multiples.savedList.deleteFailed')
+  } finally {
+    const next = new Set(deleting.value)
+    next.delete(multiple.id)
+    deleting.value = next
+  }
+}
+
+/** After Reutilizar: the copied multiple's date and how many legs were left out. */
+const reuseNote = ref<{ date: string; dropped: number } | null>(null)
+
+/** Reutilizar: Criar with the card's legs, all pinned, minus games that already started. */
+function reuse(multiple: SavedMultiple) {
+  const { kept, dropped } = reusableLegs(
+    multiple.legs.map((leg) => ({ origin: leg.origin, prediction: leg.prediction })),
+  )
+  notice.value = null
+  error.value = null
+  draft.reuse(
+    kept,
+    multiple.generator_mode
+      ? { mode: multiple.generator_mode, params: multiple.generator_params ?? {} }
+      : null,
+  )
+  if (multiple.is_placed && multiple.stake_units != null) draft.stakeUnits = multiple.stake_units
+  reuseNote.value = {
+    date: shortDayLabel(new Date(multiple.created_at), intlLocale.value),
+    dropped,
+  }
+  panel.value = null
+  tab.value = 'create'
+}
+
 function togglePanel(name: 'add' | 'generator') {
   panel.value = panel.value === name ? null : name
 }
@@ -163,6 +255,7 @@ function swap(predictionId: string) {
 
 function clear() {
   notice.value = null
+  reuseNote.value = null
   draft.clear()
 }
 
@@ -220,15 +313,61 @@ const panelButton = (active: boolean) =>
       />
     </div>
 
-    <section
-      v-if="tab === 'saved'"
-      class="rounded-2xl border border-eb-border bg-eb-surface p-6 text-center text-eb-muted"
-    >
-      {{ t('multiples.savedSoon') }}
-    </section>
+    <template v-if="tab === 'saved'">
+      <ChipGroup v-model="filter" :options="filters" :label="t('multiples.savedList.filters')" />
+      <Message v-if="savedError" severity="error">{{ message(savedError) }}</Message>
+      <p v-if="savedLoading && !saved.length" class="m-0 text-center text-eb-muted">
+        {{ t('common.loading') }}
+      </p>
+      <section
+        v-else-if="!shownSaved.length && !savedError"
+        class="rounded-2xl border border-eb-border bg-eb-surface p-6 text-center text-eb-muted"
+        data-saved-empty
+      >
+        {{ t(`multiples.savedList.empty.${filter}`) }}
+      </section>
+      <div
+        v-else
+        class="grid grid-cols-1 gap-3 lg:grid-cols-[repeat(auto-fill,minmax(340px,1fr))] lg:items-start lg:gap-4"
+        data-saved-grid
+      >
+        <SavedMultipleCard
+          v-for="multiple in shownSaved"
+          :key="multiple.id"
+          :multiple="multiple"
+          :unit-value="settings.unitValue"
+          :money-display="settings.moneyDisplay"
+          :busy="deleting.has(multiple.id)"
+          @reuse="reuse(multiple)"
+          @delete="removeSaved(multiple)"
+        />
+      </div>
+    </template>
 
     <template v-else>
       <Message v-if="error" severity="error">{{ message(error) }}</Message>
+      <div
+        v-if="reuseNote"
+        class="flex items-start gap-2 rounded-xl bg-eb-info-soft py-1 pr-1 pl-3.5 text-sm font-semibold text-eb-info"
+        role="status"
+        data-reuse-note
+      >
+        <p class="m-0 flex-1 py-2.5">
+          {{ t('multiples.savedList.reuseNote', { date: reuseNote.date }) }}
+          <template v-if="reuseNote.dropped">
+            {{ t('multiples.savedList.reuseDropped', reuseNote.dropped) }}
+          </template>
+        </p>
+        <button
+          type="button"
+          class="flex size-11 shrink-0 items-center justify-center rounded-xl hover:bg-eb-surface/40"
+          :aria-label="t('multiples.savedList.closeNote')"
+          data-action="close-note"
+          @click="reuseNote = null"
+        >
+          <AppIcon name="x" class="size-[18px]" />
+        </button>
+      </div>
 
       <div
         class="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:items-start lg:gap-5"

@@ -98,8 +98,9 @@ The settings screen (`/definicoes`) edits "Mostrar valores em: Unidades | Euros"
 
 - Single: won → `stake × (odd − 1)`, lost → `−stake`, void → `0`.
 - Multiple: lost if any leg lost; void legs count as odd 1.00; won when every non-void leg won; void if every leg is void.
+- A multiple's status always follows its legs (`multipleStatus` over each leg's prediction status, at `odd_at_selection`). Profit = stake × (effective odd − 1) when won, the effective odd from `multipleOdd` (void legs at 1.00); −stake when lost; 0 when void. A placed multiple uses its stake, a simulated one 1 virtual unit. Whenever saved multiples load (Guardadas, Hoje), the store writes `multiples.status` when it differs from the legs, setting `settled_at` when it leaves pending (keeping the first one) and clearing it back to pending; a failed write is retried on the next load. So settling a leg on Hoje updates its multiples on the next load.
 
-Code: `src/domain/settlement.ts`.
+Code: `src/domain/settlement.ts`, `src/domain/savedMultiples.ts`.
 
 A prediction's profit uses its real stake when it is a punter bet (punter flag on and a stake recorded) and 1 virtual unit otherwise (`stakeFor`, `predictionProfit`). Hit rate is `won ÷ (won + lost)`, voids and pending excluded (`src/domain/metrics.ts`).
 
@@ -111,6 +112,7 @@ Route `/` ("Hoje"), the screen used every evening to settle the day.
 - **Games**: predictions of the day grouped by game, by kickoff. The game header links to `/eventos/:id`.
 - **Settlement**: Ganho / Perdido / Nulo on each row; tapping the active one returns it to pending and clears `settled_at`. The row updates at once and rolls back with an error message if the save fails. Each row shows the amount staked and its result (see the prediction row in [ui.md](ui.md)); non-punter results are on 1 virtual unit and tagged "virtual".
 - **Day summary**: "Lucro punter" (P/L of punter bets, one value per the money display) with the amount staked, "N de M liquidados", and tiles Prognósticos / Taxa de acerto / Em aberto. On desktop the summary is a strip with Apostado / Prognósticos / Ganhos / Taxa de acerto / Em aberto (see [ui.md](ui.md#hoje)).
+- **Múltiplas do dia**: when placed multiples have their first leg on the selected day, a line in the summary with their count and the P/L of the settled ones ("Por resolver" until one is), linking to `/multiplas?vista=guardadas`. If multiples fail to load, the line is left out.
 - **Pendentes de dias anteriores**: amber banner with the count of pending predictions on games before the selected day, capped at today (a future day does not count today's games). Tapping it opens the day of the oldest one.
 - **Empty day**: a button to `/registo`.
 - **Shortcut**: pressing N opens `/registo`, except while typing in an input, textarea, select or editable element, or with Ctrl / Cmd / Alt held. The desktop "Novo prognóstico" button shows the hint.

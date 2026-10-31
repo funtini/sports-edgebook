@@ -3,6 +3,7 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
+import { createMemoryHistory, createRouter, type Router } from 'vue-router'
 import { argsOf, fakeSupabase, has, type Query } from '@/stores/__tests__/fakeSupabase'
 import { formatDecimal } from '@/domain/money'
 import MultiplesView from '../MultiplesView.vue'
@@ -69,20 +70,123 @@ const predictions = ROWS.map(([e, odd, confidence, probability], i) => ({
   created_at: noon.toISOString(),
 }))
 
+const DAY = 24 * 60 * 60 * 1000
+const sid = (i: number) => `00000000-0000-4000-9000-00000000000${i}`
+const prediction = (
+  i: number,
+  kickoff: Date,
+  odd: number,
+  status: string,
+  eventIndex = 10 + i,
+) => ({
+  ...predictions[0]!,
+  id: sid(i),
+  event_id: `e${eventIndex}`,
+  event: { ...event(eventIndex), kickoff_at: kickoff.toISOString() },
+  odd,
+  status,
+})
+
+/**
+ * Saved multiples, newest first. `placed`: won leg, void leg, pending leg (stored as pending,
+ * so it stays). `simulated`: lost leg, so the stored `pending` is out of date. `reusable`: one
+ * game already started and two to come, with its mode.
+ */
+function savedRows() {
+  const past = new Date(Date.now() - DAY)
+  const future = new Date(Date.now() + DAY)
+  return [
+    {
+      id: 'reusable',
+      origin: 'mixed',
+      generator_mode: 'confidence',
+      generator_params: { mode: 'confidence', legs: 2 },
+      total_odd: 5.4,
+      stake_units: 2,
+      is_placed: true,
+      status: 'pending',
+      created_at: '2026-10-30T18:00:00.000Z',
+      settled_at: null,
+      legs: [
+        {
+          odd_at_selection: 1.5,
+          origin: 'manual',
+          prediction: prediction(1, past, 1.5, 'pending'),
+        },
+        {
+          odd_at_selection: 2,
+          origin: 'generated',
+          prediction: prediction(2, future, 2, 'pending'),
+        },
+        {
+          odd_at_selection: 1.8,
+          origin: 'manual',
+          prediction: prediction(3, future, 1.8, 'pending'),
+        },
+      ],
+    },
+    {
+      id: 'simulated',
+      origin: 'manual',
+      generator_mode: null,
+      generator_params: null,
+      total_odd: 3,
+      stake_units: null,
+      is_placed: false,
+      status: 'pending',
+      created_at: '2026-10-29T18:00:00.000Z',
+      settled_at: null,
+      legs: [
+        { odd_at_selection: 1.5, origin: 'manual', prediction: prediction(4, past, 1.5, 'won') },
+        { odd_at_selection: 2, origin: 'manual', prediction: prediction(5, past, 2, 'lost') },
+      ],
+    },
+    {
+      id: 'placed',
+      origin: 'generated',
+      generator_mode: 'target_odd',
+      generator_params: { mode: 'target_odd', targetOdd: 5 },
+      total_odd: 4.52,
+      stake_units: 2,
+      is_placed: true,
+      status: 'won',
+      created_at: '2026-10-28T18:00:00.000Z',
+      settled_at: '2026-10-28T23:00:00.000Z',
+      legs: [
+        {
+          odd_at_selection: 2.26,
+          origin: 'generated',
+          prediction: prediction(6, past, 2.26, 'won'),
+        },
+        { odd_at_selection: 2, origin: 'generated', prediction: prediction(7, past, 2, 'void') },
+      ],
+    },
+  ]
+}
+
 function setup() {
   const fake = fakeSupabase((q) => {
     if (q.table === 'user_settings') return { data: settingsRow }
     if (q.table === 'predictions') return { data: predictions }
-    if (q.table === 'multiples') return { data: { id: 'm' } }
+    if (q.table === 'multiples' && has(q, 'insert')) return { data: { id: 'm' } }
+    if (q.table === 'multiples' && has(q, 'select')) return { data: savedRows() }
     return {}
   })
   mocked.client = fake.client
   return fake.queries
 }
 
-async function render() {
+let router: Router
+
+async function render(path = '/multiplas') {
+  router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/multiplas', name: 'multiples', component: MultiplesView }],
+  })
+  await router.push(path)
+  await router.isReady()
   const wrapper = mount(MultiplesView, {
-    global: { plugins: [PrimeVue, ToastService], stubs: { Toast: true } },
+    global: { plugins: [PrimeVue, ToastService, router], stubs: { Toast: true } },
     attachTo: document.body,
   })
   await flushPromises()
@@ -239,5 +343,122 @@ describe('MultiplesView', () => {
     await wrapper.get('[data-action="generate"]').trigger('click')
     expect(wrapper.text()).toContain('Não há prognósticos suficientes com estes filtros.')
     expect(wrapper.find('[data-leg]').exists()).toBe(false)
+  })
+})
+
+describe('MultiplesView · Guardadas', () => {
+  const card = (wrapper: VueWrapper, multipleId: string) =>
+    wrapper.get(`[data-multiple="${multipleId}"]`)
+
+  it('lists saved multiples with origin, void note, boxes and leg status', async () => {
+    setup()
+    const wrapper = await render('/multiplas?vista=guardadas')
+    expect(wrapper.findAll('[data-multiple]').map((c) => c.attributes('data-multiple'))).toEqual([
+      'reusable',
+      'simulated',
+      'placed',
+    ])
+
+    const placed = card(wrapper, 'placed')
+    expect(placed.get('[data-origin]').text()).toBe('Odd alvo')
+    expect(placed.get('[data-void-note]').text()).toBe('1 nula · odd 2,26')
+    expect(placed.get('[data-box="stake"]').text()).toBe('Apostado2,00')
+    // 2 × (2,26 − 1) with the void leg at 1,00.
+    expect(placed.get('[data-box="result"]').text()).toBe('Lucro+2,52')
+    expect(placed.findAll('[data-dot]').map((d) => d.text())).toEqual(['✓', '–'])
+
+    const simulated = card(wrapper, 'simulated')
+    expect(simulated.get('[data-origin]').text()).toBe('Manual')
+    expect(simulated.get('[data-box="stake"]').text()).toBe('Simulada—')
+    expect(simulated.get('[data-box="result"]').text()).toBe('Prejuízovirtual-1,00')
+
+    const mixed = card(wrapper, 'reusable')
+    expect(mixed.get('[data-origin]').text()).toBe('Mista · Mais confiança')
+    expect(mixed.get('[data-box="result"]').text()).toBe('Por resolver—')
+    expect(mixed.find('[data-void-note]').exists()).toBe(false)
+  })
+
+  it('writes the status from the legs when it changed since it was stored', async () => {
+    const queries = setup()
+    await render('/multiplas?vista=guardadas')
+    const updates = queries.filter((q) => q.table === 'multiples' && has(q, 'update'))
+    expect(updates).toHaveLength(1)
+    expect(argsOf(updates[0]!, 'update')?.[0]).toMatchObject({ status: 'lost' })
+    expect(argsOf(updates[0]!, 'eq')).toEqual(['id', 'simulated'])
+  })
+
+  it('filters by placed and simulated', async () => {
+    setup()
+    const wrapper = await render('/multiplas?vista=guardadas')
+    const chip = (label: string) => wrapper.findAll('button').find((b) => b.text() === label)!
+    await chip('Simuladas').trigger('click')
+    expect(wrapper.findAll('[data-multiple]').map((c) => c.attributes('data-multiple'))).toEqual([
+      'simulated',
+    ])
+    await chip('Apostadas').trigger('click')
+    expect(wrapper.findAll('[data-multiple]').map((c) => c.attributes('data-multiple'))).toEqual([
+      'reusable',
+      'placed',
+    ])
+  })
+
+  it('Reutilizar opens Criar with the legs pinned, origins kept and started games left out', async () => {
+    const queries = setup()
+    const wrapper = await render('/multiplas?vista=guardadas')
+    await card(wrapper, 'reusable').get('[data-action="reuse"]').trigger('click')
+    await flushPromises()
+
+    expect(router.currentRoute.value.query.vista).toBeUndefined()
+    expect(wrapper.find('[data-slip-header]').exists()).toBe(true)
+    expect(legIds(wrapper)).toEqual([sid(2), sid(3)])
+    expect(wrapper.get(`[data-leg="${sid(2)}"] [data-origin]`).text()).toBe('Gerado')
+    expect(wrapper.get(`[data-leg="${sid(3)}"] [data-origin]`).text()).toBe('Manual')
+    for (const pin of wrapper.findAll('[data-action="pin"]')) {
+      expect(pin.attributes('aria-pressed')).toBe('true')
+    }
+    const note = wrapper.get('[data-reuse-note]').text()
+    expect(note).toContain('Vem toda fixada: desfixa o que queres gerar de novo.')
+    expect(note).toContain('1 prognóstico ficou de fora porque o jogo já começou.')
+
+    // Saving keeps the generation it came with.
+    await wrapper.get('[data-action="simulate"]').trigger('click')
+    await flushPromises()
+    expect(inserted(queries, 'multiples')).toMatchObject({
+      origin: 'mixed',
+      generator_mode: 'confidence',
+      is_placed: false,
+    })
+    expect(wrapper.find('[data-reuse-note]').exists()).toBe(false)
+  })
+
+  it('closes the Reutilizar note', async () => {
+    setup()
+    const wrapper = await render('/multiplas?vista=guardadas')
+    await card(wrapper, 'reusable').get('[data-action="reuse"]').trigger('click')
+    await wrapper.get('[data-action="close-note"]').trigger('click')
+    expect(wrapper.find('[data-reuse-note]').exists()).toBe(false)
+  })
+
+  it('deletes a simulated multiple after an inline confirmation; placed ones cannot', async () => {
+    const queries = setup()
+    const wrapper = await render('/multiplas?vista=guardadas')
+    expect(card(wrapper, 'placed').find('[data-action="delete"]').exists()).toBe(false)
+
+    await card(wrapper, 'simulated').get('[data-action="delete"]').trigger('click')
+    expect(card(wrapper, 'simulated').get('[data-confirm]').text()).toContain(
+      'Apagar esta múltipla simulada?',
+    )
+    await card(wrapper, 'simulated').get('[data-action="cancel-delete"]').trigger('click')
+    expect(queries.some((q) => q.table === 'multiples' && has(q, 'delete'))).toBe(false)
+
+    await card(wrapper, 'simulated').get('[data-action="delete"]').trigger('click')
+    await card(wrapper, 'simulated').get('[data-action="confirm-delete"]').trigger('click')
+    await flushPromises()
+    const deleted = queries.find((q) => q.table === 'multiples' && has(q, 'delete'))!
+    expect(deleted.ops.filter(([m]) => m === 'eq').map(([, args]) => args)).toEqual([
+      ['id', 'simulated'],
+      ['is_placed', false],
+    ])
+    expect(wrapper.find('[data-multiple="simulated"]').exists()).toBe(false)
   })
 })

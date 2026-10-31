@@ -1,12 +1,24 @@
 import { defineStore } from 'pinia'
 import { multipleOrigin } from '@/domain/multipleDraft'
+import { statusUpdate } from '@/domain/savedMultiples'
 import { multipleCreateSchema, type MultipleCreate } from '@/domain/schemas'
 import { multipleOdd } from '@/domain/settlement'
-import type { MultipleInsert, MultipleLegInsert, MultipleRow } from '@/types/db'
-import { requireSupabase, unwrap } from './client'
+import type {
+  MultipleInsert,
+  MultipleLegInsert,
+  MultipleRow,
+  SavedMultiple,
+  SavedMultipleLeg,
+} from '@/types/db'
+import { allPages, EVENT_SELECT, requireSupabase, unwrap } from './client'
 
 /** `multiples.total_odd` is `numeric(10, 3)`. */
 const roundOdd = (odd: number) => Math.round(odd * 1000) / 1000
+
+const SAVED_SELECT = `*, legs:multiple_legs(odd_at_selection, origin, prediction:predictions(*, event:events(${EVENT_SELECT})))`
+
+const byKickoff = (a: SavedMultipleLeg, b: SavedMultipleLeg) =>
+  Date.parse(a.prediction.event.kickoff_at) - Date.parse(b.prediction.event.kickoff_at)
 
 export const useMultiplesStore = defineStore('multiples', () => {
   /**
@@ -45,5 +57,40 @@ export const useMultiplesStore = defineStore('multiples', () => {
     return saved
   }
 
-  return { create }
+  /**
+   * Brings each stored status (and `settled_at`) in line with its legs, in place. A write that
+   * fails is left for the next load: the screens read the status from the legs anyway.
+   */
+  async function syncStatuses(multiples: SavedMultiple[]): Promise<void> {
+    const db = requireSupabase()
+    await Promise.allSettled(
+      multiples.map(async (multiple) => {
+        const update = statusUpdate(multiple)
+        if (!update) return
+        unwrap(await db.from('multiples').update(update).eq('id', multiple.id))
+        Object.assign(multiple, update)
+      }),
+    )
+  }
+
+  /** Saved multiples, newest first, legs by kickoff; `placedOnly` for Hoje. */
+  async function list(options: { placedOnly?: boolean } = {}): Promise<SavedMultiple[]> {
+    const db = requireSupabase()
+    const rows = await allPages<SavedMultiple>((from, to) => {
+      let query = db.from('multiples').select(SAVED_SELECT)
+      if (options.placedOnly) query = query.eq('is_placed', true)
+      return query.order('created_at', { ascending: false }).order('id').range(from, to)
+    })
+    for (const row of rows) row.legs = [...(row.legs ?? [])].sort(byKickoff)
+    await syncStatuses(rows)
+    return rows
+  }
+
+  /** Deletes a simulated multiple (its legs go with it); a placed one is never deleted here. */
+  async function removeSimulated(id: string): Promise<void> {
+    const db = requireSupabase()
+    unwrap(await db.from('multiples').delete().eq('id', id).eq('is_placed', false))
+  }
+
+  return { create, list, removeSimulated }
 })
