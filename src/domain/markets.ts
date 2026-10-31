@@ -52,6 +52,24 @@ export function lineKind(betType: BetType): LineKind | null {
   }
 }
 
+/** Where Linha's − / + start from when it is blank. */
+const FIRST_LINE: Record<LineKind, number> = { total: 2.5, handicap: 0.5 }
+
+/**
+ * The line after a − (`-1`) or + (`1`) press on Linha: one unit down or up. A total steps its size
+ * and keeps its side (−2.5 → −3.5 on +), never below 0.5; a handicap steps its signed value. A blank
+ * line starts at 2.5 (total) or ±0.5 (handicap). Null when the line cannot step: a total already at
+ * its smallest, or a line that is not a number.
+ */
+export function stepLine(kind: LineKind, line: number | null, direction: 1 | -1): number | null {
+  if (line == null) return kind === 'total' ? FIRST_LINE.total : FIRST_LINE.handicap * direction
+  if (Number.isNaN(line)) return null
+  if (kind === 'handicap') return line + direction
+  const size = Math.abs(line) + direction
+  if (size < 0.5) return null
+  return line < 0 ? -size : size
+}
+
 /** Lines go in steps of 0.5: 0.5, 1, 1.5, 2… */
 export function isHalfStep(line: number): boolean {
   return Number.isInteger(line * 2)
@@ -144,7 +162,7 @@ export function pickParts(
 
 /**
  * The bet as one line: Mercado - Tipo - Período - Seleção, e.g. `Resultado - 1X2 - HT - V1`,
- * `Golos - Total - FT - +2,5`, `Resultado - Handicap - FT - V1 −1,5`. `formatLine` formats the
+ * `Golos - Total - FT - O 2,5`, `Resultado - Handicap - FT - V1 −1,5`. `formatLine` formats the
  * absolute line in the active locale.
  */
 export function pickSummary(
@@ -155,16 +173,40 @@ export function pickSummary(
   return pickParts(bet, translate, formatLine).join(' - ')
 }
 
-/** The selection part of `pickSummary`: side and signed line. */
+export type OverUnder = 'over' | 'under'
+
+/** A total's side on summaries: O / U, the same in every language. */
+export const OVER_UNDER_MARK: Record<OverUnder, string> = { over: 'O', under: 'U' }
+
+/** A selection split for display: the side's label, a total's over / under, and the line. */
+export interface SelectionParts {
+  side: string
+  overUnder: OverUnder | null
+  /** Unsigned for totals, signed for handicaps; null without a line. */
+  line: string | null
+}
+
+export function selectionParts(
+  bet: Pick<PickSummary, 'bet_type' | 'selection' | 'line'>,
+  translate: (key: string) => string,
+  formatLine: (line: number) => string,
+): SelectionParts {
+  const { pick, line } = fromStoredPick(bet.bet_type, bet)
+  const side = bet.bet_type === 'other' || !pick ? pick : translate(`catalogue.pick.${pick}`)
+  if (line == null) return { side, overUnder: null, line: null }
+  if (lineKind(bet.bet_type) === 'total') {
+    return { side, overUnder: line < 0 ? 'under' : 'over', line: formatLine(Math.abs(line)) }
+  }
+  const sign = line < 0 ? '−' : line > 0 ? '+' : ''
+  return { side, overUnder: null, line: `${sign}${formatLine(Math.abs(line))}` }
+}
+
+/** The selection part of `pickSummary`: side, O / U for totals, and the line. */
 export function selectionLabel(
   bet: Pick<PickSummary, 'bet_type' | 'selection' | 'line'>,
   translate: (key: string) => string,
   formatLine: (line: number) => string,
 ): string {
-  const { pick, line } = fromStoredPick(bet.bet_type, bet)
-  const side = bet.bet_type === 'other' || !pick ? pick : translate(`catalogue.pick.${pick}`)
-  if (line == null) return side
-  const sign = line < 0 ? '−' : line > 0 || lineKind(bet.bet_type) === 'total' ? '+' : ''
-  const number = `${sign}${formatLine(Math.abs(line))}`
-  return side ? `${side} ${number}` : number
+  const { side, overUnder, line } = selectionParts(bet, translate, formatLine)
+  return [side, overUnder && OVER_UNDER_MARK[overUnder], line].filter(Boolean).join(' ')
 }

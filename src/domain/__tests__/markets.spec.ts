@@ -5,6 +5,7 @@ import {
   isValidSelection,
   lineKind,
   pickSummary,
+  stepLine,
   toStoredPick,
 } from '../markets'
 
@@ -48,6 +49,34 @@ describe('lineKind', () => {
   })
 })
 
+describe('stepLine', () => {
+  it('starts a blank line at 2.5 for totals and ±0.5 for handicaps', () => {
+    expect(stepLine('total', null, 1)).toBe(2.5)
+    expect(stepLine('total', null, -1)).toBe(2.5)
+    expect(stepLine('handicap', null, 1)).toBe(0.5)
+    expect(stepLine('handicap', null, -1)).toBe(-0.5)
+  })
+
+  it('steps the size of a total and keeps its side, never below 0.5', () => {
+    expect(stepLine('total', 2.5, 1)).toBe(3.5)
+    expect(stepLine('total', 2.5, -1)).toBe(1.5)
+    expect(stepLine('total', -2.5, 1)).toBe(-3.5)
+    expect(stepLine('total', -1.5, -1)).toBe(-0.5)
+    expect(stepLine('total', 0.5, -1)).toBeNull()
+    expect(stepLine('total', -1, -1)).toBeNull()
+  })
+
+  it('steps the signed value of a handicap', () => {
+    expect(stepLine('handicap', -1.5, 1)).toBe(-0.5)
+    expect(stepLine('handicap', -0.5, 1)).toBe(0.5)
+    expect(stepLine('handicap', 0.5, -1)).toBe(-0.5)
+  })
+
+  it('leaves a line that is not a number alone', () => {
+    expect(stepLine('total', Number.NaN, 1)).toBeNull()
+  })
+})
+
 describe('toStoredPick / fromStoredPick', () => {
   it("turns a total's sign into over / under and back", () => {
     expect(toStoredPick('total', '', 2.5)).toEqual({ selection: 'over', line: 2.5 })
@@ -88,7 +117,7 @@ describe('pickSummary', () => {
     ).toBe('Resultado - 1X2 - HT - V1')
     expect(
       summary({ market: 'goals', bet_type: 'total', period: 'FT', selection: 'over', line: 2.5 }),
-    ).toBe('Golos - Total - FT - +2,5')
+    ).toBe('Golos - Total - FT - O 2,5')
     expect(
       summary({
         market: 'result',
@@ -106,7 +135,7 @@ describe('pickSummary', () => {
         selection: 'x2_under',
         line: 4.5,
       }),
-    ).toBe('Resultado - Resultado + Total - FT - X2 −4,5')
+    ).toBe('Resultado - Resultado + Total - FT - X2 U 4,5')
   })
 
   it('shows the typed selection of type Outro as it is', () => {

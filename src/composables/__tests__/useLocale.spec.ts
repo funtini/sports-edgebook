@@ -62,9 +62,9 @@ describe('useLocale', () => {
       selection: 'over',
       line: 1.5,
     } as const
-    expect(betParts(bet)).toEqual(['Golos', 'Total', 'HT', '+1,5'])
+    expect(betParts(bet)).toEqual(['Golos', 'Total', 'HT', 'O 1,5'])
     setLocale('en')
-    expect(betParts(bet)).toEqual(['Goals', 'Total', 'HT', '+1.5'])
+    expect(betParts(bet)).toEqual(['Goals', 'Total', 'HT', 'O 1.5'])
     expect(betParts({ ...bet, bet_type: 'other', selection: 'Benfica marca', line: null })).toEqual(
       ['Goals', 'Other', 'HT', 'Benfica marca'],
     )

@@ -43,7 +43,7 @@ Code: `src/App.vue`.
 
 Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 
-1. Mercado - Tipo - Período (12px, muted, followed by a "Live" tag in `neg-soft` / `neg` for live predictions) and the selection with its signed line (15px semibold) on the left, together the bet's summary (see [Markets](domain.md#markets)); odd (18px bold) on the right.
+1. Mercado - Tipo - Período (12px, muted, followed by a "Live" tag in `neg-soft` / `neg` for live predictions) and the selection with its line (15px semibold; a total's O / U is a 20px badge, O in `accent-soft` / `accent-text`, U in `surface-2` / `text`, read as "Over" / "Under" by screen readers) on the left, together the bet's summary (see [Markets](domain.md#markets)); odd (18px bold) on the right.
 2. Two half-width boxes:
    - **Apostado** + amount in the info colours (`info-soft` / `info`), pending rows included. Non-punter rows: "Sem aposta" + "—" on `surface-2` / `muted`.
    - Result: pending "Por resolver" + "—" (`surface-2` / `muted`); won "Lucro" (`pos-soft` / `pos`); lost "Prejuízo" (`neg-soft` / `neg`); void "Nulo" (`surface-2` / `muted`). Non-punter results use the same colours plus a small muted "virtual" tag (1 virtual unit).
@@ -79,7 +79,7 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 ### Registo
 
-- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right), the search and, under it, **Recentes** show: one card with a 64px row per event (teams; day · time · league; the prediction count in a pill, `accent-soft` when the game is today; chevron). On desktop Recentes is three tiles side by side (league in caps and "N prognósticos" pill on top, teams 16px bold, day · time). Recentes hides while something is typed.
+- **Phone**: the logging form restyled with the tokens; value-index card in the band's colours; stake in the info colour. Until an event is picked or being created only the "Evento" label (with "+ Novo evento" on its right), the search and, under it, **Recentes** show: one card with a 64px row per event (teams; day · time · league; the prediction count in a pill, `accent-soft` when the game is today; chevron). On desktop Recentes is three tiles side by side (league in caps and "N prognósticos" pill on top, teams 16px bold, day · time). Recentes hides while something is typed. Linha is `[Over | Under] [−] [field] [+]` for totals and `[−] [field] [+] [±]` for handicaps, 48px buttons, the number centred. Every enabled button shows the pointer cursor on hover (base rule in `main.css`; Tailwind 4 resets it).
 - **Desktop**: title "Novo prognóstico" (26px). Until an event is picked, one full-width card with the event search and the Recentes tiles. Then two columns: left card with the event (or "Mesmo evento" chip), the Pré-jogo / Live switch (max 320px), the Mercado and Tipo chips, Período and Seleção side by side, Linha (totals and handicaps only) and Odd side by side, Confiança (five buttons) and "Adicionar notas"; right column (380px) with the value-index card, the punter card and "Guardar prognóstico" with the hint "Enter para guardar · o jogo fica selecionado" (desktop only). Tab order follows the columns: left card, then the right column.
 
 ### Múltiplas

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useLocale } from '@/composables/useLocale'
 import type { ConfidenceLevel } from '@/domain/confidence'
+import { OVER_UNDER_MARK } from '@/domain/markets'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import { valueBand, valueIndex } from '@/domain/value'
@@ -26,7 +27,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{ settle: [status: BetStatus] }>()
 
-const { t, intlLocale, betParts } = useLocale()
+const { t, intlLocale, betParts, betSelection } = useLocale()
 
 const outcomes: { status: Exclude<BetStatus, 'pending'>; active: string }[] = [
   { status: 'won', active: 'border-eb-pos bg-eb-pos text-eb-on-fill' },
@@ -44,7 +45,7 @@ const resultClasses: Record<BetStatus, string> = {
 /** Mercado - Tipo - Período above, the selection below: together the bet's summary. */
 const parts = computed(() => betParts(props.prediction))
 const market = computed(() => parts.value.slice(0, 3).join(' - '))
-const selection = computed(() => parts.value[3])
+const selection = computed(() => betSelection(props.prediction))
 
 const value = computed(() => {
   const index = valueIndex(props.prediction.probability, props.prediction.odd)
@@ -125,7 +126,23 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
               >{{ t('timing.live') }}</span
             >
           </div>
-          <div class="text-[15px] font-semibold break-words">{{ selection }}</div>
+          <div class="text-[15px] font-semibold break-words" data-selection>
+            <template v-if="selection.side">{{ selection.side }} </template>
+            <template v-if="selection.overUnder">
+              <span
+                class="mr-0.5 inline-grid h-5 min-w-5 place-items-center rounded-md px-1 align-[1px] text-xs font-extrabold"
+                :class="
+                  selection.overUnder === 'over'
+                    ? 'bg-eb-accent-soft text-eb-accent-text'
+                    : 'bg-eb-surface-2 text-eb-text'
+                "
+                aria-hidden="true"
+                data-over-under
+                >{{ OVER_UNDER_MARK[selection.overUnder] }}</span
+              ><span class="sr-only">{{ t(`catalogue.overUnder.${selection.overUnder}`) }}</span>
+            </template>
+            {{ selection.line }}
+          </div>
         </div>
         <div
           class="text-lg font-bold"

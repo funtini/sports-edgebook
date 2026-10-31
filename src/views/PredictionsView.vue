@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
+import AppIcon from '@/components/AppIcon.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import NotesField from '@/components/NotesField.vue'
@@ -14,7 +15,7 @@ import { useLocale } from '@/composables/useLocale'
 import { DESKTOP_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
-import { formatPercent } from '@/domain/intl'
+import { formatPercent, numberFormat } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { toSearchResult, type EventSearchResult, type RecentEvent } from '@/domain/eventSource'
@@ -24,6 +25,7 @@ import {
   MARKETS,
   MATCH_PERIODS,
   PICKS,
+  stepLine,
   type BetType,
 } from '@/domain/markets'
 import { emptyPredictionDraft, predictionInput } from '@/domain/predictionDraft'
@@ -98,6 +100,12 @@ const timingOptions = computed(() => [
   { value: 'prematch' as const, label: t('timing.prematch') },
   { value: 'live' as const, label: t('timing.live') },
 ])
+const overUnderOptions = computed(() =>
+  (['over', 'under'] as const).map((value) => ({
+    value,
+    label: t(`catalogue.overUnder.${value}`),
+  })),
+)
 const timing = computed({
   get: () => (draft.isLive ? 'live' : 'prematch'),
   set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
@@ -120,6 +128,16 @@ const pickOptions = computed(() =>
   PICKS[draft.betType].map((value) => ({ value, label: t(`catalogue.pick.${value}`) })),
 )
 const line = computed(() => lineKind(draft.betType))
+/** Linha after − / +, null when it cannot step (see `stepLine`). */
+const steppedLine = (direction: 1 | -1) =>
+  line.value ? stepLine(line.value, parseDecimal(draft.line), direction) : null
+const lineFormat = computed(() =>
+  numberFormat(intlLocale.value, { maximumFractionDigits: 2, useGrouping: false }),
+)
+function step(direction: 1 | -1) {
+  const next = steppedLine(direction)
+  if (next != null) draft.line = lineFormat.value.format(next)
+}
 
 // A type the new market does not offer falls back to its first; a side only fits its own type.
 watch(
@@ -198,10 +216,20 @@ async function save() {
     toast.add({ severity: 'success', summary: t('logging.saved'), life: 2500 })
     keptEventId.value = eventId
     resetPrediction()
+    void refreshRecent()
   } catch (e) {
     error.value = userMessage(e, 'logging.saveFailed')
   } finally {
     saving.value = false
+  }
+}
+
+/** Recentes again after a save, so a game just created shows up; optional, so failures are ignored. */
+async function refreshRecent() {
+  try {
+    recent.value = await predictions.listRecentEvents()
+  } catch (e) {
+    console.error(e)
   }
 }
 
@@ -350,6 +378,26 @@ onMounted(async () => {
                   t('logging.line')
                 }}</label>
                 <div class="flex gap-1">
+                  <!-- A total's side is picked here, so its line is never signed. -->
+                  <SegmentedControl
+                    v-if="line === 'total'"
+                    v-model="draft.overUnder"
+                    :options="overUnderOptions"
+                    :label="t('logging.overUnder')"
+                    class="mr-1 shrink-0 [&_button]:px-3"
+                  />
+                  <Button
+                    type="button"
+                    :aria-label="t('logging.lineDown')"
+                    severity="secondary"
+                    outlined
+                    class="min-h-12 min-w-12 shrink-0"
+                    :disabled="steppedLine(-1) == null"
+                    data-line-down
+                    @click="step(-1)"
+                  >
+                    <AppIcon name="minus" class="size-4" stroke-width="2.5" />
+                  </Button>
                   <InputText
                     id="line"
                     v-model="draft.line"
@@ -362,10 +410,23 @@ onMounted(async () => {
                       )
                     "
                     autocomplete="off"
-                    class="min-h-12 w-full min-w-0"
+                    class="min-h-12 w-full min-w-0 text-center tabular-nums"
                     :invalid="!!errors.line"
                   />
                   <Button
+                    type="button"
+                    :aria-label="t('logging.lineUp')"
+                    severity="secondary"
+                    outlined
+                    class="min-h-12 min-w-12 shrink-0"
+                    :disabled="steppedLine(1) == null"
+                    data-line-up
+                    @click="step(1)"
+                  >
+                    <AppIcon name="plus" class="size-4" stroke-width="2.5" />
+                  </Button>
+                  <Button
+                    v-if="line === 'handicap'"
                     type="button"
                     label="±"
                     :aria-label="t('logging.toggleSign')"
@@ -376,9 +437,6 @@ onMounted(async () => {
                   />
                 </div>
                 <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
-                <small v-else-if="line === 'total'" class="text-eb-muted">{{
-                  t('logging.lineTotalHint')
-                }}</small>
               </div>
 
               <div class="flex flex-col gap-1">

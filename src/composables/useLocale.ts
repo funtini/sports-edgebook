@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { numberFormat } from '@/domain/intl'
-import { pickParts, type PickSummary } from '@/domain/markets'
+import { pickParts, selectionParts, type PickSummary } from '@/domain/markets'
 import { setLocale } from '@/i18n'
 import { INTL_LOCALES, LOCALES, type AppLocale } from '@/lib/preferences'
 
@@ -19,14 +19,17 @@ export function useLocale() {
     return te(keyOrText) ? t(keyOrText) : keyOrText
   }
 
+  const formatLine = (line: number) =>
+    numberFormat(intlLocale.value, { maximumFractionDigits: 2 }).format(line)
+
   /** A bet's market, type, period and selection labels, in the active language (`pickParts`). */
   function betParts(bet: PickSummary) {
-    const lineFormat = numberFormat(intlLocale.value, { maximumFractionDigits: 2 })
-    return pickParts(
-      bet,
-      (key) => t(key),
-      (line) => lineFormat.format(line),
-    )
+    return pickParts(bet, (key) => t(key), formatLine)
+  }
+
+  /** A bet's selection split for display, in the active language (`selectionParts`). */
+  function betSelection(bet: PickSummary) {
+    return selectionParts(bet, (key) => t(key), formatLine)
   }
 
   /** Next language in `LOCALES`, wrapping round. */
@@ -34,5 +37,5 @@ export function useLocale() {
     setLocale(LOCALES[(LOCALES.indexOf(locale.value) + 1) % LOCALES.length]!)
   }
 
-  return { t, locale, intlLocale, message, betParts, setLocale, toggleLocale }
+  return { t, locale, intlLocale, message, betParts, betSelection, setLocale, toggleLocale }
 }

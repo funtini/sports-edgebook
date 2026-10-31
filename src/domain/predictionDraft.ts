@@ -1,6 +1,13 @@
 import type { ConfidenceLevel } from './confidence'
 import { parseDecimal } from './decimal'
-import { lineKind, toStoredPick, type BetType, type Market, type MatchPeriod } from './markets'
+import {
+  lineKind,
+  toStoredPick,
+  type BetType,
+  type Market,
+  type MatchPeriod,
+  type OverUnder,
+} from './markets'
 import type { NewGameForm, PredictionForm } from './schemas'
 
 /** The logging form's prediction fields as typed, before validation. */
@@ -10,8 +17,10 @@ export interface PredictionDraft {
   period: MatchPeriod
   /** Side picked from the catalogue, or the selection typed for type `other`. */
   pick: string
-  /** Typed with comma or dot, signed (a total's sign is over / under); parsed on save. */
+  /** Typed with comma or dot; signed for handicaps, a total's size (its side is `overUnder`). */
   line: string
+  /** A total's side. */
+  overUnder: OverUnder
   odd: string
   confidence: ConfidenceLevel | null
   /** Logged with the game already under way. */
@@ -29,6 +38,7 @@ export function emptyPredictionDraft(): PredictionDraft {
     period: 'FT',
     pick: '',
     line: '',
+    overUnder: 'over',
     odd: '',
     confidence: null,
     isLive: false,
@@ -56,7 +66,13 @@ export function emptyNewGame(now = new Date()): NewGameForm {
  * types that have one; stake and bookmaker only count for a punter bet.
  */
 export function predictionInput(draft: PredictionDraft): Record<keyof PredictionForm, unknown> {
-  const line = lineKind(draft.betType) ? parseDecimal(draft.line) : null
+  const kind = lineKind(draft.betType)
+  const typed = kind ? parseDecimal(draft.line) : null
+  // `toStoredPick` reads a total's side from the sign: under is negative.
+  const line =
+    kind === 'total' && typed != null
+      ? Math.abs(typed) * (draft.overUnder === 'under' ? -1 : 1)
+      : typed
   return {
     market: draft.market,
     bet_type: draft.betType,

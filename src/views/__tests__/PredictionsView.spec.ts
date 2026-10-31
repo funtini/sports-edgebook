@@ -235,6 +235,44 @@ describe('PredictionsView', () => {
     expect((line.element as HTMLInputElement).value).toBe('-1,5')
   })
 
+  it('steps the line one unit with − and +, and still takes a typed line', async () => {
+    setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    await button(wrapper, 'Golos').trigger('click')
+    await button(wrapper, 'Total').trigger('click')
+    const line = wrapper.get('#line')
+    const value = () => (line.element as HTMLInputElement).value
+
+    await wrapper.get('[data-line-up]').trigger('click')
+    expect(value()).toBe('2,5')
+    await wrapper.get('[data-line-up]').trigger('click')
+    expect(value()).toBe('3,5')
+    await wrapper.get('[data-line-down]').trigger('click')
+    await wrapper.get('[data-line-down]').trigger('click')
+    await wrapper.get('[data-line-down]').trigger('click')
+    expect(value()).toBe('0,5')
+    expect(wrapper.get('[data-line-down]').attributes('disabled')).toBeDefined()
+
+    await line.setValue('4,5')
+    await wrapper.get('[data-line-up]').trigger('click')
+    expect(value()).toBe('5,5')
+  })
+
+  it("picks a total's side with Over / Under instead of a sign", async () => {
+    const queries = setup(backend())
+    const wrapper = await render({ eventId: EVENT_ID })
+    await fillPrediction(wrapper)
+    expect(wrapper.find('[aria-label="Trocar o sinal da linha"]').exists()).toBe(false)
+    expect(button(wrapper, 'Over').attributes('aria-pressed')).toBe('true')
+
+    await button(wrapper, 'Under').trigger('click')
+    await submit(wrapper)
+    expect(argsOf(inserted(queries, 'predictions')[0]!, 'insert')?.[0]).toMatchObject({
+      selection: 'under',
+      line: 2.5,
+    })
+  })
+
   it('defaults to pre-match for an upcoming event and to live once it has started', async () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-27T19:00:00Z') })
     const queries = setup(backend())
@@ -288,6 +326,42 @@ describe('PredictionsView', () => {
     expect(wrapper.find('#odd').exists()).toBe(true)
   })
 
+  it('lists a game created on Registo under Recentes after saving, without a reload', async () => {
+    const respond = backend()
+    let saved = false
+    setup((q) => {
+      if (q.table === 'predictions' && has(q, 'insert')) saved = true
+      if (q.table === 'predictions' && has(q, 'limit') && saved) {
+        return {
+          data: [
+            {
+              created_at: '2026-10-27T10:00:00Z',
+              event: {
+                id: EVENT_ID,
+                kickoff_at: '2026-10-27T20:00:00Z',
+                home_score: null,
+                source: 'manual',
+                external_id: null,
+                home_team: team('Benfica'),
+                away_team: team('Porto'),
+                league: null,
+              },
+            },
+          ],
+        }
+      }
+      return respond(q)
+    })
+    const wrapper = await render()
+    expect(wrapper.find('[data-recent-events]').exists()).toBe(false)
+    await fillNewGame(wrapper)
+    await fillPrediction(wrapper)
+    await submit(wrapper)
+
+    await button(wrapper, 'Outro evento').trigger('click')
+    expect(wrapper.get('[data-recent-events]').text()).toContain('Benfica – Porto')
+  })
+
   it('offers the types of the market and only the sides of the type', async () => {
     setup(backend())
     const wrapper = await render({ eventId: EVENT_ID })
@@ -316,7 +390,8 @@ describe('PredictionsView', () => {
     await button(wrapper, 'Team total').trigger('click')
     await button(wrapper, 'HT').trigger('click')
     await button(wrapper, 'W2').trigger('click')
-    await wrapper.get('#line').setValue('-1.5')
+    await button(wrapper, 'Under').trigger('click')
+    await wrapper.get('#line').setValue('1.5')
     await wrapper.get('#odd').setValue('1.85')
     await button(wrapper, '3Good').trigger('click')
 
