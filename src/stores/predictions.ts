@@ -68,6 +68,19 @@ export const usePredictionsStore = defineStore('predictions', () => {
     return rows.sort(byKickoff)
   }
 
+  /** Pending predictions on games from `from` to `to` (local days, both included). */
+  async function listPendingBetween(from: Date, to: Date): Promise<PredictionWithRelations[]> {
+    const rows = unwrap<PredictionWithRelations[]>(
+      await requireSupabase()
+        .from('predictions')
+        .select(PREDICTION_SELECT)
+        .eq('status', 'pending')
+        .gte('event.kickoff_at', startOfDay(from).toISOString())
+        .lt('event.kickoff_at', addDays(startOfDay(to), 1).toISOString()),
+    )
+    return rows.sort(byKickoff)
+  }
+
   /** Pending predictions on games that kicked off before `date` (local day), oldest first. */
   async function listPendingBefore(date: Date): Promise<PredictionWithRelations[]> {
     const start = startOfDay(date)
@@ -133,6 +146,7 @@ export const usePredictionsStore = defineStore('predictions', () => {
     listByEvent,
     listPending,
     listPendingBefore,
+    listPendingBetween,
     listBookmakers,
     listRecentEvents,
     settle,

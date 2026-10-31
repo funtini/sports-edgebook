@@ -19,8 +19,15 @@ export interface Candidate {
   is_punter: boolean
 }
 
-export type GeneratorMode =
-  'confidence' | 'value' | 'highest_odds' | 'lowest_odds' | 'random' | 'target_odd'
+export const GENERATOR_MODES = [
+  'confidence',
+  'value',
+  'highest_odds',
+  'lowest_odds',
+  'random',
+  'target_odd',
+] as const
+export type GeneratorMode = (typeof GENERATOR_MODES)[number]
 
 export interface GeneratorParams {
   mode: GeneratorMode

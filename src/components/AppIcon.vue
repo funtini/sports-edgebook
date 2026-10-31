@@ -15,6 +15,13 @@ export type IconName =
   | 'logo'
   | 'moon'
   | 'sun'
+  | 'lock'
+  | 'unlock'
+  | 'swap'
+  | 'x'
+  | 'spark'
+  | 'chevron-down'
+  | 'search'
 
 defineProps<{ name: IconName }>()
 
@@ -42,6 +49,19 @@ const PATHS: Record<IconName, string[]> = {
     'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
     'M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41',
   ],
+  lock: [
+    'M5 13a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z',
+    'M8 11V7a4 4 0 0 1 8 0v4',
+  ],
+  unlock: [
+    'M5 13a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z',
+    'M8 11V7a4 4 0 0 1 7.75-1.4',
+  ],
+  swap: ['M16 3l4 4-4 4', 'M20 7H4', 'M8 21l-4-4 4-4', 'M4 17h16'],
+  x: ['M18 6L6 18M6 6l12 12'],
+  spark: ['M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z'],
+  'chevron-down': ['M6 9l6 6 6-6'],
+  search: ['M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0z', 'M21 21l-4.3-4.3'],
 }
 </script>
 

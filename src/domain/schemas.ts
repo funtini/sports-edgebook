@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 // Issue messages are vue-i18n keys (`src/locales/`); the UI translates them when shown.
 import { CONFIDENCE_LEVELS, type ConfidenceAnchors } from './confidence'
+import { GENERATOR_MODES } from './generator'
 import {
   BET_TYPES,
   BET_TYPES_BY_MARKET,
@@ -12,6 +13,7 @@ import {
   MATCH_PERIODS,
 } from './markets'
 import { MONEY_DISPLAYS } from './money'
+import { MIN_SAVED_LEGS } from './multipleDraft'
 import { sameName, tidyName } from './names'
 
 export const idSchema = z.uuid('validation.idInvalid')
@@ -214,3 +216,44 @@ export type ScoreForm = z.input<typeof scoreFormSchema>
 export function toScoreForm(score: EventScore): ScoreForm {
   return { home: score.home_score?.toString() ?? '', away: score.away_score?.toString() ?? '' }
 }
+
+/** Max value of a `numeric(6, 2)` column, such as a stake. */
+const NUMERIC_6_2_MAX = 9_999.99
+
+/** A multiple built on the Múltiplas screen, before its origin and total odd are worked out. */
+export const multipleCreateSchema = z
+  .object({
+    legs: z
+      .array(
+        z.object({
+          prediction_id: id,
+          /** The prediction's odd when it was added. */
+          odd,
+          origin: z.enum(['manual', 'generated']),
+        }),
+      )
+      .min(MIN_SAVED_LEGS, 'validation.multipleMinLegs')
+      .refine((legs) => new Set(legs.map((leg) => leg.prediction_id)).size === legs.length, {
+        message: 'validation.multipleRepeatedLeg',
+      }),
+    is_placed: z.boolean(),
+    /** Required to place it; ignored for a simulated one. */
+    stake_units: z
+      .number('validation.stakeInvalid')
+      .positive('validation.stakePositive')
+      .max(NUMERIC_6_2_MAX, 'validation.valueTooHigh')
+      .nullish(),
+    /** The last generation, saved when any leg is generated. */
+    generator: z
+      .object({
+        mode: z.enum(GENERATOR_MODES),
+        params: z.record(z.string(), z.unknown()),
+      })
+      .nullish(),
+  })
+  .refine((m) => !m.is_placed || m.stake_units != null, {
+    message: 'validation.multipleStakeRequired',
+    path: ['stake_units'],
+  })
+
+export type MultipleCreate = z.input<typeof multipleCreateSchema>
