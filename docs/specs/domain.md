@@ -28,22 +28,22 @@ Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home an
 
 What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`), stored as codes in `predictions.market`, `bet_type`, `period`, `selection` and `line` and shown through `catalogue.*` messages. Only the selection of type **Outro** is free text.
 
-| Mercado (`market`)                                                       | Tipos (`bet_type`)                                      |
-| ------------------------------------------------------------------------ | ------------------------------------------------------- |
-| Resultado (`result`): who wins                                           | 1X2, Dupla hipótese, Handicap, Resultado + Total, Outro |
-| Golos (`goals`): how many goals                                          | Total, Total da equipa, Ambas marcam, Outro             |
-| Cantos (`corners`), Cartões amarelos (`yellow_cards`), Cartões (`cards`) | 1X2, Handicap, Total, Total da equipa, Outro            |
+| Mercado (`market`) | Tipos (`bet_type`) |
+| --- | --- |
+| Resultado (`result`): who wins | 1X2, Dupla hipótese, Handicap, Resultado + Total, Outro |
+| Golos (`goals`): how many goals | Total, Total da equipa, Ambas marcam, Outro |
+| Cantos (`corners`), Cartões amarelos (`yellow_cards`), Cartões (`cards`) | 1X2, Handicap, Total, Total da equipa, Outro |
 
-| Tipo                               | Seleção (stored)                                                       | Linha                                                                              |
-| ---------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| 1X2 (`1x2`)                        | V1 / X / V2 (`home`, `draw`, `away`; EN W1 / X / W2)                   | none                                                                               |
-| Dupla hipótese (`double_chance`)   | 1X / X2 / 12 (`1x`, `x2`, `12`)                                        | none                                                                               |
-| Handicap (`handicap`)              | V1 / V2                                                                | signed, steps of 0.5 (−1.5, 1, 0.5…); a whole line that ends level is settled Nulo |
-| Resultado + Total (`result_total`) | 1, X, 2, 1X, X2 or 12 with over / under of the goals line (`x2_under`) | the total, steps of 0.5                                                            |
-| Total (`total`)                    | over / under, from the Over / Under switch                             | steps of 0.5                                                                       |
-| Total da equipa (`team_total`)     | V1 / V2 with over / under (`home_over`)                                | steps of 0.5                                                                       |
-| Ambas marcam (`btts`)              | Sim / Não (`yes`, `no`)                                                | none                                                                               |
-| Outro (`other`)                    | free text                                                              | none                                                                               |
+| Tipo | Seleção (stored) | Linha |
+| --- | --- | --- |
+| 1X2 (`1x2`) | V1 / X / V2 (`home`, `draw`, `away`; EN W1 / X / W2) | none |
+| Dupla hipótese (`double_chance`) | 1X / X2 / 12 (`1x`, `x2`, `12`) | none |
+| Handicap (`handicap`) | V1 / V2 | signed, steps of 0.5 (−1.5, 1, 0.5…); a whole line that ends level is settled Nulo |
+| Resultado + Total (`result_total`) | 1, X, 2, 1X, X2 or 12 with over / under of the goals line (`x2_under`) | the total, steps of 0.5 |
+| Total (`total`) | over / under, from the Over / Under switch | steps of 0.5 |
+| Total da equipa (`team_total`) | V1 / V2 with over / under (`home_over`) | steps of 0.5 |
+| Ambas marcam (`btts`) | Sim / Não (`yes`, `no`) | none |
+| Outro (`other`) | free text | none |
 
 - **Período** (`period`): FT (regular time), HT (first half), 2P (second half). It applies to every type, so "home team winning at half time" is Resultado · 1X2 · HT · V1 and "corner winner in the first half" is Cantos · 1X2 · HT · V1.
 - **Team 1 / 2** is in the selection (V1 / V2); there is no team field.
@@ -54,12 +54,12 @@ What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`)
 ## Confidence levels
 
 | Level | Label (UI) | Probability | Fair odd |
-| ----- | ---------- | ----------- | -------- |
-| 1     | Palpite    | 40%         | 2.50     |
-| 2     | Moderada   | 55%         | 1.82     |
-| 3     | Boa        | 65%         | 1.54     |
-| 4     | Alta       | 75%         | 1.33     |
-| 5     | Muito alta | 85%         | 1.18     |
+| --- | --- | --- | --- |
+| 1 | Palpite | 40% | 2.50 |
+| 2 | Moderada | 55% | 1.82 |
+| 3 | Boa | 65% | 1.54 |
+| 4 | Alta | 75% | 1.33 |
+| 5 | Muito alta | 85% | 1.18 |
 
 Anchors are per-user settings (`user_settings.confidence_anchors`). Each prediction stores the probability in force when it was logged. After ~100 settled predictions per level, the app shows the real hit rate per level and suggests recalibrating. Code: `src/domain/confidence.ts`.
 
@@ -72,13 +72,13 @@ value index = p × odd
 
 Five bands (`valueBand`), judged on the index rounded to 2 decimals, as it is shown:
 
-| Band         | Index       | Row label (Hoje, Evento) | Pill (Registo) | Colour |
-| ------------ | ----------- | ------------------------ | -------------- | ------ |
-| `banger`     | > 1.35      | Banger 1,37              | Banger         | purple |
-| `favourable` | 1.06 – 1.35 | Favorável 1,20           | Favorável      | pos    |
-| `neutral`    | 0.95 – 1.05 | Neutro                   | Neutro         | muted  |
-| `reduced`    | 0.85 – 0.94 | Valor reduzido 0,90      | Desfavorável   | amber  |
-| `no_value`   | < 0.85      | Odd sem valor 0,77       | Sem valor      | neg    |
+| Band | Index | Row label (Hoje, Evento) | Pill (Registo) | Colour |
+| --- | --- | --- | --- | --- |
+| `banger` | > 1.35 | Banger 1,37 | Banger | purple |
+| `favourable` | 1.06 – 1.35 | Favorável 1,20 | Favorável | pos |
+| `neutral` | 0.95 – 1.05 | Neutro | Neutro | muted |
+| `reduced` | 0.85 – 0.94 | Valor reduzido 0,90 | Desfavorável | amber |
+| `no_value` | < 0.85 | Odd sem valor 0,77 | Sem valor | neg |
 
 - Shown live in the logging form before saving, and on every prediction row as a pill in the band colours (see the prediction row in [ui.md](ui.md#prediction-row)).
 - Labels and colours: `src/components/valueBands.ts`.
