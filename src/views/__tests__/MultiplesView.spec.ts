@@ -299,6 +299,31 @@ describe('MultiplesView', () => {
     expect(totalOdd(wrapper)).toBe(odd(1.5, 2.5, 1.9))
   })
 
+  it('swapping one row again and again never repeats until every prediction was shown', async () => {
+    setup()
+    const wrapper = await render()
+    await addByHand(wrapper, 0)
+    await generate(wrapper)
+    expect(legIds(wrapper)).toEqual([id(0), id(5), id(8), id(3)])
+
+    // Games e1, e3, e5, e6 are free: p2, p4, p6, p7, each shown once, in Melhor valor order.
+    const shown = [id(3)]
+    const last = (list: string[]) => Number(list[list.length - 1]!.slice(-1))
+    for (let step = 0; step < 4; step++) {
+      await leg(wrapper, last(shown)).get('[data-action="swap"]').trigger('click')
+      const ids = legIds(wrapper)
+      expect(ids.slice(0, 3)).toEqual([id(0), id(5), id(8)])
+      expect(shown).not.toContain(ids[3])
+      shown.push(ids[3]!)
+    }
+    expect([...shown].sort()).toEqual([id(2), id(3), id(4), id(6), id(7)])
+    expect(shown.slice(1, 3)).toEqual([id(4), id(7)])
+
+    // All shown: it starts again from the best one, p3.
+    await leg(wrapper, last(shown)).get('[data-action="swap"]').trigger('click')
+    expect(legIds(wrapper)[3]).toBe(id(3))
+  })
+
   it('keeps the multiple when the screen is left and opened again', async () => {
     setup()
     const first = await render()

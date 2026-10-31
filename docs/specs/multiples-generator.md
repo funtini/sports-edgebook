@@ -9,7 +9,7 @@ Pure TypeScript in `src/domain/` (fully unit-tested). Picks from pending predict
 | `highest_odds` | highest odd                                                                   |
 | `lowest_odds`  | lowest odd                                                                    |
 | `random`       | shuffle, optional seed to reproduce                                           |
-| `target_odd`   | combination whose total odd is closest to the target, preferring better value |
+| `target_odd`   | a random combination within tolerance of the target; the closest if none is   |
 
 Parameters: number of legs **or** target odd (with tolerance, e.g. ±10%), minimum confidence, min/max odd per leg, league and market filters, include non-punter only or all. The generator can also **complete** a multiple: it appends legs to the ones already there (fixed), and "Gerar outra" regenerates the unpinned legs while trying not to pick them again (avoid).
 
@@ -26,7 +26,7 @@ Code: `src/domain/generator.ts`, tests in `src/domain/__tests__/generator.spec.t
 
 ```ts
 generateMultiple(candidates: Candidate[], params: GeneratorParams): GeneratedMultiple | null
-swapLeg(current: GeneratedMultiple, legId: string, candidates: Candidate[], params: GeneratorParams): GeneratedMultiple | null
+swapLeg(current: GeneratedMultiple, legId: string, candidates: Candidate[], params: GeneratorParams, seen?: string[]): SwapResult | null
 windowRange(window: 'today' | 'tomorrow' | 'next3' | { from, to }, now: Date): { from, to }
 ```
 
@@ -41,12 +41,12 @@ Rules:
 2. **One leg per event**: ordering and random modes keep the first candidate of each event in their order; `target_odd` never combines two of the same event.
 3. **Ordering**: `confidence` (level desc, odd desc), `value` (p × odd desc), `highest_odds`, `lowest_odds`. Ties: earlier kickoff, then id ascending, so results are deterministic.
 4. **Random**: candidates sorted by kickoff and id, then a Fisher–Yates shuffle with mulberry32 seeded by `seed` (`Math.random` without one). Same seed and same candidates give the same multiple, whatever order they come in.
-5. **Target odd**: beam search (width 50) over combinations in log space. With `legs` unset it tries 2–10 legs, keeping at each depth the states whose sum of log(odd) is closest to log(target); with `legs` set it builds exactly that many, steering each depth to its share of log(target). A total is within tolerance when `|total ÷ target − 1| ≤ tolerance`. Among results within tolerance the highest EV wins (then the closest); if none is within tolerance the closest in log space wins (then the highest EV), with `withinTolerance: false`. Legs come in kickoff order.
+5. **Target odd**: beam search (width 50) over combinations in log space. With `legs` unset it tries 2–10 legs, keeping at each depth the states whose sum of log(odd) is closest to log(target); with `legs` set it builds exactly that many, steering each depth to its share of log(target). A total is within tolerance when `|total ÷ target − 1| ≤ tolerance`. One of the results within tolerance is picked at random with mulberry32 seeded by `seed` (`Math.random` without one), so the same target does not always give the same multiple; if none is within tolerance the closest in log space wins (then the highest EV), with `withinTolerance: false`. Legs come in kickoff order.
 6. **Null**: fewer distinct events survive the filters (and rule 9) than `legs` (for `target_odd` without `legs`: 2, or 1 with `fixed`).
 7. **Invalid parameters throw `RangeError`**: `legs` missing (except `target_odd`), not a whole number, or outside 2–10 (1–6 when `fixed` is non-empty); `targetOdd` missing or ≤ 1 for `target_odd`; negative `tolerance`.
-8. **Swap a leg**: the leg is replaced in place by a candidate that passes the same filters and whose event is not in the multiple (the swapped leg's event included, so a swap always changes game). Ordering modes take the top-ranked one; `random` picks one with the seeded PRNG; `target_odd` takes the one that gives the best result under rule 5. Null when no candidate is left or `legId` is not a leg.
+8. **Swap a leg**: the leg is replaced in place by a candidate whose event is not in the multiple (the swapped leg's event included, so a swap always changes game) and whose id is not the swapped leg's or in `seen` (what that slot has already shown). First the candidates that pass the filters: ordering modes take the top-ranked one, `random` picks one with the seeded PRNG, `target_odd` picks at random one that keeps the multiple within tolerance, or else the one that brings it closest in log space. When none of those is left, any other candidate is picked at random with the seeded PRNG, filters ignored. When every candidate has been seen, `seen` is cleared and the cycle starts again (`restarted: true`). The result is a `GeneratedMultiple` plus `replacement` and `restarted`. Null when no other event is left or `legId` is not a leg.
 9. **Fixed legs**: kept as given, first and in order, and not run through the filters (they were picked by hand). Their events are left out of the pool, so one leg per event still holds. `legs` counts only the legs to add. Their odd and probability count in `totalOdd`, `probability` and `ev`.
-10. **Target odd with fixed legs**: the added legs are searched as in rule 5 towards log(target) − log(fixed total odd), so that fixed × added is closest to the target; with `legs` unset it tries 1–6 added legs. `withinTolerance` and the EV preference are about the whole multiple.
+10. **Target odd with fixed legs**: the added legs are searched as in rule 5 towards log(target) − log(fixed total odd), so that fixed × added is closest to the target; with `legs` unset it tries 1–6 added legs. `withinTolerance` is about the whole multiple.
 11. **Avoid**: candidates whose id is in `avoid` are only used when too few others are left. Ordering and random modes rank as usual, then take the non-avoided legs first and fill the rest from the avoided ones in the same order; `target_odd` searches without the avoided ones when enough events remain, and over the whole pool otherwise. "Gerar outra" passes the unpinned legs it replaces as `fixed` = pinned legs and `avoid` = the replaced ones.
 12. **Date window**: `today` is today; `tomorrow` is tomorrow; `next3` is today … today + 2; a custom `{ from, to }` is clamped to today … today + 13 (at most 14 days). An invalid day, `from` after `to`, or a range wholly outside that span throws `RangeError`. Days are local dates of `now`.
 
@@ -57,6 +57,6 @@ The Múltiplas screen ([ui.md](ui.md#múltiplas)) maps its state to the engine i
 - Candidates are the window's pending predictions (`toCandidate` in `src/domain/multipleDraft.ts`); the screen loads today … today + 13 once and filters by window.
 - **Acrescentar**: `fixed` = every leg in the slip, `legs` = the stepper (Odd alvo: unset). The new legs are appended, unpinned, with origin `generated`.
 - **Gerar outra**: `fixed` = pinned legs, `avoid` = the unpinned ones, `legs` = how many are replaced (kept within 1–6, or 2–10 when nothing is pinned); Odd alvo leaves `legs` unset. Pinned legs move first, in order.
-- **Trocar**: `swapLeg` with the current mode and filters.
+- **Trocar**: `swapLeg` with the current mode and filters, and `seen` = the ids that slot has shown since it was last generated, added or reused (the original leg first); each swap adds the new one, and a `restarted` swap starts the list again. Pressing Trocar on the same row therefore walks the mode's order, then the rest of the window at random, and only then repeats.
 - **Random**: each run draws a new `seed`, saved in `generator_params` so the pick can be reproduced.
 

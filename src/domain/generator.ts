@@ -147,39 +147,71 @@ export function windowRange(window: DateWindow, now: Date): DayRange {
   return { from: toDayKey(clampedFrom), to: toDayKey(clampedTo) }
 }
 
+export interface SwapResult extends GeneratedMultiple {
+  /** The candidate that took the swapped leg's place. */
+  replacement: Candidate
+  /** True when every candidate had been seen, so `seen` was cleared and the cycle began again. */
+  restarted: boolean
+}
+
 /**
- * Replaces one leg with the best remaining candidate under the same mode and filters, from an
- * event not already in the multiple (the replaced leg's event included). Null when none is left
- * or `legId` is not a leg of `current`.
+ * Replaces one leg in place with a candidate from an event not already in the multiple (the
+ * replaced leg's event included) and whose id is not in `seen` (the ids this slot has already
+ * shown). First the candidates that pass the filters, in the mode's order (`random`: seeded;
+ * `target_odd`: a random one that keeps the multiple within tolerance, or else the closest); once those are used up,
+ * any other candidate at random, filters ignored. When every candidate has been seen, `seen` is
+ * cleared and it starts again (`restarted`). Null when no other event is left or `legId` is not a
+ * leg of `current`.
  */
 export function swapLeg(
   current: GeneratedMultiple,
   legId: string,
   candidates: Candidate[],
   params: GeneratorParams,
-): GeneratedMultiple | null {
+  seen: readonly string[] = [],
+): SwapResult | null {
   validate(params)
   const index = current.legs.findIndex((leg) => leg.id === legId)
   if (index === -1) return null
   const usedEvents = new Set(current.legs.map((leg) => leg.event_id))
-  const options = applyFilters(candidates, params).filter((c) => !usedEvents.has(c.event_id))
-  if (options.length === 0) return null
+  const open = sortByKickoff(candidates.filter((c) => !usedEvents.has(c.event_id)))
+  if (open.length === 0) return null
 
+  const random = rngFor(params.seed)
   const withLeg = (replacement: Candidate) =>
     current.legs.map((leg, i) => (i === index ? replacement : leg))
+  const target = params.targetOdd as number
+  const tolerance = params.tolerance ?? DEFAULT_TOLERANCE
+  const result = (replacement: Candidate) =>
+    params.mode === 'target_odd'
+      ? build(withLeg(replacement), params, target, tolerance)
+      : build(withLeg(replacement), params)
+  const anyOf = (options: Candidate[]) => options[Math.floor(random() * options.length)]
 
-  if (params.mode === 'target_odd') {
-    const target = params.targetOdd as number
-    const tolerance = params.tolerance ?? DEFAULT_TOLERANCE
-    const results = sortByKickoff(options).map((c) => build(withLeg(c), params, target, tolerance))
-    return pickTargetResult(results, target)
+  const choose = (excluded: Set<string>): Candidate | undefined => {
+    const unseen = open.filter((c) => !excluded.has(c.id))
+    const filtered = applyFilters(unseen, params)
+    if (params.mode === 'target_odd') {
+      const fits = filtered.filter((c) => result(c).withinTolerance)
+      if (fits.length) return anyOf(fits)
+      // None fits: the closest first (ties: earlier kickoff), so repeated swaps walk outwards.
+      const closest = [...filtered].sort(
+        (a, b) => distance(result(a).totalOdd, target) - distance(result(b).totalOdd, target),
+      )[0]
+      if (closest) return closest
+    } else if (filtered.length) {
+      return params.mode === 'random' ? anyOf(filtered) : rank(filtered, params.mode)[0]
+    }
+    return unseen.length ? anyOf(unseen) : undefined
   }
 
-  const replacement =
-    params.mode === 'random'
-      ? sortByKickoff(options)[Math.floor(rngFor(params.seed)() * options.length)]
-      : rank(options, params.mode)[0]
-  return build(withLeg(replacement as Candidate), params)
+  let restarted = false
+  let replacement = choose(new Set([legId, ...seen]))
+  if (!replacement) {
+    restarted = true
+    replacement = choose(new Set([legId])) as Candidate
+  }
+  return { ...result(replacement), replacement, restarted }
 }
 
 function countEvents(candidates: Candidate[]): number {
@@ -288,18 +320,24 @@ function distance(totalOdd: number, target: number): number {
   return Math.abs(Math.log(totalOdd) - Math.log(target))
 }
 
-/** Within tolerance: highest EV (then closest). Otherwise: closest (then highest EV). First wins ties. */
-function pickTargetResult(results: GeneratedMultiple[], target: number): GeneratedMultiple | null {
+/**
+ * Within tolerance: one at random (seeded), so the same target does not always give the same
+ * multiple. Otherwise: closest in log space (then highest EV; first wins ties).
+ */
+function pickTargetResult(
+  results: GeneratedMultiple[],
+  target: number,
+  random: () => number,
+): GeneratedMultiple | null {
   const within = results.filter((r) => r.withinTolerance)
-  const [primary, secondary] = within.length
-    ? [(r: GeneratedMultiple) => -r.ev, (r: GeneratedMultiple) => distance(r.totalOdd, target)]
-    : [(r: GeneratedMultiple) => distance(r.totalOdd, target), (r: GeneratedMultiple) => -r.ev]
+  if (within.length) return within[Math.floor(random() * within.length)] as GeneratedMultiple
   let best: GeneratedMultiple | null = null
-  for (const result of within.length ? within : results) {
+  for (const result of results) {
+    const gap = distance(result.totalOdd, target)
     if (
       best === null ||
-      primary(result) < primary(best) ||
-      (primary(result) === primary(best) && secondary(result) < secondary(best))
+      gap < distance(best.totalOdd, target) ||
+      (gap === distance(best.totalOdd, target) && result.ev > best.ev)
     ) {
       best = result
     }
@@ -367,5 +405,5 @@ function searchTargetOdd(pool: Candidate[], params: GeneratorParams): GeneratedM
       results.push(...beam.map(toResult))
     }
   }
-  return pickTargetResult(results, target)
+  return pickTargetResult(results, target, rngFor(params.seed))
 }
