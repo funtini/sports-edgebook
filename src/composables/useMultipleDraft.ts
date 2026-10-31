@@ -25,6 +25,8 @@ export interface DraftLeg {
   prediction: PredictionWithRelations
   origin: LegOrigin
   pinned: boolean
+  /** Prediction ids Trocar has shown in this slot, the first leg included; unset before a swap. */
+  swapSeen?: string[]
 }
 
 export type WindowChoice = 'today' | 'tomorrow' | 'next3' | 'custom'
@@ -162,7 +164,7 @@ export const useMultipleDraft = defineStore('multipleDraft', () => {
         targetOdd: settings.targetOdd,
         tolerance: settings.tolerance,
       }),
-      ...(settings.mode === 'random' && { seed: newSeed() }),
+      ...((settings.mode === 'random' || settings.mode === 'target_odd') && { seed: newSeed() }),
       ...(settings.minConfidence != null && { minConfidence: settings.minConfidence }),
       ...(settings.minOdd != null && { minOdd: settings.minOdd }),
       ...(settings.maxOdd != null && { maxOdd: settings.maxOdd }),
@@ -247,26 +249,31 @@ export const useMultipleDraft = defineStore('multipleDraft', () => {
   }
 
   /**
-   * Trocar: the leg is replaced in place by the generator's best pick from another game, under
-   * the current mode and filters; the new leg is generated and unpinned. False when none is left.
+   * Trocar: the leg is replaced in place by the generator's next pick from another game, under
+   * the current mode and filters, never one this slot has already shown until every prediction
+   * of the window has been; the new leg is generated and unpinned. False when none is left.
    */
   function swap(predictionId: string, pool: PredictionWithRelations[]): boolean {
+    const index = legs.value.findIndex((leg) => leg.prediction.id === predictionId)
+    const leg = legs.value[index]
+    if (!leg) return false
     const current = { ...slipTotals(legs.value.map((l) => l.prediction)), withinTolerance: true }
     // `swapLeg` reads `legs` only to validate it; 2 is valid in every mode.
     const params: GeneratorParams = { ...baseParams(), legs: MIN_LEGS }
+    const seen = leg.swapSeen ?? [predictionId]
     const result = swapLeg(
       { ...current, legs: candidates.value },
       predictionId,
       pool.map(toCandidate),
       params,
+      seen,
     )
-    const index = legs.value.findIndex((leg) => leg.prediction.id === predictionId)
-    const replacement = result?.legs[index]
-    const prediction = replacement && pool.find((p) => p.id === replacement.id)
-    if (!prediction) return false
+    const prediction = result && pool.find((p) => p.id === result.replacement.id)
+    if (!result || !prediction) return false
     changed()
-    legs.value = legs.value.map((leg, i) =>
-      i === index ? { prediction, origin: 'generated', pinned: false } : leg,
+    const swapSeen = result.restarted ? [predictionId, prediction.id] : [...seen, prediction.id]
+    legs.value = legs.value.map((l, i) =>
+      i === index ? { prediction, origin: 'generated', pinned: false, swapSeen } : l,
     )
     remember({ ...params, legs: undefined })
     return true

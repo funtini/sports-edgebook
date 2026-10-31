@@ -178,13 +178,25 @@ describe('generateMultiple: target_odd', () => {
     pick({ id: 'e', odd: 1.25, probability: 0.85 }),
   ]
 
-  it('finds a combination within tolerance and prefers the higher EV', () => {
-    // Within 4.0 ± 10%: b×c = 4.00 (EV −0.12), d×e = 3.75 (EV +0.275), a×c×e = 3.75 (EV +0.316).
-    const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 4 })
-    expect(result?.withinTolerance).toBe(true)
-    expect(Math.abs((result?.totalOdd ?? 0) / 4 - 1)).toBeLessThanOrEqual(0.1)
-    expect(ids(result)?.sort()).toEqual(['a', 'c', 'e'])
-    expect(result?.ev).toBeCloseTo(0.75 * 0.55 * 0.85 * 3.75 - 1)
+  it('picks a combination within tolerance at random, not always the highest EV', () => {
+    // Within 4.0 ± 10%: b×c = 4.00, d×e = 3.75, a×c×e = 3.75, …; the highest EV is a×c×e.
+    const picked = new Set<string>()
+    for (let seed = 1; seed <= 40; seed++) {
+      const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 4, seed })
+      expect(result?.withinTolerance).toBe(true)
+      expect(Math.abs((result?.totalOdd ?? 0) / 4 - 1)).toBeLessThanOrEqual(0.1)
+      expect(result?.ev).toBeCloseTo(
+        (result?.legs ?? []).reduce((p, leg) => p * leg.probability, 1) * result!.totalOdd - 1,
+      )
+      picked.add(ids(result)!.sort().join(''))
+    }
+    expect(picked.size).toBeGreaterThan(2)
+    expect(picked).toContain('bc')
+  })
+
+  it('is reproducible with a seed', () => {
+    const params: GeneratorParams = { mode: 'target_odd', targetOdd: 4, seed: 7 }
+    expect(ids(generateMultiple(pool, params))).toEqual(ids(generateMultiple(pool, params)))
   })
 
   it('respects a custom tolerance', () => {
@@ -201,9 +213,13 @@ describe('generateMultiple: target_odd', () => {
   })
 
   it('fixes the number of legs when given', () => {
-    // Two legs within 4.0 ± 10%: b×c = 4.00 (EV −0.12) and d×e = 3.75 (EV +0.275).
-    const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 4, legs: 2 })
-    expect(ids(result)?.sort()).toEqual(['d', 'e'])
+    // Two legs within 4.0 ± 10%: b×c = 4.00 and d×e = 3.75.
+    const picked = new Set<string>()
+    for (let seed = 1; seed <= 20; seed++) {
+      const result = generateMultiple(pool, { mode: 'target_odd', targetOdd: 4, legs: 2, seed })
+      picked.add(ids(result)!.sort().join(''))
+    }
+    expect([...picked].sort()).toEqual(['bc', 'de'])
     expect(
       generateMultiple(pool, { mode: 'target_odd', targetOdd: 4, legs: 2, tolerance: 0 })?.totalOdd,
     ).toBeCloseTo(4)
@@ -237,6 +253,12 @@ describe('generateMultiple: parameters', () => {
 })
 
 describe('swapLeg', () => {
+  const build = (from: Candidate[], legIds: string[]) =>
+    generateMultiple(
+      from.filter((c) => legIds.includes(c.id)),
+      { mode: 'confidence', legs: legIds.length },
+    )!
+
   const pool = [
     pick({ id: 'a', event_id: 'g1', odd: 3.0 }),
     pick({ id: 'a2', event_id: 'g1', odd: 1.1 }),
@@ -277,14 +299,58 @@ describe('swapLeg', () => {
     expect(new Set(first?.legs.map((leg) => leg.event_id)).size).toBe(2)
   })
 
-  it('picks the replacement that keeps a target_odd multiple closest to the target', () => {
+  it('target_odd: a random replacement within tolerance, or else the closest', () => {
     const params: GeneratorParams = { mode: 'target_odd', targetOdd: 5, legs: 2 }
-    const current = generateMultiple(pool, params)
-    expect(ids(current)?.sort()).toEqual(['b', 'c'])
-    const swapped = swapLeg(current!, 'c', pool, params)
-    // b (2.5) with a 3.0 = 7.5, d 1.6 = 4.0, e 1.4 = 3.5 → d is closest in log space.
+    const current = build(pool, ['b', 'c'])
+    // b (2.5) with a 3.0 = 7.5, d 1.6 = 4.0, e 1.4 = 3.5: none within ±10%, d is closest.
+    const swapped = swapLeg(current, 'c', pool, params)
     expect(ids(swapped)).toEqual(['b', 'd'])
     expect(swapped?.withinTolerance).toBe(false)
+    // Then e (next closest), then a; no repeats.
+    expect(ids(swapLeg(swapped!, 'd', pool, params, ['c', 'd']))).toEqual(['b', 'e'])
+    expect(ids(swapLeg(swapped!, 'd', pool, params, ['c', 'd', 'e']))).toEqual(['b', 'a'])
+
+    const wide = { ...params, tolerance: 0.25 }
+    for (let seed = 1; seed <= 10; seed++) {
+      const result = swapLeg(current, 'c', pool, { ...wide, seed })
+      // Within 5 ± 25%: d (4.0) only; a2 (2.75) and e (3.5) are not.
+      expect(ids(result)).toEqual(['b', 'd'])
+    }
+  })
+
+  it('never repeats a pick: the mode order first, then the rest at random, then again', () => {
+    const params: GeneratorParams = { mode: 'highest_odds', legs: 2, leagueIds: ['liga'] }
+    // Slot of b, with a in the multiple. Filters leave c, e (g1 is used, d is in another league).
+    const current = build(pool, ['a', 'b'])
+    const seen = ['b']
+    const order: string[] = []
+    let multiple = current
+    for (let step = 0; step < 3; step++) {
+      const result = swapLeg(multiple, multiple.legs[1]!.id, pool, params, seen)!
+      expect(result.restarted).toBe(false)
+      expect(result.legs[0]!.id).toBe('a')
+      expect(new Set(result.legs.map((leg) => leg.event_id)).size).toBe(2)
+      order.push(result.replacement.id)
+      seen.push(result.replacement.id)
+      multiple = result
+    }
+    // c, e by highest odd (the filter), then d at random from outside it.
+    expect(order).toEqual(['c', 'e', 'd'])
+    const again = swapLeg(multiple, 'd', pool, params, seen)!
+    expect(again.restarted).toBe(true)
+    expect(again.replacement.id).toBe('b')
+  })
+
+  it('in random mode, picks from the filtered ones before the rest', () => {
+    const params: GeneratorParams = { mode: 'random', legs: 2, leagueIds: ['liga'], seed: 5 }
+    const current = build(pool, ['a', 'b'])
+    const first = swapLeg(current, 'b', pool, params, ['b'])!
+    expect(['c', 'e']).toContain(first.replacement.id)
+    const second = swapLeg(first, first.replacement.id, pool, params, ['b', first.replacement.id])!
+    expect(['c', 'e']).toContain(second.replacement.id)
+    expect(second.replacement.id).not.toBe(first.replacement.id)
+    const third = swapLeg(second, second.replacement.id, pool, params, ['b', 'c', 'e'])!
+    expect(third.replacement.id).toBe('d')
   })
 
   it('returns null when nothing is left or the leg is unknown', () => {
