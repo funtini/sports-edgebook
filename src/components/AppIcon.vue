@@ -2,6 +2,7 @@
 /** Stroke icons used across the app (24×24, `currentColor`). Decorative: pair with a text label. */
 export type IconName =
   | 'calendar'
+  | 'minus'
   | 'plus-circle'
   | 'plus'
   | 'layers'
@@ -22,6 +23,7 @@ const PATHS: Record<IconName, string[]> = {
     'M3 6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
     'M16 2v4M8 2v4M3 10h18',
   ],
+  minus: ['M5 12h14'],
   'plus-circle': ['M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z', 'M12 8v8M8 12h8'],
   plus: ['M12 5v14M5 12h14'],
   layers: ['M12 2L2 7l10 5 10-5-10-5z', 'M2 17l10 5 10-5', 'M2 12l10 5 10-5'],

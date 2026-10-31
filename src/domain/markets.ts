@@ -52,6 +52,24 @@ export function lineKind(betType: BetType): LineKind | null {
   }
 }
 
+/** Where Linha's − / + start from when it is blank. */
+const FIRST_LINE: Record<LineKind, number> = { total: 2.5, handicap: 0.5 }
+
+/**
+ * The line after a − (`-1`) or + (`1`) press on Linha: one unit down or up. A total steps its size
+ * and keeps its side (−2.5 → −3.5 on +), never below 0.5; a handicap steps its signed value. A blank
+ * line starts at 2.5 (total) or ±0.5 (handicap). Null when the line cannot step: a total already at
+ * its smallest, or a line that is not a number.
+ */
+export function stepLine(kind: LineKind, line: number | null, direction: 1 | -1): number | null {
+  if (line == null) return kind === 'total' ? FIRST_LINE.total : FIRST_LINE.handicap * direction
+  if (Number.isNaN(line)) return null
+  if (kind === 'handicap') return line + direction
+  const size = Math.abs(line) + direction
+  if (size < 0.5) return null
+  return line < 0 ? -size : size
+}
+
 /** Lines go in steps of 0.5: 0.5, 1, 1.5, 2… */
 export function isHalfStep(line: number): boolean {
   return Number.isInteger(line * 2)

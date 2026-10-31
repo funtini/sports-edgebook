@@ -3,6 +3,14 @@
 
 /* `dark:` follows the theme toggle (.app-dark on <html>), not prefers-color-scheme. Views should
    not need it: the --eb-* tokens below already switch. */
+/* Tailwind 4 resets buttons to the default cursor; clickable things should show the hand. */
+@layer base {
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @custom-variant dark (&:where(.app-dark, .app-dark *));
 
 /*

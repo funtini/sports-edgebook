@@ -301,6 +301,8 @@ const ptPT = {
     lineHandicapPlaceholder: '-1,5',
     lineTotalHint: '+ é mais de (over), − é menos de (under)',
     toggleSign: 'Trocar o sinal da linha',
+    lineDown: 'Descer a linha uma unidade',
+    lineUp: 'Subir a linha uma unidade',
     odd: 'Odd',
     oddPlaceholder: '1,85',
     confidence: 'Confiança',

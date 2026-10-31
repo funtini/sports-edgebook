@@ -298,6 +298,8 @@ const en: Messages = {
     lineHandicapPlaceholder: '-1.5',
     lineTotalHint: '+ is over, − is under',
     toggleSign: 'Flip the line sign',
+    lineDown: 'Lower the line by one',
+    lineUp: 'Raise the line by one',
     odd: 'Odd',
     oddPlaceholder: '1.85',
     confidence: 'Confidence',

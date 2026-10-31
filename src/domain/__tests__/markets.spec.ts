@@ -5,6 +5,7 @@ import {
   isValidSelection,
   lineKind,
   pickSummary,
+  stepLine,
   toStoredPick,
 } from '../markets'
 
@@ -45,6 +46,34 @@ describe('lineKind', () => {
     expect(lineKind('handicap')).toBe('handicap')
     expect(lineKind('1x2')).toBeNull()
     expect(lineKind('other')).toBeNull()
+  })
+})
+
+describe('stepLine', () => {
+  it('starts a blank line at 2.5 for totals and ±0.5 for handicaps', () => {
+    expect(stepLine('total', null, 1)).toBe(2.5)
+    expect(stepLine('total', null, -1)).toBe(2.5)
+    expect(stepLine('handicap', null, 1)).toBe(0.5)
+    expect(stepLine('handicap', null, -1)).toBe(-0.5)
+  })
+
+  it('steps the size of a total and keeps its side, never below 0.5', () => {
+    expect(stepLine('total', 2.5, 1)).toBe(3.5)
+    expect(stepLine('total', 2.5, -1)).toBe(1.5)
+    expect(stepLine('total', -2.5, 1)).toBe(-3.5)
+    expect(stepLine('total', -1.5, -1)).toBe(-0.5)
+    expect(stepLine('total', 0.5, -1)).toBeNull()
+    expect(stepLine('total', -1, -1)).toBeNull()
+  })
+
+  it('steps the signed value of a handicap', () => {
+    expect(stepLine('handicap', -1.5, 1)).toBe(-0.5)
+    expect(stepLine('handicap', -0.5, 1)).toBe(0.5)
+    expect(stepLine('handicap', 0.5, -1)).toBe(-0.5)
+  })
+
+  it('leaves a line that is not a number alone', () => {
+    expect(stepLine('total', Number.NaN, 1)).toBeNull()
   })
 })
 
