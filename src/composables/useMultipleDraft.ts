@@ -141,6 +141,19 @@ export const useMultipleDraft = defineStore('multipleDraft', () => {
     lastGeneration.value = null
   }
 
+  /**
+   * Reutilizar: replaces the slip with these legs, all pinned, each keeping its origin; the
+   * saved multiple's generation (if any) comes with them so saving keeps its mode.
+   */
+  function reuse(
+    reused: readonly { prediction: PredictionWithRelations; origin: LegOrigin }[],
+    generation: Generation | null,
+  ) {
+    changed()
+    legs.value = reused.map(({ prediction, origin }) => ({ prediction, origin, pinned: true }))
+    lastGeneration.value = legs.value.some((leg) => leg.origin === 'generated') ? generation : null
+  }
+
   /** Filters and mode from the settings; `legs`, `fixed` and `avoid` are added per action. */
   function baseParams(): GeneratorParams {
     return {
@@ -276,6 +289,7 @@ export const useMultipleDraft = defineStore('multipleDraft', () => {
     remove,
     togglePin,
     clear,
+    reuse,
     generate,
     regenerate,
     swap,

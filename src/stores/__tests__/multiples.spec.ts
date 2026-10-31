@@ -151,4 +151,70 @@ describe('multiples store', () => {
     expect(cleanup).toHaveLength(1)
     expect(argsOf(cleanup[0]!, 'eq')).toEqual(['id', 'm'])
   })
+
+  it('lists saved multiples newest first, legs by kickoff, and syncs a status the legs changed', async () => {
+    const legs = [
+      {
+        odd_at_selection: 2,
+        origin: 'manual',
+        prediction: { status: 'won', event: { kickoff_at: '2026-10-30T21:00:00Z' } },
+      },
+      {
+        odd_at_selection: 1.5,
+        origin: 'manual',
+        prediction: { status: 'void', event: { kickoff_at: '2026-10-30T19:00:00Z' } },
+      },
+    ]
+    const rows = [
+      { id: 'a', is_placed: true, stake_units: 1, status: 'pending', settled_at: null, legs },
+      { id: 'b', is_placed: true, stake_units: 1, status: 'won', settled_at: 'x', legs },
+    ]
+    const queries = setup((q) => (has(q, 'select') ? { data: rows } : {}))
+    const list = await useMultiplesStore().list({ placedOnly: true })
+
+    const select = queries[0]!
+    expect(argsOf(select, 'eq')).toEqual(['is_placed', true])
+    expect(argsOf(select, 'order')).toEqual(['created_at', { ascending: false }])
+    expect(list[0]!.legs.map((l) => l.odd_at_selection)).toEqual([1.5, 2])
+
+    const updates = queries.filter((q) => has(q, 'update'))
+    expect(updates).toHaveLength(1)
+    expect(argsOf(updates[0]!, 'update')?.[0]).toMatchObject({ status: 'won' })
+    expect(argsOf(updates[0]!, 'eq')).toEqual(['id', 'a'])
+    expect(list[0]!.status).toBe('won')
+  })
+
+  it('still lists when a status write fails', async () => {
+    const rows = [
+      {
+        id: 'a',
+        is_placed: false,
+        stake_units: null,
+        status: 'pending',
+        settled_at: null,
+        legs: [
+          {
+            odd_at_selection: 2,
+            origin: 'manual',
+            prediction: { status: 'lost', event: { kickoff_at: '2026-10-30T21:00:00Z' } },
+          },
+        ],
+      },
+    ]
+    setup((q) => (has(q, 'update') ? { error: new Error('nope') } : { data: rows }))
+    const list = await useMultiplesStore().list()
+    expect(list).toHaveLength(1)
+    expect(list[0]!.status).toBe('pending')
+  })
+
+  it('deletes only simulated multiples', async () => {
+    const queries = setup(() => ({}))
+    await useMultiplesStore().removeSimulated('m')
+    const query = queries[0]!
+    expect(has(query, 'delete')).toBe(true)
+    expect(query.ops.filter(([m]) => m === 'eq').map(([, args]) => args)).toEqual([
+      ['id', 'm'],
+      ['is_placed', false],
+    ])
+  })
 })
