@@ -10,13 +10,14 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "type-check:functions": "deno check --config supabase/functions/read-slip/deno.json supabase/functions/read-slip/index.ts",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/",
+    "format": "prettier --write --experimental-cli src/ supabase/functions/",
     "test": "vitest run",
     "lint:check": "oxlint . && eslint .",
-    "format:check": "prettier --check src/"
+    "format:check": "prettier --check src/ supabase/functions/"
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
