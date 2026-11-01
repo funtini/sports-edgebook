@@ -9,40 +9,9 @@ import { addDays, startOfDay, toDayKey } from './days'
 import { lineKind, isValidSelection, type BetType, type Market, type MatchPeriod } from './markets'
 import { MIN_SAVED_LEGS } from './multipleDraft'
 import type { BetStatus } from './settlement'
+import type { SlipLeg, SlipLegField, SlipRead } from './slipRead'
 
-// ---------------------------------------------------------------------------------------------
-// What the reader returns (validated with Zod by the read-slip function and the store).
-
-export interface SlipLeg {
-  /** The slip's own words for the leg, shown as "Na casa:". */
-  rawText: string
-  homeTeam: string
-  awayTeam: string
-  league: string | null
-  /** ISO; null when the slip shows no date. */
-  kickoffAt: string | null
-  timing: 'pre' | 'live' | null
-  market: Market | null
-  betType: BetType | null
-  period: MatchPeriod | null
-  /** Catalogue selection key, as stored (`over`, `home_under`…). */
-  selection: string | null
-  line: number | null
-  odd: number | null
-  status: BetStatus | null
-  /** Fields the reader is not sure about. */
-  unsure: (keyof SlipLeg)[]
-}
-
-export interface SlipRead {
-  kind: 'single' | 'multiple'
-  bookmaker: string | null
-  /** In currency, as printed on the slip. */
-  stake: number | null
-  totalOdd: number | null
-  status: BetStatus | null
-  legs: SlipLeg[]
-}
+export type { SlipLeg, SlipRead }
 
 // ---------------------------------------------------------------------------------------------
 // Team names
@@ -420,7 +389,7 @@ export interface LegPlan {
   event: EventState
   duplicate: DuplicateState
   /** "Campos a confirmar": the reader's unsure fields, plus the date when the slip has none. */
-  unsure: (keyof SlipLeg)[]
+  unsure: SlipLegField[]
   /** The confidence that will be saved: the existing row's on a reused prediction, else chosen. */
   confidence: ConfidenceLevel | null
   /** Confidence comes from an existing prediction and is shown read-only. */

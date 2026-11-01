@@ -20,10 +20,18 @@ The image is never stored, neither in Supabase Storage nor in the database. It l
 - A Supabase Edge Function at `supabase/functions/read-slip/`. It calls the Claude API (a vision-capable model, chosen in the function's config) with the image and returns structured JSON. The function and the stores are the only places that leave the browser.
 - **The Anthropic API key lives only in Supabase secrets** (`ANTHROPIC_API_KEY`, set with `supabase secrets set`). It never appears in the repo, in `.env`, or in the frontend bundle. The frontend calls the function with the user's session (`supabase.functions.invoke`), and the function rejects calls without a valid JWT.
 - Limits: images over 5 MB are rejected; at most 30 reads per user per day (counted in the function), to cap cost.
-- Deploying the function is a manual step for the owner (`supabase functions deploy read-slip`); CI only type-checks and tests it.
+  - A read is counted in `slip_reads` (only `user_id` and the time) before the model is called, so failed reads count too. The day is the UTC day.
+  - The owner can read and insert `slip_reads` rows but not change or delete them.
+- Deploying the function is a manual step for the owner (`supabase functions deploy read-slip --use-api`, because it imports `src/domain/`); CI only type-checks and tests it. Setup steps: `supabase/functions/read-slip/README.md`.
+- The model and its effort are set in `supabase/functions/read-slip/config.ts`. The answer is constrained with structured output (JSON Schema from the Zod schema) and validated again after.
 - The prompt maps what it reads onto the [market catalogue](domain.md#markets) and returns, for each field, whether it is sure.
+- After validation, fields that break the catalogue's rules are added to `unsure`: a type the market does not have, a selection the type does not allow, a missing or off-step line, an odd of 1 or less, and a kickoff that is missing or not a date.
 
-Response shape (validated with Zod on both sides; anything that fails validation is treated as a failed read):
+Request: `{ image, mediaType: 'image/jpeg', timeZone? }`, the image as base64 and the browser's IANA time zone, so dates on the slip are read in it (UTC when missing or unknown).
+
+Errors answer `{ error }` with a code the UI translates: `invalid_request` (400), `image_too_large` (413), `daily_limit` (429), `read_failed` (502, no answer or one that fails validation), `unavailable` (503, Claude API or database error). A call without a valid session gets 401.
+
+Response shape (`src/domain/slipRead.ts`, validated with Zod on both sides; anything that fails validation is treated as a failed read):
 
 ```ts
 interface SlipRead {
@@ -44,8 +52,8 @@ interface SlipLeg {
   timing: 'pre' | 'live' | null
   market: Market | null // catalogue keys
   betType: BetType | null
-  period: Period | null
-  selection: string | null // catalogue selection key
+  period: MatchPeriod | null
+  selection: string | null // catalogue selection code as stored (`over`, `home_under`…)
   line: number | null
   odd: number | null
   status: 'pending' | 'won' | 'lost' | 'void' | null
