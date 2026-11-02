@@ -138,7 +138,7 @@ afterEach(() => {
 })
 
 describe('DashboardView', () => {
-  it('shows the punter summary of the month from the metrics engine', async () => {
+  it('shows the punter summary of the last 30 days from the metrics engine', async () => {
     setup()
     const wrapper = await render()
     const s = summary(scope(bets, 'punter'))
@@ -167,12 +167,12 @@ describe('DashboardView', () => {
 
     expect(lines.map((l) => l.name)).toEqual(['Punter', 'Múltiplas'])
     expect(lines[0]!.values).toEqual(
-      cumulativeSeries(scope(bets, 'punter'), '2026-10-01', '2026-10-28').map((p) => p.profit),
+      cumulativeSeries(scope(bets, 'punter'), '2026-09-29', '2026-10-28').map((p) => p.profit),
     )
     expect(lines[1]!.values).toEqual(
-      cumulativeSeries(scope(bets, 'multiples'), '2026-10-01', '2026-10-28').map((p) => p.profit),
+      cumulativeSeries(scope(bets, 'multiples'), '2026-09-29', '2026-10-28').map((p) => p.profit),
     )
-    expect(chart.props('days')).toHaveLength(28)
+    expect(chart.props('days')).toHaveLength(30)
   })
 
   it('compares punter and multiples, flagging small samples', async () => {
@@ -223,6 +223,26 @@ describe('DashboardView', () => {
 
     await button(wrapper, 'Múltiplas').trigger('click')
     expect(wrapper.text()).toContain('Os segmentos contam só prognósticos simples')
+  })
+
+  it('still shows last week on Monday the 2nd, when a calendar month would be empty', async () => {
+    vi.setSystemTime(new Date(2026, 10, 2, 20, 0))
+    setup()
+    const wrapper = await render()
+
+    expect(wrapper.find('[data-empty]').exists()).toBe(false)
+    expect(wrapper.get('[data-subtitle]').text()).toContain('4 apostas liquidadas')
+  })
+
+  it('keeps the dashboard when only the chosen scope has no bets', async () => {
+    // Only virtual singles: nothing for Punter, but Todos has bets.
+    setup(predictions.filter((p) => p.stake_units == null))
+    const wrapper = await render()
+
+    expect(wrapper.find('[data-empty]').exists()).toBe(false)
+    expect(wrapper.get('[data-subtitle]').text()).toContain('0 apostas liquidadas')
+    await button(wrapper, 'Todos').trigger('click')
+    expect(wrapper.get('[data-subtitle]').text()).toContain('2 apostas liquidadas')
   })
 
   it('shows an empty state without settled bets, in English too', async () => {

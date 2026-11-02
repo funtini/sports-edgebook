@@ -1,6 +1,6 @@
 # Dashboard metrics
 
-Every metric filters by period and scope (punter only, all predictions, multiples). The Dashboard's periods (`src/domain/periods.ts`) end today and start on Monday of this week (**Semana**), the 1st of this month (**Mês**), 1 January (**Ano**), or the earliest settled bet (**Tudo**).
+Every metric filters by period and scope (punter only, all predictions, multiples). The Dashboard's periods (`src/domain/periods.ts`) end today and start 6 days before (**7 dias**), 29 days before (**30 dias**), on 1 January (**Ano**), or at the earliest settled bet (**Tudo**). The short periods roll rather than follow the calendar, so they are never empty just because today is a Monday or the 1st.
 
 | Metric              | Definition                                                                                              |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
