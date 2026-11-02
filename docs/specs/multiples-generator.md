@@ -2,14 +2,14 @@
 
 Pure TypeScript in `src/domain/` (fully unit-tested). Picks from pending predictions in a date window (default: today) and returns legs, total odd, combined probability and expected value.
 
-| Mode           | Ordering                                                                      |
-| -------------- | ----------------------------------------------------------------------------- |
-| `confidence`   | highest confidence level; tie-break highest odd                               |
-| `value`        | highest value index (p × odd)                                                 |
-| `highest_odds` | highest odd                                                                   |
-| `lowest_odds`  | lowest odd                                                                    |
-| `random`       | shuffle, optional seed to reproduce                                           |
-| `target_odd`   | a random combination within tolerance of the target; the closest if none is   |
+| Mode           | Ordering                                                                    |
+| -------------- | --------------------------------------------------------------------------- |
+| `confidence`   | highest confidence level; tie-break highest odd                             |
+| `value`        | highest value index (p × odd)                                               |
+| `highest_odds` | highest odd                                                                 |
+| `lowest_odds`  | lowest odd                                                                  |
+| `random`       | shuffle, optional seed to reproduce                                         |
+| `target_odd`   | a random combination within tolerance of the target; the closest if none is |
 
 Parameters: number of legs **or** target odd (with tolerance, e.g. ±10%), minimum confidence, min/max odd per leg, league and market filters, include non-punter only or all. The generator can also **complete** a multiple: it appends legs to the ones already there (fixed), and "Gerar outra" regenerates the unpinned legs while trying not to pick them again (avoid).
 
@@ -59,4 +59,3 @@ The Múltiplas screen ([ui.md](ui.md#múltiplas)) maps its state to the engine i
 - **Gerar outra**: `fixed` = pinned legs, `avoid` = the unpinned ones, `legs` = how many are replaced (kept within 1–6, or 2–10 when nothing is pinned); Odd alvo leaves `legs` unset. Pinned legs move first, in order.
 - **Trocar**: `swapLeg` with the current mode and filters, and `seen` = the ids that slot has shown since it was last generated, added or reused (the original leg first); each swap adds the new one, and a `restarted` swap starts the list again. Pressing Trocar on the same row therefore walks the mode's order, then the rest of the window at random, and only then repeats.
 - **Random**: each run draws a new `seed`, saved in `generator_params` so the pick can be reproduced.
-

@@ -126,7 +126,7 @@ One card per leg, in slip order:
 
 - A line saying what is still missing ("Falta responder a 1 pergunta e escolher 2 confianças").
 - "Cancelar" and the save button: "Registar 3 prognósticos e a múltipla", or "Registar prognóstico" for a single.
-- Saving is disabled until every event question is answered, every leg has a confidence, and every required field is filled.
+- Saving is disabled until every event question is answered, every leg has a confidence, every required field is filled, and the stake is above 0.
 
 ## Saving
 

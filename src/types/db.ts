@@ -106,6 +106,8 @@ export interface MultipleRow {
   stake_units: number | null
   is_placed: boolean
   status: BetStatus
+  /** Where it was placed; set by the slip import, null otherwise. */
+  bookmaker: string | null
   created_at: string
   settled_at: string | null
 }
@@ -161,7 +163,13 @@ export type PredictionInsert = Insert<
 >
 export type MultipleInsert = Insert<
   MultipleRow,
-  'generator_mode' | 'generator_params' | 'stake_units' | 'is_placed' | 'status' | 'settled_at'
+  | 'generator_mode'
+  | 'generator_params'
+  | 'stake_units'
+  | 'is_placed'
+  | 'status'
+  | 'bookmaker'
+  | 'settled_at'
 >
 export type MultipleLegInsert = Insert<MultipleLegRow, 'origin'>
 export type UserSettingsInsert = Partial<Omit<UserSettingsRow, 'user_id'>>

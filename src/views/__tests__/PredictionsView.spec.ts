@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
@@ -82,7 +82,10 @@ const inserted = (queries: Query[], table: string) =>
 async function render(props: { eventId?: string } = {}) {
   const wrapper = mount(PredictionsView, {
     props,
-    global: { plugins: [PrimeVue, ToastService], stubs: { Toast: true } },
+    global: {
+      plugins: [PrimeVue, ToastService],
+      stubs: { Toast: true, RouterLink: RouterLinkStub },
+    },
     attachTo: document.body,
   })
   await flushPromises()
@@ -128,6 +131,24 @@ describe('PredictionsView', () => {
 
     await button(wrapper, 'Novo evento').trigger('click')
     expect(wrapper.find('#odd').exists()).toBe(true)
+  })
+
+  it('offers the slip import in the search state only', async () => {
+    setup(backend())
+    const wrapper = await render()
+
+    const links = () =>
+      wrapper.findAllComponents(RouterLinkStub).filter((l) => {
+        const to = l.props('to') as { name?: string }
+        return to.name === 'slip-import'
+      })
+    expect(links().map((l) => l.text())).toEqual([
+      'Importar aposta',
+      expect.stringContaining('Importar de uma imagem'),
+    ])
+
+    await button(wrapper, 'Novo evento').trigger('click')
+    expect(links()).toHaveLength(0)
   })
 
   it('shows inline PT-PT errors and saves nothing when the prediction is empty', async () => {
