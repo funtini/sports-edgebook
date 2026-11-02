@@ -30,6 +30,7 @@ The image is never stored, neither in Supabase Storage nor in the database. It l
 
   A request may name another choice for that one read (`model` in the body), for a "Ler com mais cuidado" retry. Sonnet and Opus use the API's server-side fallback on a refusal; Haiku has none.
 - **Usage**: each row in `slip_reads` keeps the Claude model id and the input and output tokens of the read, so the real cost can be checked. Only those two token columns can be updated; the read's time cannot.
+  - Definições shows, per choice, the average cost of its last 3 reads with tokens (`src/domain/slipCost.ts`): tokens × the model's list price in USD per million tokens (Haiku 5.5 $0.10 / $0.50, $0.50 / $2.50 above 100K input tokens; Sonnet 5.5 $2 / $10; Opus 5.5 $4 / $20). A model in `config.ts` must have a price there (a test checks it); reads of a model with no price are not counted. A read served by a fallback model is priced as the configured one.
   - A read is counted in `slip_reads` (only `user_id` and the time) before the model is called, so failed reads count too. The day is the UTC day.
   - The owner can read and insert `slip_reads` rows but not change or delete them.
 - Deploying the function is a manual step for the owner (`supabase functions deploy read-slip --use-api`, because it imports `src/domain/`); CI only type-checks and tests it. Setup steps: `supabase/functions/read-slip/README.md`.

@@ -422,6 +422,7 @@ const ptPT = {
       balancedHint: 'Sonnet · cerca de 2 cêntimos por boletim',
       best: 'Máximo',
       bestHint: 'Opus · 5 a 10 cêntimos por boletim',
+      real: 'Real: {cost} cêntimos (USD) por boletim, média da última leitura | Real: {cost} cêntimos (USD) por boletim, média das últimas {n} leituras',
     },
     saved: 'Definições guardadas.',
     save: 'Guardar alterações',
