@@ -5,6 +5,7 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import AppIcon from './AppIcon.vue'
 import ChipGroup from './ChipGroup.vue'
+import SegmentedControl from './SegmentedControl.vue'
 import SlipLegCard from './SlipLegCard.vue'
 import StepperField from './StepperField.vue'
 import { useLocale } from '@/composables/useLocale'
@@ -15,6 +16,7 @@ import {
   type ContextPrediction,
   type ImportContext,
   type LegChoice,
+  type SaveAs,
   type SlipChoice,
 } from '@/domain/slipImport'
 import { SLIP_STATUSES, type SlipLeg, type SlipRead, type SlipStatus } from '@/domain/slipRead'
@@ -59,6 +61,15 @@ const saving = ref(false)
 const error = ref<string | null>(null)
 
 const isMultiple = computed(() => props.read.kind === 'multiple')
+/** A multiple slip saved as its predictions only: no multiple, not a real bet. */
+const saveAs = ref<SaveAs>('multiple')
+const predictionsOnly = computed(() => isMultiple.value && saveAs.value === 'predictions')
+const saveAsOptions = computed(() =>
+  (['multiple', 'predictions'] as const).map((value) => ({
+    value,
+    label: t(`slipImport.saveAs.${value}`),
+  })),
+)
 
 /** The read with the owner's edits; a single's leg takes the Boletim card's status. */
 const edited = computed<SlipRead>(() => ({
@@ -78,6 +89,7 @@ const slip = computed<SlipChoice>(() => ({
   stakeUnits: stakeUnits.value,
   status: status.value,
   totalOdd: isMultiple.value ? totalOdd.value : null,
+  saveAs: saveAs.value,
 }))
 
 const plan = computed(() => buildImportPlan(edited.value, slip.value, choices.value, context.value))
@@ -105,13 +117,14 @@ const statusOptions = computed(() =>
   SLIP_STATUSES.map((value) => ({ value, label: t(`slipImport.status.${value}`) })),
 )
 
-const stakeMissing = computed(() => stakeUnits.value == null)
+const stakeMissing = computed(() => !predictionsOnly.value && stakeUnits.value == null)
 const canSave = computed(() => plan.value.canSave && !stakeMissing.value && !saving.value)
 
 /** "Falta responder a 1 pergunta e escolher 2 confianças". */
 const missingLine = computed(() => {
-  const { missing, tooFewLegs } = plan.value
+  const { missing, tooFewLegs, nothingToSave } = plan.value
   if (tooFewLegs) return t('slipImport.missing.tooFewLegs')
+  if (nothingToSave) return t('slipImport.missing.nothingToSave')
   if (missing.alreadyLogged > 0) return t('slipImport.missing.alreadyLogged')
   const items: string[] = []
   if (missing.questions > 0)
@@ -129,6 +142,11 @@ const missingLine = computed(() => {
 })
 
 const saveLabel = computed(() => {
+  if (predictionsOnly.value) {
+    // Legs that are already predictions write nothing.
+    const n = plan.value.legs.filter((leg) => leg.duplicate.kind !== 'reuse').length
+    return t('slipImport.confirm.savePredictions', { n }, n)
+  }
   if (isMultiple.value) return t('slipImport.confirm.saveMultiple', { n: plan.value.legs.length })
   return plan.value.legs[0]?.duplicate.kind === 'upgrade'
     ? t('slipImport.confirm.saveUpgrade')
@@ -274,94 +292,103 @@ onBeforeUnmount(() => {
               />
             </div>
 
-            <div class="grid gap-3.5 lg:grid-cols-2">
-              <div class="flex flex-col gap-1.5">
-                <label for="slip-stake" class="text-[13px] font-semibold text-eb-muted">
-                  {{ t('slipImport.slip.stake') }} (€)
-                </label>
-                <div class="flex items-center gap-3">
-                  <StepperField
-                    id="slip-stake"
-                    v-model="stakeEuros"
-                    :min="0"
-                    :max="100000"
-                    :step="1"
-                    :decimals="2"
-                    :down-label="t('slipImport.slip.stakeDown')"
-                    :up-label="t('slipImport.slip.stakeUp')"
-                    tone="info"
-                    class="max-w-[220px] flex-1"
+            <p
+              v-if="predictionsOnly"
+              class="m-0 rounded-xl bg-eb-surface-2 px-3 py-2.5 text-[13px]"
+              data-predictions-only-note
+            >
+              {{ t('slipImport.saveAs.predictionsNote') }}
+            </p>
+            <template v-else>
+              <div class="grid gap-3.5 lg:grid-cols-2">
+                <div class="flex flex-col gap-1.5">
+                  <label for="slip-stake" class="text-[13px] font-semibold text-eb-muted">
+                    {{ t('slipImport.slip.stake') }} (€)
+                  </label>
+                  <div class="flex items-center gap-3">
+                    <StepperField
+                      id="slip-stake"
+                      v-model="stakeEuros"
+                      :min="0"
+                      :max="100000"
+                      :step="1"
+                      :decimals="2"
+                      :down-label="t('slipImport.slip.stakeDown')"
+                      :up-label="t('slipImport.slip.stakeUp')"
+                      tone="info"
+                      class="max-w-[220px] flex-1"
+                    />
+                    <span class="text-[13px] text-eb-info tabular-nums" data-stake-units>
+                      {{
+                        t('slipImport.slip.stakeUnits', {
+                          units: formatDecimal(stakeUnits ?? 0, intlLocale),
+                        })
+                      }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-[13px] font-semibold text-eb-muted">{{
+                    t('slipImport.slip.status')
+                  }}</span>
+                  <ChipGroup
+                    v-model="status"
+                    :options="statusOptions"
+                    :label="t('slipImport.slip.status')"
                   />
-                  <span class="text-[13px] text-eb-info tabular-nums" data-stake-units>
-                    {{
-                      t('slipImport.slip.stakeUnits', {
-                        units: formatDecimal(stakeUnits ?? 0, intlLocale),
-                      })
-                    }}
-                  </span>
                 </div>
               </div>
 
-              <div class="flex flex-col gap-1.5">
-                <span class="text-[13px] font-semibold text-eb-muted">{{
-                  t('slipImport.slip.status')
-                }}</span>
-                <ChipGroup
-                  v-model="status"
-                  :options="statusOptions"
-                  :label="t('slipImport.slip.status')"
-                />
+              <div class="grid grid-cols-2 gap-3">
+                <div class="flex flex-col gap-1">
+                  <label
+                    v-if="isMultiple"
+                    for="slip-total-odd"
+                    class="text-[13px] font-semibold text-eb-muted"
+                    >{{ t('slipImport.slip.totalOdd') }}</label
+                  >
+                  <span v-else class="text-[13px] font-semibold text-eb-muted">{{
+                    t('slipImport.slip.totalOdd')
+                  }}</span>
+                  <InputText
+                    v-if="isMultiple"
+                    id="slip-total-odd"
+                    v-model="totalOddText"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    :placeholder="
+                      shownTotalOdd != null ? formatDecimal(shownTotalOdd, intlLocale) : ''
+                    "
+                    class="min-h-11 w-full text-lg font-bold tabular-nums"
+                  />
+                  <span v-else class="text-lg font-bold tabular-nums">{{
+                    shownTotalOdd != null ? formatDecimal(shownTotalOdd, intlLocale) : '—'
+                  }}</span>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <span class="text-[13px] font-semibold text-eb-muted">{{
+                    t('slipImport.slip.possibleReturn')
+                  }}</span>
+                  <span class="text-lg font-bold tabular-nums" data-possible-return>{{
+                    possibleReturn
+                  }}</span>
+                </div>
               </div>
-            </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex flex-col gap-1">
-                <label
-                  v-if="isMultiple"
-                  for="slip-total-odd"
-                  class="text-[13px] font-semibold text-eb-muted"
-                  >{{ t('slipImport.slip.totalOdd') }}</label
-                >
-                <span v-else class="text-[13px] font-semibold text-eb-muted">{{
-                  t('slipImport.slip.totalOdd')
-                }}</span>
-                <InputText
-                  v-if="isMultiple"
-                  id="slip-total-odd"
-                  v-model="totalOddText"
-                  inputmode="decimal"
-                  autocomplete="off"
-                  :placeholder="
-                    shownTotalOdd != null ? formatDecimal(shownTotalOdd, intlLocale) : ''
-                  "
-                  class="min-h-11 w-full text-lg font-bold tabular-nums"
-                />
-                <span v-else class="text-lg font-bold tabular-nums">{{
-                  shownTotalOdd != null ? formatDecimal(shownTotalOdd, intlLocale) : '—'
-                }}</span>
+              <div
+                class="flex items-center gap-3 rounded-xl bg-eb-info-soft px-3 py-2.5 text-eb-info"
+              >
+                <AppIcon name="check" class="size-4 shrink-0" stroke-width="2.5" />
+                <span class="flex flex-col">
+                  <span class="text-sm font-bold">{{ t('slipImport.slip.punter') }}</span>
+                  <span class="text-xs">{{ t('slipImport.slip.punterHint') }}</span>
+                </span>
               </div>
-              <div class="flex flex-col gap-1">
-                <span class="text-[13px] font-semibold text-eb-muted">{{
-                  t('slipImport.slip.possibleReturn')
-                }}</span>
-                <span class="text-lg font-bold tabular-nums" data-possible-return>{{
-                  possibleReturn
-                }}</span>
-              </div>
-            </div>
-
-            <div
-              class="flex items-center gap-3 rounded-xl bg-eb-info-soft px-3 py-2.5 text-eb-info"
-            >
-              <AppIcon name="check" class="size-4 shrink-0" stroke-width="2.5" />
-              <span class="flex flex-col">
-                <span class="text-sm font-bold">{{ t('slipImport.slip.punter') }}</span>
-                <span class="text-xs">{{ t('slipImport.slip.punterHint') }}</span>
-              </span>
-            </div>
-            <p v-if="isMultiple" class="m-0 text-[13px] text-eb-muted">
-              {{ t('slipImport.slip.multipleNote') }}
-            </p>
+              <p v-if="isMultiple" class="m-0 text-[13px] text-eb-muted">
+                {{ t('slipImport.slip.multipleNote') }}
+              </p>
+            </template>
           </section>
 
           <SlipLegCard
@@ -371,6 +398,7 @@ onBeforeUnmount(() => {
             :choice="choices[legPlan.index]!"
             :plan="legPlan"
             :kind="read.kind"
+            :as-predictions="predictionsOnly"
             :events="context.events"
             :predictions="context.predictions"
             :now="context.now"
@@ -379,6 +407,23 @@ onBeforeUnmount(() => {
             @remove="remove(legPlan.index)"
             @pick-event="addEvent"
           />
+
+          <!-- At the end: keep the multiple, or only its predictions (a slip someone shared). -->
+          <section
+            v-if="isMultiple"
+            class="flex flex-col gap-2 rounded-2xl border border-eb-border bg-eb-surface p-4"
+            data-save-as
+          >
+            <h3 class="m-0 text-base font-bold">{{ t('slipImport.saveAs.title') }}</h3>
+            <SegmentedControl
+              v-model="saveAs"
+              :options="saveAsOptions"
+              :label="t('slipImport.saveAs.title')"
+            />
+            <p class="m-0 text-[13px] text-eb-muted">
+              {{ t(`slipImport.saveAs.${saveAs}Hint`) }}
+            </p>
+          </section>
         </div>
       </div>
 

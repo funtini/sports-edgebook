@@ -27,6 +27,8 @@ const props = defineProps<{
   events: EventWithTeams[]
   predictions: readonly ContextPrediction[]
   now: Date
+  /** A multiple slip saved as its predictions only. */
+  asPredictions?: boolean
 }>()
 
 const leg = defineModel<SlipLeg>('leg', { required: true })
@@ -141,7 +143,7 @@ const notes = computed({
 
 const removeLabel = computed(() =>
   t(
-    props.kind === 'multiple'
+    props.kind === 'multiple' && !props.asPredictions
       ? 'slipImport.leg.removeFromMultiple'
       : 'slipImport.leg.removeFromImport',
   ),
@@ -217,7 +219,7 @@ const removeLabel = computed(() =>
       class="m-0 rounded-xl bg-eb-accent-soft px-3 py-2 text-sm text-eb-accent-text"
       data-duplicate="reuse"
     >
-      {{ t('slipImport.leg.reuse') }}
+      {{ t(asPredictions ? 'slipImport.leg.alreadyHave' : 'slipImport.leg.reuse') }}
     </p>
     <p
       v-else-if="plan.duplicate.kind === 'upgrade'"

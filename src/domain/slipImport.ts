@@ -351,7 +351,14 @@ export interface SlipChoice {
   status: BetStatus
   /** Null falls back to the product of the legs' odds. */
   totalOdd: number | null
+  /**
+   * For a multiple slip: save the multiple and its predictions (default), or only the predictions,
+   * each on its own and not as a real bet (a slip someone else shared).
+   */
+  saveAs?: SaveAs
 }
+
+export type SaveAs = 'multiple' | 'predictions'
 
 /** The Boletim card as read, with the stake converted to units. */
 export function slipChoiceFromRead(read: SlipRead, unitValue: number): SlipChoice {
@@ -480,6 +487,8 @@ export interface ImportPlan {
   missing: { questions: number; confidences: number; fields: number; alreadyLogged: number }
   /** A multiple left with fewer than two legs. */
   tooFewLegs: boolean
+  /** Every leg is complete, but none writes a row (all already logged as predictions). */
+  nothingToSave: boolean
   canSave: boolean
   /** The rows saving writes; complete only when `canSave`. */
   rows: ImportRows
@@ -609,6 +618,7 @@ export function buildImportPlan(
   const predictionsById = new Map(context.predictions.map((p) => [p.id, p]))
   const settledAt = (status: BetStatus) => (status === 'pending' ? null : context.now.toISOString())
   const multipleLegs: NewMultiple['legs'] = []
+  const asMultiple = read.kind === 'multiple' && slip.saveAs !== 'predictions'
   const legs: LegPlan[] = []
 
   read.legs.forEach((leg, index) => {
@@ -663,6 +673,8 @@ export function buildImportPlan(
 
     const odd = leg.odd!
     if (duplicate.kind === 'reuse') {
+      // Only predictions: the existing one is the leg, nothing to write.
+      if (!asMultiple) return
       multipleLegs.push({
         prediction: { id: duplicate.predictionId },
         oddAtSelection: odd,
@@ -705,7 +717,7 @@ export function buildImportPlan(
       notes: choice?.notes?.trim() || null,
     }
     builder.rows.predictions.push(prediction)
-    if (!single)
+    if (asMultiple)
       multipleLegs.push({
         prediction: { key: prediction.key },
         oddAtSelection: odd,
@@ -721,10 +733,16 @@ export function buildImportPlan(
     fields: count('field'),
     alreadyLogged: count('already_logged'),
   }
-  const tooFewLegs = read.kind === 'multiple' && legs.length < MIN_SAVED_LEGS
-  const canSave = legs.length > 0 && !tooFewLegs && legs.every((leg) => leg.missing.length === 0)
+  const tooFewLegs = asMultiple && legs.length < MIN_SAVED_LEGS
+  const complete = legs.length > 0 && !tooFewLegs && legs.every((leg) => leg.missing.length === 0)
+  const nothingToSave =
+    complete &&
+    !asMultiple &&
+    builder.rows.predictions.length === 0 &&
+    builder.rows.upgrades.length === 0
+  const canSave = complete && !nothingToSave
 
-  if (read.kind === 'multiple' && canSave) {
+  if (asMultiple && canSave) {
     const productOdd = legs.reduce((total, leg) => total * leg.leg.odd!, 1)
     builder.rows.multiple = {
       origin: 'manual',
@@ -738,5 +756,5 @@ export function buildImportPlan(
     }
   }
 
-  return { legs, missing, tooFewLegs, canSave, rows: builder.rows }
+  return { legs, missing, tooFewLegs, nothingToSave, canSave, rows: builder.rows }
 }

@@ -181,7 +181,10 @@ let router: Router
 async function render(path = '/multiplas') {
   router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/multiplas', name: 'multiples', component: MultiplesView }],
+    routes: [
+      { path: '/multiplas', name: 'multiples', component: MultiplesView },
+      { path: '/registo/importar', name: 'slip-import', component: { render: () => null } },
+    ],
   })
   await router.push(path)
   await router.isReady()
@@ -222,6 +225,13 @@ beforeEach(() => {
 })
 
 describe('MultiplesView', () => {
+  it('opens the slip import from the page, returning here', async () => {
+    const wrapper = await render()
+    const link = wrapper.find('[data-import-button]')
+    expect(link.text()).toBe('Importar aposta')
+    expect(link.attributes('href')).toBe('/registo/importar?origem=multiplas')
+  })
+
   it('starts empty and loads the pending predictions of the next 14 days', async () => {
     const queries = setup()
     const wrapper = await render()

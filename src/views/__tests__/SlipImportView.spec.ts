@@ -74,8 +74,9 @@ function setup(invoke: Mock<Invoke>) {
 const mounted: VueWrapper[] = []
 afterEach(() => mounted.splice(0).forEach((w) => w.unmount()))
 
-function render() {
+function render(props: { from?: 'predictions' | 'multiples' } = {}) {
   const wrapper = mount(SlipImportView, {
+    props,
     global: {
       plugins: [PrimeVue, ToastService],
       stubs: { RouterLink: RouterLinkStub },
@@ -151,5 +152,27 @@ describe('SlipImportView', () => {
     await cancel.trigger('click')
     expect(wrapper.find('[data-slip-confirm]').exists()).toBe(false)
     expect(wrapper.find('[data-drop-zone]').exists()).toBe(true)
+  })
+
+  it('goes back to Múltiplas, and to Guardadas after saving a multiple, when opened from there', async () => {
+    const read2: SlipRead = {
+      ...read,
+      kind: 'multiple',
+      legs: [read.legs[0]!, { ...read.legs[0]!, selection: 'under' }],
+    }
+    setup(vi.fn<Invoke>().mockResolvedValue({ data: read2, error: null }))
+    const wrapper = render({ from: 'multiples' })
+    const back = wrapper.findComponent(RouterLinkStub)
+    expect(back.props('to')).toEqual({ name: 'multiples' })
+    expect(back.text()).toBe('Múltiplas')
+
+    await choose(wrapper)
+    await flushPromises()
+    wrapper.findComponent({ name: 'SlipConfirm' }).vm.$emit('saved', {
+      predictions: 2,
+      multiple: true,
+      upgraded: false,
+    })
+    expect(mocked.push).toHaveBeenCalledWith({ name: 'multiples', query: { vista: 'guardadas' } })
   })
 })

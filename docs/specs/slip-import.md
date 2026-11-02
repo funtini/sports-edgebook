@@ -8,10 +8,11 @@ Phase 4. The owner uploads a screenshot or photo of a bet slip from a bookmaker 
    - Phone: a dashed tile "Importar de uma imagem" under Recentes.
    - Desktop: an "Importar aposta" button next to the "Novo prognóstico" title.
    - Both open `/registo/importar`.
+   - Also on Múltiplas: an "Importar aposta" button next to the title, on phone and desktop. It opens `/registo/importar?origem=multiplas`, and the import goes back to Múltiplas: "‹ Múltiplas", and after saving (Guardadas when a multiple was saved).
 2. **Enviar**: one image per import (PNG, JPEG or WebP; the camera on phone). The image is shrunk in the browser to at most 1600px on its long side and re-encoded as JPEG before upload.
 3. **A ler**: the image goes to the `read-slip` Edge Function (below). The screen shows the image and a progress state; on failure it says so and offers "Tentar outra vez" and "Escolher outra imagem".
 4. **Confirmar aposta**: the confirmation window (below). Nothing is written to the database before the owner presses the save button.
-5. **Saved**: back to Hoje with a toast ("3 prognósticos e a múltipla registados").
+5. **Saved**: back to Hoje (or Múltiplas, see Entry) with a toast ("3 prognósticos e a múltipla registados"; "3 prognósticos registados" when only the predictions were kept).
 
 The image is never stored, neither in Supabase Storage nor in the database. It lives only in the browser for the length of the import.
 
@@ -22,13 +23,14 @@ The image is never stored, neither in Supabase Storage nor in the database. It l
 - Limits: images over 5 MB are rejected; at most 30 reads per user per day (counted in the function), to cap cost.
 - **Model**: chosen by the owner in Definições ("Leitura de boletins", `user_settings.slip_model`). The function maps each choice to a Claude model in `config.ts`; the browser only sends the choice, never a model id, and any other value is rejected.
 
-  | Choice | Model | Effort | Rough cost per slip |
-  | --- | --- | --- | --- |
-  | `economy` (Económico, default) | Haiku 5.5 | low | ~0.1 cent |
-  | `balanced` (Equilibrado) | Sonnet 5.5 | low | ~2 cents |
-  | `best` (Máximo) | Opus 5.5 | medium | 5–10 cents |
+  | Choice                         | Model      | Effort | Rough cost per slip |
+  | ------------------------------ | ---------- | ------ | ------------------- |
+  | `economy` (Económico, default) | Haiku 5.5  | low    | ~0.1 cent           |
+  | `balanced` (Equilibrado)       | Sonnet 5.5 | low    | ~2 cents            |
+  | `best` (Máximo)                | Opus 5.5   | medium | 5–10 cents          |
 
   A request may name another choice for that one read (`model` in the body), for a "Ler com mais cuidado" retry. Sonnet and Opus use the API's server-side fallback on a refusal; Haiku has none.
+
 - **Usage**: each row in `slip_reads` keeps the Claude model id and the input and output tokens of the read, so the real cost can be checked. Only those two token columns can be updated; the read's time cannot.
   - A read is counted in `slip_reads` (only `user_id` and the time) before the model is called, so failed reads count too. The day is the UTC day.
   - The owner can read and insert `slip_reads` rows but not change or delete them.
@@ -132,11 +134,20 @@ One card per leg, in slip order:
   - "Tirar da múltipla" (or "Tirar da importação" on a single).
   - "Concluído" closes it.
 
+### Guardar como (multiple slips)
+
+The last card, under the prediction cards: a segmented control "Múltipla e prognósticos" (default) | "Só prognósticos", with a hint under it.
+
+- **Só prognósticos** is for a slip that is not the owner's (someone shared it): the multiple is not saved, and every leg is saved as a prediction on its own, as described under [Saving](#saving).
+- The Boletim card then hides the stake, the status, the odd total, the possible return, the punter tile and the multiple note, and says "Só os prognósticos: sem valor apostado e sem aposta real."
+- A leg that is already one of the owner's predictions writes nothing: "Já tens este prognóstico · não é registado outra vez". "Tirar da múltipla" reads "Tirar da importação".
+- The stake is not required, and one leg is enough. When every leg is already a prediction, nothing can be saved: "Já tens todos estes prognósticos."
+
 ### Footer
 
 - A line saying what is still missing ("Falta responder a 1 pergunta e escolher 2 confianças").
-- "Cancelar" and the save button: "Registar 3 prognósticos e a múltipla", or "Registar prognóstico" for a single.
-- Saving is disabled until every event question is answered, every leg has a confidence, every required field is filled, and the stake is above 0.
+- "Cancelar" and the save button: "Registar 3 prognósticos e a múltipla", "Registar 3 prognósticos" with Só prognósticos, or "Registar prognóstico" for a single.
+- Saving is disabled until every event question is answered, every leg has a confidence, every required field is filled, and the stake is above 0 (not needed with Só prognósticos).
 
 ## Saving
 
@@ -151,6 +162,7 @@ One card per leg, in slip order:
   - `probability` comes from the confidence anchors at save time, as in Registo.
   - On a single, `is_punter = true`, with `stake_units` and `bookmaker` from the slip.
   - In a multiple, legs are not punter and have no stake.
+  - With Só prognósticos, the same: not punter, no stake, no bookmaker; and no multiple is written.
   - `status` comes from the leg (pending when unknown). `settled_at` is set when the status is not pending.
 - **The multiple**:
   - `origin = 'manual'` and every leg's `origin = 'manual'`.

@@ -19,6 +19,14 @@ import { useSlipImportStore, type ImportSaved } from '@/stores/slipImport'
  * Importar aposta (docs/specs/slip-import.md, ui.md#importar): Enviar, A ler, then the
  * confirmation window. The image only lives in this screen, for the length of the import.
  */
+const props = withDefaults(
+  defineProps<{
+    /** Where the import was opened from, and goes back to. */
+    from?: 'predictions' | 'multiples'
+  }>(),
+  { from: 'predictions' },
+)
+
 const store = useSlipImportStore()
 const predictions = usePredictionsStore()
 const settings = useSettingsStore()
@@ -120,23 +128,32 @@ function cancel() {
 }
 
 function saved(result: ImportSaved) {
+  const n = result.predictions
   const summary = result.multiple
-    ? t('slipImport.saved.multiple', { n: result.predictions })
-    : t(result.upgraded ? 'slipImport.saved.upgrade' : 'slipImport.saved.single')
+    ? t('slipImport.saved.multiple', { n })
+    : result.upgraded
+      ? t('slipImport.saved.upgrade')
+      : read.value?.kind === 'multiple'
+        ? t('slipImport.saved.predictions', { n }, n)
+        : t('slipImport.saved.single')
   toast.add({ severity: 'success', summary, life: 3000 })
   reset()
-  void router.push({ name: 'today' })
+  if (props.from === 'multiples') {
+    void router.push({ name: 'multiples', query: result.multiple ? { vista: 'guardadas' } : {} })
+  } else {
+    void router.push({ name: 'today' })
+  }
 }
 </script>
 
 <template>
   <div class="mx-auto flex max-w-xl flex-col gap-4 lg:max-w-[760px]">
     <RouterLink
-      :to="{ name: 'predictions' }"
+      :to="{ name: from }"
       class="inline-flex min-h-11 items-center gap-1 self-start text-sm font-semibold text-eb-accent-text no-underline"
     >
       <AppIcon name="chevron-left" class="size-4" />
-      {{ t('slipImport.back') }}
+      {{ t(from === 'multiples' ? 'slipImport.backMultiples' : 'slipImport.back') }}
     </RouterLink>
     <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
       {{ t('slipImport.title') }}

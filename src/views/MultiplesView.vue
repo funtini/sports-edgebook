@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import AppIcon from '@/components/AppIcon.vue'
@@ -302,9 +302,19 @@ const panelButton = (active: boolean) =>
 <template>
   <div class="mx-auto flex max-w-xl flex-col gap-4 tabular-nums lg:max-w-[1200px]">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
-        {{ t('multiples.title') }}
-      </h1>
+      <div class="flex min-w-0 flex-1 items-center justify-between gap-3 sm:justify-start">
+        <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
+          {{ t('multiples.title') }}
+        </h1>
+        <RouterLink
+          :to="{ name: 'slip-import', query: { origem: 'multiplas' } }"
+          class="inline-flex min-h-11 items-center gap-2 rounded-xl border border-eb-border bg-eb-surface px-3.5 text-sm font-semibold text-eb-text no-underline hover:border-eb-accent"
+          data-import-button
+        >
+          <AppIcon name="image" class="size-4" />
+          {{ t('slipImport.entryButton') }}
+        </RouterLink>
+      </div>
       <SegmentedControl
         v-model="tab"
         :options="tabs"
