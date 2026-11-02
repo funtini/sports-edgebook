@@ -419,6 +419,7 @@ const en: Messages = {
       balancedHint: 'Sonnet · about 2 cents per slip',
       best: 'Best',
       bestHint: 'Opus · 5 to 10 cents per slip',
+      real: 'Actual: {cost} cents (USD) per slip, from the last read | Actual: {cost} cents (USD) per slip, average of the last {n} reads',
     },
     saved: 'Settings saved.',
     save: 'Save changes',

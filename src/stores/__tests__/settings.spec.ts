@@ -106,4 +106,23 @@ describe('settings store', () => {
     mocked.client = null
     await expect(useSettingsStore().load()).rejects.toThrow(/errors.supabaseNotConfigured/)
   })
+
+  it('averages the last priced reads of each choice, null with none', async () => {
+    const queries = setup((q) => {
+      const models = argsOf(q, 'in')?.[1] as string[]
+      if (models.includes('claude-sonnet-5-5')) {
+        return { data: [{ model: 'claude-sonnet-5-5', input_tokens: 2000, output_tokens: 1000 }] }
+      }
+      return { data: [] }
+    })
+    const costs = await useSettingsStore().recentSlipCosts()
+
+    expect(costs.economy).toBeNull()
+    expect(costs.best).toBeNull()
+    expect(costs.balanced?.reads).toBe(1)
+    expect(costs.balanced?.usd).toBeCloseTo(0.014)
+    expect(queries.map((q) => q.table)).toEqual(['slip_reads', 'slip_reads', 'slip_reads'])
+    expect(argsOf(queries[0]!, 'order')).toEqual(['created_at', { ascending: false }])
+    expect(argsOf(queries[0]!, 'limit')).toEqual([3])
+  })
 })

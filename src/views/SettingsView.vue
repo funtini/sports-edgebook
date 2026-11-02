@@ -18,6 +18,7 @@ import {
   formatMoney,
   type MoneyDisplay,
 } from '@/domain/money'
+import type { AverageCost } from '@/domain/slipCost'
 import { DEFAULT_SLIP_MODEL, SLIP_MODELS, type SlipModel } from '@/domain/slipRead'
 import { fairOdd } from '@/domain/value'
 import { userMessage } from '@/lib/errors'
@@ -34,6 +35,7 @@ const unitValue = ref<number | null>(DEFAULT_UNIT_VALUE)
 const bankroll = ref<number | null>(null)
 const moneyDisplay = ref<MoneyDisplay>(DEFAULT_MONEY_DISPLAY)
 const slipModel = ref<SlipModel>(DEFAULT_SLIP_MODEL)
+const slipCosts = ref<Partial<Record<SlipModel, AverageCost | null>>>({})
 const loading = ref(true)
 const saving = ref(false)
 const saved = ref(false)
@@ -47,8 +49,18 @@ const slipModelOptions = computed(() =>
     value,
     label: t(`settings.slipModel.${value}`),
     hint: t(`settings.slipModel.${value}Hint`),
+    real: realCost(slipCosts.value[value]),
   })),
 )
+/** `0.0007` US$ → "0,07" cents: two significant digits, so cheap reads still show a figure. */
+function realCost(cost: AverageCost | null | undefined): string | null {
+  if (!cost) return null
+  const cents = numberFormat(intlLocale.value, { maximumSignificantDigits: 2 }).format(
+    cost.usd * 100,
+  )
+  return t('settings.slipModel.real', { cost: cents, n: cost.reads }, cost.reads)
+}
+
 const localeOptions = computed(() =>
   LOCALES.map((value) => ({ value, label: t(`app.language.${value}`) })),
 )
@@ -112,6 +124,13 @@ watch(
 )
 
 onMounted(async () => {
+  // Real costs are extra information: without them each option keeps its estimate.
+  store
+    .recentSlipCosts()
+    .then((costs) => {
+      slipCosts.value = costs
+    })
+    .catch(() => {})
   try {
     const row = await store.ensureLoaded()
     unitValue.value = row.unit_value
@@ -249,6 +268,12 @@ async function save() {
             >
               <span class="text-[15px] font-semibold">{{ option.label }}</span>
               <span class="text-[13px] text-eb-muted">{{ option.hint }}</span>
+              <span
+                v-if="option.real"
+                class="text-[13px] text-eb-muted tabular-nums"
+                data-slot="slip-model-real"
+                >{{ option.real }}</span
+              >
             </button>
           </div>
           <p class="m-0 text-sm text-eb-muted">{{ t('settings.slipModel.help') }}</p>

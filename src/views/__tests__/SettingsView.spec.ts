@@ -27,9 +27,13 @@ const settingsRow = {
 }
 
 /** A backend that stores the settings row and echoes each update. */
-function setup(): Query[] {
+function setup(reads: unknown[] = []): Query[] {
   let row = { ...settingsRow }
   const fake = fakeSupabase((q) => {
+    if (q.table === 'slip_reads') {
+      const models = argsOf(q, 'in')?.[1] as string[]
+      return { data: reads.filter((r) => models.includes((r as { model: string }).model)) }
+    }
     const patch = argsOf(q, 'update')?.[0] as Partial<typeof settingsRow> | undefined
     if (patch) row = { ...row, ...patch }
     return { data: row }
@@ -97,6 +101,25 @@ describe('SettingsView', () => {
     const update = queries.find((q) => q.table === 'user_settings' && has(q, 'update'))
     expect(argsOf(update!, 'update')?.[0]).toMatchObject({ slip_model: 'balanced' })
     expect(submit(wrapper).text()).toBe('Sem alterações')
+  })
+
+  it('shows the real cost of recent reads under the options that have them', async () => {
+    setup([
+      { model: 'claude-sonnet-5-5', input_tokens: 2000, output_tokens: 1000 },
+      { model: 'claude-sonnet-5-5', input_tokens: 4000, output_tokens: 1000 },
+      { model: 'claude-opus-5-5', input_tokens: 5000, output_tokens: 2000 },
+    ])
+    const wrapper = await render()
+
+    const options = wrapper.findAll('[data-slot="slip-model"] button')
+    expect(options[0]!.find('[data-slot="slip-model-real"]').exists()).toBe(false)
+    expect(options[0]!.text()).toContain('cerca de 0,1 cêntimo')
+    expect(options[1]!.get('[data-slot="slip-model-real"]').text()).toBe(
+      'Real: 1,6 cêntimos (USD) por boletim, média das últimas 2 leituras',
+    )
+    expect(options[2]!.get('[data-slot="slip-model-real"]').text()).toBe(
+      'Real: 6 cêntimos (USD) por boletim, média da última leitura',
+    )
   })
 
   it('switches language and theme at once, shared with the header toggles', async () => {

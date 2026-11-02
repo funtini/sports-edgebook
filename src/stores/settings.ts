@@ -3,6 +3,13 @@ import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
 import { DEFAULT_ODDS_BANDS } from '@/domain/metrics'
 import { DEFAULT_MONEY_DISPLAY, DEFAULT_UNIT_VALUE, type MoneyDisplay } from '@/domain/money'
+import {
+  averageRecentCost,
+  modelsForChoice,
+  RECENT_READS,
+  type AverageCost,
+  type ReadUsage,
+} from '@/domain/slipCost'
 import { DEFAULT_SLIP_MODEL, SLIP_MODELS, type SlipModel } from '@/domain/slipRead'
 import {
   confidenceAnchorsSchema,
@@ -74,6 +81,30 @@ export const useSettingsStore = defineStore('settings', () => {
     return row
   }
 
+  /**
+   * Average real cost of the last reads with each choice's model, from the tokens in `slip_reads`;
+   * null for a choice with no priced read yet.
+   */
+  async function recentSlipCosts(): Promise<Record<SlipModel, AverageCost | null>> {
+    const db = requireSupabase()
+    const entries = await Promise.all(
+      SLIP_MODELS.map(async (choice) => {
+        const reads = unwrap<ReadUsage[]>(
+          await db
+            .from('slip_reads')
+            .select('model, input_tokens, output_tokens')
+            .in('model', modelsForChoice(choice))
+            .not('input_tokens', 'is', null)
+            .not('output_tokens', 'is', null)
+            .order('created_at', { ascending: false })
+            .limit(RECENT_READS),
+        )
+        return [choice, averageRecentCost(reads ?? [])] as const
+      }),
+    )
+    return Object.fromEntries(entries) as Record<SlipModel, AverageCost | null>
+  }
+
   return {
     settings,
     unitValue,
@@ -84,5 +115,6 @@ export const useSettingsStore = defineStore('settings', () => {
     load,
     ensureLoaded,
     update,
+    recentSlipCosts,
   }
 })
