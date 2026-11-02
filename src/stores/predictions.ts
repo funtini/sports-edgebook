@@ -2,7 +2,13 @@ import { defineStore } from 'pinia'
 import { probabilityFor, type ConfidenceLevel } from '@/domain/confidence'
 import { addDays, startOfDay } from '@/domain/days'
 import { recentEvents, type RecentEvent } from '@/domain/eventSource'
-import { predictionCreateSchema, type PredictionCreate } from '@/domain/schemas'
+import { editedProbability } from '@/domain/predictionEdit'
+import {
+  predictionCreateSchema,
+  predictionUpdateSchema,
+  type PredictionCreate,
+  type PredictionUpdate,
+} from '@/domain/schemas'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
 import { EVENT_SELECT, PREDICTION_SELECT, requireSupabase, unwrap } from './client'
 import { useSettingsStore } from './settings'
@@ -32,6 +38,36 @@ export const usePredictionsStore = defineStore('predictions', () => {
       await requireSupabase()
         .from('predictions')
         .insert({ ...prediction, probability })
+        .select(PREDICTION_SELECT)
+        .single(),
+    )
+  }
+
+  /**
+   * Saves the editable fields of a logged prediction (`predictionUpdateSchema`). The stored
+   * probability stays unless the confidence level changes (`editedProbability`). Status, the pick
+   * and the event are left as they are.
+   */
+  async function update(
+    stored: Pick<PredictionWithRelations, 'id' | 'confidence' | 'probability'>,
+    input: PredictionUpdate,
+  ): Promise<PredictionWithRelations> {
+    const fields = predictionUpdateSchema.parse(input)
+    let probability = stored.probability
+    if (fields.confidence !== stored.confidence) {
+      const settings = useSettingsStore()
+      await settings.ensureLoaded()
+      probability = editedProbability(
+        stored,
+        fields.confidence as ConfidenceLevel,
+        settings.confidenceAnchors,
+      )
+    }
+    return unwrap<PredictionWithRelations>(
+      await requireSupabase()
+        .from('predictions')
+        .update({ ...fields, probability })
+        .eq('id', stored.id)
         .select(PREDICTION_SELECT)
         .single(),
     )
@@ -150,6 +186,7 @@ export const usePredictionsStore = defineStore('predictions', () => {
     listBookmakers,
     listRecentEvents,
     settle,
+    update,
     remove,
   }
 })

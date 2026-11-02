@@ -96,6 +96,25 @@ export const predictionCreateSchema = predictionFields
 export type PredictionCreate = z.input<typeof predictionCreateSchema>
 export type PredictionCreateParsed = z.output<typeof predictionCreateSchema>
 
+/**
+ * The fields of a logged prediction that can be edited from a prediction row (Hoje, Evento); the
+ * pick and the event stay as logged.
+ */
+export const predictionUpdateSchema = predictionFields
+  .pick({
+    odd: true,
+    confidence: true,
+    is_live: true,
+    is_punter: true,
+    stake_units: true,
+    bookmaker: true,
+    notes: true,
+  })
+  .refine(punterHasStake, punterStakeIssue)
+
+export type PredictionUpdate = z.input<typeof predictionUpdateSchema>
+export type PredictionUpdateParsed = z.output<typeof predictionUpdateSchema>
+
 export const eventCreateSchema = z
   .object({
     kickoff_at: z.iso.datetime({ offset: true, message: 'validation.kickoffInvalid' }),

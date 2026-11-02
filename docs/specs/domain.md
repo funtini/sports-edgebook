@@ -24,6 +24,15 @@ Logging target: under 20 seconds per prediction on a phone. Autocomplete leagues
 
 Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home and away must differ, ignoring case and extra spaces). Database and network errors show a generic message. Saving shows "Prognóstico guardado" and clears the form except the event, marked "Mesmo evento", so the next market for the same game is one tap away; "Outro evento" clears it.
 
+### Editing a prediction
+
+From a prediction row on Hoje or Evento (see [ui.md](ui.md#edit-a-prediction)) the owner can change the **odd**, **confidence**, **Pré-jogo / Live**, **punter** flag, **stake**, **bookmaker** and **notes** of a logged prediction, whatever its status (`predictionUpdateSchema`, `src/domain/predictionEdit.ts`, `update` in `src/stores/predictions.ts`).
+
+- The pick (market, type, period, selection, line) and the event stay as logged; a different pick is a new prediction.
+- Same validation as logging: odd above 1, a punter bet needs a stake; turning punter off clears stake and bookmaker; blank notes are saved as null.
+- **Probability**: kept as stored while the confidence level stays the same, so editing never recomputes a row from current anchors. A new level takes its probability from the current anchors, as logging it again would (`editedProbability`).
+- Status and `settled_at` are untouched, so a settled row's profit follows the new odd and stake at once. Saved multiples keep each leg's `odd_at_selection`.
+
 ## Markets
 
 What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`), stored as codes in `predictions.market`, `bet_type`, `period`, `selection` and `line` and shown through `catalogue.*` messages. Only the selection of type **Outro** is free text.
@@ -61,7 +70,7 @@ What a prediction bets on comes from a fixed catalogue (`src/domain/markets.ts`)
 | 4     | Alta       | 75%         | 1.33     |
 | 5     | Muito alta | 85%         | 1.18     |
 
-Anchors are per-user settings (`user_settings.confidence_anchors`). Each prediction stores the probability in force when it was logged. After ~100 settled predictions per level, the app shows the real hit rate per level and suggests recalibrating. Code: `src/domain/confidence.ts`.
+Anchors are per-user settings (`user_settings.confidence_anchors`). Each prediction stores the probability in force when it was logged (or when its level was last changed, see [Editing a prediction](#editing-a-prediction)). After ~100 settled predictions per level, the app shows the real hit rate per level and suggests recalibrating. Code: `src/domain/confidence.ts`.
 
 ## Value index
 

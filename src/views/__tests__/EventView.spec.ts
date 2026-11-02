@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, RouterLinkStub, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
+import ToastService from 'primevue/toastservice'
 import { argsOf, fakeSupabase, has, type Responder } from '@/stores/__tests__/fakeSupabase'
 import EventView from '../EventView.vue'
 
@@ -90,7 +91,7 @@ function setup(respond: Responder) {
 async function render(id = EVENT_ID) {
   const wrapper = mount(EventView, {
     props: { id },
-    global: { plugins: [PrimeVue], stubs: { RouterLink: RouterLinkStub } },
+    global: { plugins: [PrimeVue, ToastService], stubs: { RouterLink: RouterLinkStub } },
   })
   await flushPromises()
   return wrapper
@@ -114,6 +115,24 @@ describe('EventView', () => {
     expect(wrapper.get('h2').text()).toBe('Prognósticos')
     expect(wrapper.text()).toContain('Odd 2,00')
     expect(wrapper.text()).toContain('Análise do jogo')
+  })
+
+  it('edits a prediction from its row and shows the saved row', async () => {
+    const queries = setup(backend())
+    const wrapper = await render()
+
+    await wrapper.get('button[data-edit]').trigger('click')
+    expect(wrapper.find('[data-prediction-edit]').exists()).toBe(true)
+    await wrapper.get('#edit-odd').setValue('2,4')
+    await wrapper.get('#stake').setValue('3')
+    await wrapper.get('[data-prediction-edit] form').trigger('submit')
+    await flushPromises()
+
+    const update = queries.find((q) => q.table === 'predictions' && has(q, 'update'))!
+    expect(argsOf(update, 'update')?.[0]).toMatchObject({ odd: 2.4, stake_units: 3 })
+    expect(wrapper.find('[data-prediction-edit]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Odd 2,40')
+    expect(wrapper.get('[data-box="stake"]').text()).toBe('Apostado3,00')
   })
 
   it('says the game was not found for an unknown or malformed id', async () => {

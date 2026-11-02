@@ -53,6 +53,18 @@ describe('PredictionRow', () => {
     expect(wrapper.emitted('settle')).toEqual([['pending']])
   })
 
+  it('opens the editor from the bet summary only when editable', async () => {
+    expect(mountRow('pending').find('[data-edit]').exists()).toBe(false)
+    const wrapper = mount(PredictionRow, {
+      props: { prediction: prediction(), unitValue: 10, moneyDisplay: 'units', editable: true },
+    })
+    const edit = wrapper.get('button[data-edit]')
+    expect(edit.text()).toContain('Editar prognóstico')
+    await edit.trigger('click')
+    expect(wrapper.emitted('edit')).toEqual([[]])
+    expect(wrapper.emitted('settle')).toBeUndefined()
+  })
+
   it('shows the stake and the real profit of a punter bet', () => {
     const won = mountRow('won')
     expect(box(won, 'stake').text()).toBe('Apostado2,00')

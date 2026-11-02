@@ -7,6 +7,7 @@ import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import AppIcon from '@/components/AppIcon.vue'
 import ChipGroup from '@/components/ChipGroup.vue'
+import ConfidencePicker from '@/components/ConfidencePicker.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import NotesField from '@/components/NotesField.vue'
 import PunterFields from '@/components/PunterFields.vue'
@@ -14,7 +15,7 @@ import SegmentedControl from '@/components/SegmentedControl.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
 import { useLocale } from '@/composables/useLocale'
 import { DESKTOP_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
-import { CONFIDENCE_LEVELS, probabilityFor } from '@/domain/confidence'
+import { probabilityFor } from '@/domain/confidence'
 import { parseDecimal, toggleSign } from '@/domain/decimal'
 import { formatPercent, numberFormat } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
@@ -491,26 +492,7 @@ onMounted(async () => {
               <span>{{ t('logging.confidence') }}</span>
               <span v-if="probabilityLabel" class="tabular-nums">{{ probabilityLabel }}</span>
             </legend>
-            <div class="grid grid-cols-5 gap-2">
-              <button
-                v-for="level in CONFIDENCE_LEVELS"
-                :key="level"
-                type="button"
-                class="flex min-h-16 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-[1.5px] px-0.5 py-1 transition-colors"
-                :class="
-                  draft.confidence === level
-                    ? 'border-eb-accent bg-eb-accent text-eb-on-accent'
-                    : 'border-eb-border bg-eb-surface text-eb-text hover:bg-eb-surface-2'
-                "
-                :aria-pressed="draft.confidence === level"
-                @click="draft.confidence = level"
-              >
-                <span class="text-xl leading-none font-bold">{{ level }}</span>
-                <span class="text-center text-[11px] leading-tight font-semibold">
-                  {{ t(`confidence.${level}`) }}
-                </span>
-              </button>
-            </div>
+            <ConfidencePicker v-model="draft.confidence" />
             <small v-if="errors.confidence" class="text-eb-neg">{{
               message(errors.confidence)
             }}</small>

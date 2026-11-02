@@ -54,11 +54,23 @@ Shared by Hoje and Evento (`src/components/PredictionRow.vue`). Top to bottom:
 
 Amounts follow the money display setting (units or euros, see [domain.md](domain.md#units-and-money)).
 
+On Hoje and Evento the rows are `editable`: the bet's summary (item 1, left) is a button (≥ 44px tall, `surface-2` on hover, a small pencil icon after the market line, accessible name ending "Editar prognóstico") that opens [Editar prognóstico](#edit-a-prediction).
+
 With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` its own width (container query) picks the grid:
 
 - **≥ 880px** (Hoje): the one-line grid of Hoje desktop (columns `1fr · 76px · 176px · 120px · 120px · 204px`, the outcome buttons 3 × ≥ 64px wide, 44px tall).
 - **680–879px** (Evento's right column): the same line with the confidence badge and value pill under the selection (columns `1fr · 64px · 104px · 112px · 204px`).
 - **< 680px**: the stacked layout.
+
+### Edit a prediction
+
+`src/components/PredictionEditDialog.vue`, opened from an editable prediction row. Rules: [domain.md](domain.md#editing-a-prediction).
+
+- **Phone**: a bottom sheet over a scrim (max 92% of the height, rounded top, the form scrolls). **From 640px**: a centred modal, max 560px wide.
+- **Header**: "Editar prognóstico", the game ("Casa – Fora", muted) and the bet's summary (Mercado - Tipo - Período - Seleção), read-only; a 44px close button.
+- **Form**, the logging form's pieces in its order: Pré-jogo / Live switch, Odd, Confiança (the five buttons, probability · odd justa beside the title), the Índice de valor card, the punter card (Valor apostado, Casa de apostas) and Notas (open when the row has notes).
+- **Footer** (sticky): "Cancelar" and "Guardar alterações"; errors inline per field, a save failure as a message above the buttons. Saving closes it, shows a "Prognóstico atualizado" toast and puts the saved row in the list. Escape, the scrim and the close button cancel, except while saving.
+- On Hoje the `N` shortcut is off while it is open.
 
 ## Screens
 
