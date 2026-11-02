@@ -17,9 +17,19 @@ The image is never stored, neither in Supabase Storage nor in the database. It l
 
 ## Reading: `read-slip` Edge Function
 
-- A Supabase Edge Function at `supabase/functions/read-slip/`. It calls the Claude API (a vision-capable model, chosen in the function's config) with the image and returns structured JSON. The function and the stores are the only places that leave the browser.
+- A Supabase Edge Function at `supabase/functions/read-slip/`. It calls the Claude API with the image and returns structured JSON. The function and the stores are the only places that leave the browser.
 - **The Anthropic API key lives only in Supabase secrets** (`ANTHROPIC_API_KEY`, set with `supabase secrets set`). It never appears in the repo, in `.env`, or in the frontend bundle. The frontend calls the function with the user's session (`supabase.functions.invoke`), and the function rejects calls without a valid JWT.
 - Limits: images over 5 MB are rejected; at most 30 reads per user per day (counted in the function), to cap cost.
+- **Model**: chosen by the owner in Definições ("Leitura de boletins", `user_settings.slip_model`). The function maps each choice to a Claude model in `config.ts`; the browser only sends the choice, never a model id, and any other value is rejected.
+
+  | Choice | Model | Effort | Rough cost per slip |
+  | --- | --- | --- | --- |
+  | `economy` (Económico, default) | Haiku 5.5 | low | ~0.1 cent |
+  | `balanced` (Equilibrado) | Sonnet 5.5 | low | ~2 cents |
+  | `best` (Máximo) | Opus 5.5 | medium | 5–10 cents |
+
+  A request may name another choice for that one read (`model` in the body), for a "Ler com mais cuidado" retry. Sonnet and Opus use the API's server-side fallback on a refusal; Haiku has none.
+- **Usage**: each row in `slip_reads` keeps the Claude model id and the input and output tokens of the read, so the real cost can be checked. Only those two token columns can be updated; the read's time cannot.
   - A read is counted in `slip_reads` (only `user_id` and the time) before the model is called, so failed reads count too. The day is the UTC day.
   - The owner can read and insert `slip_reads` rows but not change or delete them.
 - Deploying the function is a manual step for the owner (`supabase functions deploy read-slip --use-api`, because it imports `src/domain/`); CI only type-checks and tests it. Setup steps: `supabase/functions/read-slip/README.md`.

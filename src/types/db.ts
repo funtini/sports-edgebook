@@ -7,6 +7,7 @@
 import type { GeneratorMode } from '@/domain/generator'
 import type { BetType, Market, MatchPeriod } from '@/domain/markets'
 import type { MoneyDisplay } from '@/domain/money'
+import type { SlipModel } from '@/domain/slipRead'
 import type { LegOrigin, MultipleOrigin } from '@/domain/multipleDraft'
 import type { BetStatus } from '@/domain/settlement'
 
@@ -129,6 +130,7 @@ export interface UserSettingsRow {
   confidence_anchors: Record<string, number>
   odds_bands: number[]
   money_display: MoneyDisplay
+  slip_model: SlipModel
 }
 
 /** Columns the database fills in: `id`, `user_id` (auth.uid()) and `created_at`. */

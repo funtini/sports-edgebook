@@ -3,6 +3,7 @@ import { DAILY_SLIP_READ_LIMIT, MAX_SLIP_IMAGE_BYTES } from '../../../../src/dom
 import {
   dayIn,
   handleReadSlip,
+  knownSlipModel,
   knownTimeZone,
   startOfUtcDay,
   type ReadSlipDeps,
@@ -15,11 +16,17 @@ const IMAGE = btoa('not really a jpeg')
 function deps(overrides: Partial<ReadSlipDeps> = {}): ReadSlipDeps {
   return {
     countReadsSince: vi.fn<ReadSlipDeps['countReadsSince']>(async () => 0),
-    recordRead: vi.fn<ReadSlipDeps['recordRead']>(async () => {}),
-    readImage: vi.fn<ReadSlipDeps['readImage']>(async () => SINGLE),
+    settingsModel: vi.fn<ReadSlipDeps['settingsModel']>(async () => 'balanced'),
+    recordRead: vi.fn<ReadSlipDeps['recordRead']>(async () => 7),
+    recordUsage: vi.fn<ReadSlipDeps['recordUsage']>(async () => {}),
+    readImage: vi.fn<ReadSlipDeps['readImage']>(async () => answer(SINGLE)),
     now: () => NOW,
     ...overrides,
   }
+}
+
+function answer(text: string | null) {
+  return { text, inputTokens: 3200, outputTokens: 900 }
 }
 
 function post(body: unknown): Request {
@@ -39,13 +46,44 @@ describe('handleReadSlip', () => {
     expect(res.status).toBe(200)
     expect((await res.json()).legs[0].selection).toBe('yes')
     expect(d.countReadsSince).toHaveBeenCalledWith(new Date('2026-10-31T00:00:00Z'))
-    expect(d.recordRead).toHaveBeenCalledOnce()
+    expect(d.recordRead).toHaveBeenCalledWith('balanced')
     expect(d.readImage).toHaveBeenCalledWith({
       image: IMAGE,
       mediaType: 'image/jpeg',
       today: '2026-10-31',
       timeZone: 'Europe/Lisbon',
+      model: 'balanced',
     })
+    expect(d.recordUsage).toHaveBeenCalledWith(7, answer(SINGLE))
+  })
+
+  it('reads with the model in the request over the one in Definições', async () => {
+    const d = deps()
+    await handleReadSlip(post({ ...valid, model: 'best' }), d)
+    expect(d.readImage).toHaveBeenCalledWith(expect.objectContaining({ model: 'best' }))
+    expect(d.recordRead).toHaveBeenCalledWith('best')
+  })
+
+  it('rejects a model outside the list', async () => {
+    const d = deps()
+    const res = await handleReadSlip(post({ ...valid, model: 'claude-fable-5-1' }), d)
+    expect(res.status).toBe(400)
+    expect(d.readImage).not.toHaveBeenCalled()
+  })
+
+  it('uses the economy model when Definições has none or an unknown one', async () => {
+    for (const stored of [null, 'turbo']) {
+      const d = deps({ settingsModel: async () => stored })
+      await handleReadSlip(post(valid), d)
+      expect(d.readImage).toHaveBeenCalledWith(expect.objectContaining({ model: 'economy' }))
+    }
+  })
+
+  it('still answers when the usage cannot be stored', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const d = deps({ recordUsage: () => Promise.reject(new Error('rls')) })
+    expect((await handleReadSlip(post(valid), d)).status).toBe(200)
+    log.mockRestore()
   })
 
   it('rejects a body that is not a JPEG read request', async () => {
@@ -83,7 +121,7 @@ describe('handleReadSlip', () => {
 
   it('treats output that fails validation as a failed read', async () => {
     for (const text of [null, 'Sorry, I cannot read this slip.', '{"kind":"single","legs":[]}']) {
-      const res = await handleReadSlip(post(valid), deps({ readImage: async () => text }))
+      const res = await handleReadSlip(post(valid), deps({ readImage: async () => answer(text) }))
       expect(res.status).toBe(502)
       expect(await res.json()).toEqual({ error: 'read_failed' })
     }
@@ -99,7 +137,7 @@ describe('handleReadSlip', () => {
 
   it('never logs the image or the read', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
-    await handleReadSlip(post(valid), deps({ readImage: async () => 'garbage' }))
+    await handleReadSlip(post(valid), deps({ readImage: async () => answer('garbage') }))
     expect(log.mock.calls.flat().join(' ')).toBe('read-slip: read_failed')
     log.mockRestore()
   })
@@ -108,6 +146,11 @@ describe('handleReadSlip', () => {
 describe('dates', () => {
   it('starts the daily limit at midnight UTC', () => {
     expect(startOfUtcDay(NOW).toISOString()).toBe('2026-10-31T00:00:00.000Z')
+  })
+
+  it('keeps only known slip models', () => {
+    expect(knownSlipModel('best')).toBe('best')
+    expect(knownSlipModel('opus')).toBe('economy')
   })
 
   it('gives today in the owner time zone, falling back to UTC', () => {

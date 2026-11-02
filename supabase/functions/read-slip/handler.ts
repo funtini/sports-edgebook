@@ -5,6 +5,9 @@ import {
   MAX_SLIP_IMAGE_BYTES,
   parseSlipRead,
   slipReadRequestSchema,
+  DEFAULT_SLIP_MODEL,
+  SLIP_MODELS,
+  type SlipModel,
   type SlipReadError,
 } from '../../../src/domain/slipRead.ts'
 
@@ -16,16 +19,29 @@ export interface SlipImage {
   /** YYYY-MM-DD in `timeZone`. */
   today: string
   timeZone: string
+  model: SlipModel
+}
+
+/** The model's answer and what it cost. */
+export interface ModelAnswer {
+  /** The JSON text; null when it gave none (refused or cut off). */
+  text: string | null
+  inputTokens: number
+  outputTokens: number
 }
 
 /** Outside effects, injected so the handler can be tested without Supabase or the Claude API. */
 export interface ReadSlipDeps {
   /** Reads this user started at or after `since`. */
   countReadsSince(since: Date): Promise<number>
-  /** Counts one read for this user, before the model is called. */
-  recordRead(): Promise<void>
-  /** The model's text answer; null when it gave none (refused or cut off). Throws on API errors. */
-  readImage(input: SlipImage): Promise<string | null>
+  /** The model chosen in Definições (`user_settings.slip_model`); null when there is no row. */
+  settingsModel(): Promise<string | null>
+  /** Counts one read for this user, before the model is called; returns the read's id. */
+  recordRead(model: SlipModel): Promise<number>
+  /** Stores the tokens a read used, so its cost can be checked later. */
+  recordUsage(readId: number, answer: ModelAnswer): Promise<void>
+  /** Calls the model. Throws on API errors. */
+  readImage(input: SlipImage): Promise<ModelAnswer>
   now(): Date
 }
 
@@ -52,6 +68,13 @@ export function knownTimeZone(timeZone: string | undefined): string {
   } catch {
     return 'UTC'
   }
+}
+
+/** The stored choice if it is one of `SLIP_MODELS`, otherwise the default. */
+export function knownSlipModel(value: string | null): SlipModel {
+  return (SLIP_MODELS as readonly string[]).includes(value ?? '')
+    ? (value as SlipModel)
+    : DEFAULT_SLIP_MODEL
 }
 
 /** YYYY-MM-DD of `now` in `timeZone`. */
@@ -86,24 +109,35 @@ export async function handleReadSlip(req: Request, deps: ReadSlipDeps): Promise<
   if (base64Bytes(image) > MAX_SLIP_IMAGE_BYTES) return fail('image_too_large', 413)
 
   const now = deps.now()
+  let model: SlipModel
+  let readId: number
   try {
     if ((await deps.countReadsSince(startOfUtcDay(now))) >= DAILY_SLIP_READ_LIMIT) {
       return fail('daily_limit', 429)
     }
-    await deps.recordRead()
+    model = request.data.model ?? knownSlipModel(await deps.settingsModel())
+    readId = await deps.recordRead(model)
   } catch {
     return fail('unavailable', 503)
   }
 
   const timeZone = knownTimeZone(request.data.timeZone)
-  let text: string | null
+  let answer: ModelAnswer
   try {
-    text = await deps.readImage({ image, mediaType, today: dayIn(now, timeZone), timeZone })
+    answer = await deps.readImage({
+      image,
+      mediaType,
+      today: dayIn(now, timeZone),
+      timeZone,
+      model,
+    })
   } catch {
     return fail('unavailable', 503)
   }
+  // The read already succeeded or failed on its own; a missed usage row must not change that.
+  await deps.recordUsage(readId, answer).catch(() => console.error('read-slip: usage_not_recorded'))
 
-  const slip = text == null ? null : parseSlipRead(text)
+  const slip = answer.text == null ? null : parseSlipRead(answer.text)
   if (!slip) return fail('read_failed', 502)
   return Response.json(slip)
 }
