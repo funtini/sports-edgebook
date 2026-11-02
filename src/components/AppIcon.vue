@@ -24,6 +24,8 @@ export type IconName =
   | 'search'
   | 'copy'
   | 'trash'
+  | 'image'
+  | 'camera'
 
 defineProps<{ name: IconName }>()
 
@@ -67,6 +69,15 @@ const PATHS: Record<IconName, string[]> = {
   copy: [
     'M9 11a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2z',
     'M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1',
+  ],
+  image: [
+    'M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+    'M10 9.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z',
+    'M21 15l-5-5L5 21',
+  ],
+  camera: [
+    'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z',
+    'M16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
   ],
   trash: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6'],
 }

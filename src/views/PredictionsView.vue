@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
@@ -265,9 +266,21 @@ onMounted(async () => {
 
 <template>
   <div class="mx-auto flex max-w-xl flex-col gap-4 lg:max-w-[1100px] lg:gap-[18px]">
-    <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
-      {{ t('logging.title') }}
-    </h1>
+    <div class="flex items-center justify-between gap-3">
+      <h1 class="m-0 text-[22px] font-bold tracking-tight lg:text-[26px]">
+        {{ t('logging.title') }}
+      </h1>
+      <!-- Desktop entry to the slip import, in the search state. -->
+      <RouterLink
+        v-if="!hasEvent"
+        :to="{ name: 'slip-import' }"
+        class="hidden min-h-11 items-center gap-2 rounded-xl border border-eb-border bg-eb-surface px-4 text-sm font-semibold text-eb-text no-underline hover:border-eb-accent lg:inline-flex"
+        data-import-button
+      >
+        <AppIcon name="image" class="size-4" />
+        {{ t('slipImport.entryButton') }}
+      </RouterLink>
+    </div>
 
     <!--
       Phone: one column. Desktop: a card with the event and the prediction on the left, and the
@@ -293,6 +306,20 @@ onMounted(async () => {
             :recent="recent"
           />
         </fieldset>
+
+        <!-- Phone entry to the slip import, under Recentes. -->
+        <RouterLink
+          v-if="!hasEvent"
+          :to="{ name: 'slip-import' }"
+          class="flex min-h-16 items-center gap-3 rounded-2xl border-2 border-dashed border-eb-border px-4 py-3 text-eb-text no-underline hover:border-eb-accent lg:hidden"
+          data-import-tile
+        >
+          <AppIcon name="image" class="size-6 shrink-0 text-eb-muted" />
+          <span class="flex flex-col">
+            <span class="text-[15px] font-bold">{{ t('slipImport.entryTile') }}</span>
+            <span class="text-[13px] text-eb-muted">{{ t('slipImport.entryTileHint') }}</span>
+          </span>
+        </RouterLink>
 
         <!-- The rest of the form appears once an event is picked or being created. -->
         <template v-if="hasEvent">

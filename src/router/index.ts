@@ -15,6 +15,11 @@ const router = createRouter({
       }),
     },
     {
+      path: '/registo/importar',
+      name: 'slip-import',
+      component: () => import('@/views/SlipImportView.vue'),
+    },
+    {
       path: '/eventos/:id',
       name: 'event',
       component: () => import('@/views/EventView.vue'),
