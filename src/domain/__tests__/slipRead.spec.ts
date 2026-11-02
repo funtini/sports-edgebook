@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   base64Bytes,
+  checkLeg,
+  fixEventNameMarket,
   flagCatalogueIssues,
   parseSlipRead,
   slipReadJsonSchema,
@@ -152,5 +154,98 @@ describe('base64Bytes', () => {
     expect(base64Bytes(btoa('ab'))).toBe(2)
     expect(base64Bytes(btoa('abc'))).toBe(3)
     expect(base64Bytes(btoa('abcd'))).toBe(4)
+  })
+})
+
+describe('fixEventNameMarket', () => {
+  // The slip from the report: "Cantos Marítimo - Cantos Santa Clara 1.ª parte", "Total 2 acima de (1.5)".
+  const cantos: SlipLeg = {
+    ...leg,
+    rawText:
+      'Cantos Marítimo - Cantos Santa Clara 1.ª parte · Total 2: Total individual 2 acima de (1.5)',
+    homeTeam: 'Cantos Marítimo',
+    awayTeam: 'Cantos Santa Clara 1.ª parte',
+    market: 'goals',
+    betType: 'team_total',
+    period: 'FT',
+    selection: 'away_over',
+    line: 1.5,
+  }
+
+  it('takes the market words off the teams and sets corners and the first half', () => {
+    expect(fixEventNameMarket(cantos)).toMatchObject({
+      homeTeam: 'Marítimo',
+      awayTeam: 'Santa Clara',
+      market: 'corners',
+      period: 'HT',
+      unsure: ['market', 'period'],
+    })
+  })
+
+  it('sets the market from the slip’s words when the model already cleaned the names', () => {
+    const cleaned = {
+      ...cantos,
+      homeTeam: 'Marítimo',
+      awayTeam: 'Santa Clara',
+      period: 'HT' as const,
+    }
+    expect(fixEventNameMarket(cleaned)).toMatchObject({
+      homeTeam: 'Marítimo',
+      awayTeam: 'Santa Clara',
+      market: 'corners',
+      unsure: ['market'],
+    })
+  })
+
+  it('knows cards and yellow cards in English and Portuguese, and the second half', () => {
+    expect(
+      fixEventNameMarket({
+        ...leg,
+        homeTeam: 'Cartões amarelos Benfica',
+        awayTeam: 'Cartões amarelos Porto 2.ª parte',
+      }),
+    ).toMatchObject({
+      homeTeam: 'Benfica',
+      awayTeam: 'Porto',
+      market: 'yellow_cards',
+      period: '2P',
+    })
+    expect(
+      fixEventNameMarket({
+        ...leg,
+        homeTeam: 'Corners Chelsea',
+        awayTeam: 'Corners Manchester United 1st half',
+      }),
+    ).toMatchObject({
+      homeTeam: 'Chelsea',
+      awayTeam: 'Manchester United',
+      market: 'corners',
+      period: 'HT',
+    })
+  })
+
+  it('flags a type the new market does not have', () => {
+    const btts = { ...cantos, betType: 'btts' as const, selection: 'yes', line: null }
+    expect(fixEventNameMarket(btts).unsure).toContain('betType')
+  })
+
+  it('leaves an ordinary leg as it is', () => {
+    expect(fixEventNameMarket(leg)).toEqual(leg)
+    expect(
+      fixEventNameMarket({ ...leg, homeTeam: 'Sporting CP', awayTeam: 'Rio Ave' }),
+    ).toMatchObject({
+      homeTeam: 'Sporting CP',
+      awayTeam: 'Rio Ave',
+      market: 'result',
+      period: 'FT',
+    })
+  })
+
+  it('runs before the catalogue check in checkLeg', () => {
+    expect(checkLeg(cantos)).toMatchObject({
+      market: 'corners',
+      period: 'HT',
+      unsure: ['market', 'period'],
+    })
   })
 })

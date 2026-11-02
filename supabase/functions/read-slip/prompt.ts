@@ -36,7 +36,20 @@ betType, by market:
 - goals: "total", "team_total", "btts", "other"
 - corners, yellow_cards, cards: "1x2", "handicap", "total", "team_total", "other"
 
-period: "FT" (regular time, the default), "HT" (first half), "2P" (second half). Bookmakers put the market and period in the event name ("Corners Chelsea - Corners Manchester United 1st half") and the type and selection in the bet ("1X2: W1"); that example is corners · 1x2 · HT · home.
+period: "FT" (regular time, the default), "HT" (first half), "2P" (second half).
+
+## Corners and cards in the event name
+
+Bookmakers often put the market and the period in the event name, before each team and after the game, and only the type and selection in the bet. The market word in the event name decides the market, even when the bet itself only says "Total":
+- corners: "Cantos", "Corners", "Córners", "Escanteios"
+- cards: "Cartões", "Cards", "Bookings"; yellow_cards: "Cartões amarelos", "Yellow cards"
+- HT: "1.ª parte", "1º tempo", "1st half"; 2P: "2.ª parte", "2º tempo", "2nd half"
+
+The team names never keep these words. Examples:
+- "Corners Chelsea - Corners Manchester United 1st half" with "1X2: W1" → homeTeam "Chelsea", awayTeam "Manchester United", corners · 1x2 · HT · home.
+- "Cantos Marítimo - Cantos Santa Clara 1.ª parte" with "Total 2: Total individual 2 acima de (1.5)" → homeTeam "Marítimo", awayTeam "Santa Clara", corners · team_total · HT · away_over, line 1.5.
+
+Bet wording: "acima de", "mais de", "over" → over; "abaixo de", "menos de", "under" → under. "Total individual 1" / "Total 1" is the home team's total, "Total individual 2" / "Total 2" the away team's; a plain "Total" with no team is the game's total. "Resultado" next to a settled bet is the score at the time, not part of the bet.
 
 selection and line, by betType (team 1 is the home team, team 2 the away team):
 - "1x2": "home", "draw" or "away" (1 / X / 2, W1 / W2, V1 / V2); line null.

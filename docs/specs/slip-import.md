@@ -38,7 +38,9 @@ The image is never stored, neither in Supabase Storage nor in the database. It l
 - Deploying the function is a manual step for the owner (`supabase functions deploy read-slip --use-api`, because it imports `src/domain/`); CI only type-checks and tests it. Setup steps: `supabase/functions/read-slip/README.md`.
 - The model and its effort are set in `supabase/functions/read-slip/config.ts`. The answer is constrained with structured output (JSON Schema from the Zod schema) and validated again after.
 - The prompt maps what it reads onto the [market catalogue](domain.md#markets) and returns, for each field, whether it is sure.
-- After validation, fields that break the catalogue's rules are added to `unsure`: a type the market does not have, a selection the type does not allow, a missing or off-step line, an odd of 1 or less, and a kickoff that is missing or not a date.
+- After validation, each leg is checked in code, the same in the function and in the browser (`checkLeg` in `src/domain/slipRead.ts`):
+  - **Event-name markets**: market words before the teams ("Cantos Marítimo - Cantos Santa Clara", "Corners …", "Cartões …", "Cartões amarelos …") are taken off the team names and set the market (corners, cards, yellow_cards). A period after the game ("1.ª parte", "1st half", "2.ª parte") sets the period. A market or period changed this way is added to `unsure`. The prompt also explains this pattern, with Portuguese wording.
+  - **Catalogue rules**: fields that break the catalogue's rules are added to `unsure`: a type the market does not have, a selection the type does not allow, a missing or off-step line, an odd of 1 or less, and a kickoff that is missing or not a date.
 
 Request: `{ image, mediaType: 'image/jpeg', timeZone? }`, the image as base64 and the browser's IANA time zone, so dates on the slip are read in it (UTC when missing or unknown).
 
