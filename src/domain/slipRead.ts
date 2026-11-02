@@ -22,6 +22,14 @@ export const MAX_SLIP_IMAGE_BYTES = 5 * 1024 * 1024
 /** Reads allowed per user per UTC day, to cap the API cost. */
 export const DAILY_SLIP_READ_LIMIT = 30
 
+/**
+ * How carefully slips are read, chosen in Definições (`user_settings.slip_model`). Each one maps to a
+ * Claude model in the Edge Function's `config.ts`; the browser never names a model itself.
+ */
+export const SLIP_MODELS = ['economy', 'balanced', 'best'] as const
+export type SlipModel = (typeof SLIP_MODELS)[number]
+export const DEFAULT_SLIP_MODEL: SlipModel = 'economy'
+
 /** Error codes the function answers with, in `{ error }`; the UI maps them to messages. */
 export const SLIP_READ_ERRORS = [
   'invalid_request',
@@ -104,6 +112,8 @@ export const slipReadRequestSchema = z.object({
   mediaType: z.literal('image/jpeg'),
   /** The browser's IANA time zone, so dates without a year or offset are read in it. */
   timeZone: z.string().min(1).optional(),
+  /** Reads this one slip with another model than the one in Definições ("Ler com mais cuidado"). */
+  model: z.enum(SLIP_MODELS).optional(),
 })
 export type SlipReadRequest = z.infer<typeof slipReadRequestSchema>
 

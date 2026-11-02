@@ -15,6 +15,7 @@ import {
 import { MONEY_DISPLAYS } from './money'
 import { MIN_SAVED_LEGS } from './multipleDraft'
 import { sameName, tidyName } from './names'
+import { SLIP_MODELS } from './slipRead'
 
 export const idSchema = z.uuid('validation.idInvalid')
 const id = idSchema
@@ -176,6 +177,8 @@ export const userSettingsUpdateSchema = z.object({
     .transform((units) => (units === 0 ? null : units)),
   /** Left as it is when omitted. */
   money_display: z.enum(MONEY_DISPLAYS).optional(),
+  /** Left as it is when omitted. */
+  slip_model: z.enum(SLIP_MODELS).optional(),
 })
 
 export type UserSettingsUpdate = z.input<typeof userSettingsUpdateSchema>

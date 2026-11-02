@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { DEFAULT_CONFIDENCE_ANCHORS, type ConfidenceAnchors } from '@/domain/confidence'
 import { DEFAULT_ODDS_BANDS } from '@/domain/metrics'
 import { DEFAULT_MONEY_DISPLAY, DEFAULT_UNIT_VALUE, type MoneyDisplay } from '@/domain/money'
+import { DEFAULT_SLIP_MODEL, SLIP_MODELS, type SlipModel } from '@/domain/slipRead'
 import {
   confidenceAnchorsSchema,
   userSettingsUpdateSchema,
@@ -19,6 +20,12 @@ export const useSettingsStore = defineStore('settings', () => {
   const moneyDisplay = computed<MoneyDisplay>(() =>
     settings.value?.money_display === 'euros' ? 'euros' : DEFAULT_MONEY_DISPLAY,
   )
+
+  /** How slips are read in Importar aposta; an unknown stored value falls back to the default. */
+  const slipModel = computed<SlipModel>(() => {
+    const value = settings.value?.slip_model
+    return value && SLIP_MODELS.includes(value) ? value : DEFAULT_SLIP_MODEL
+  })
 
   const oddsBands = computed<readonly number[]>(
     () => settings.value?.odds_bands ?? DEFAULT_ODDS_BANDS,
@@ -71,6 +78,7 @@ export const useSettingsStore = defineStore('settings', () => {
     settings,
     unitValue,
     moneyDisplay,
+    slipModel,
     oddsBands,
     confidenceAnchors,
     load,

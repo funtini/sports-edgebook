@@ -21,6 +21,7 @@ const settingsRow = {
   currency: 'EUR',
   starting_bankroll_units: null as number | null,
   money_display: 'units',
+  slip_model: 'economy',
   confidence_anchors: { '1': 0.4, '2': 0.55, '3': 0.65, '4': 0.75, '5': 0.85 },
   odds_bands: [1.5, 1.8, 2.2, 3, 5],
 }
@@ -78,6 +79,23 @@ describe('SettingsView', () => {
     const update = queries.find((q) => q.table === 'user_settings' && has(q, 'update'))
     expect(argsOf(update!, 'update')?.[0]).toMatchObject({ unit_value: 20 })
     expect(wrapper.text()).toContain('Definições guardadas.')
+    expect(submit(wrapper).text()).toBe('Sem alterações')
+  })
+
+  it('saves the slip reading model, Económico by default', async () => {
+    const queries = setup()
+    const wrapper = await render()
+    const options = wrapper.findAll('[data-slot="slip-model"] button')
+    expect(options.map((b) => b.attributes('aria-pressed'))).toEqual(['true', 'false', 'false'])
+    expect(options[0]!.text()).toContain('Haiku')
+
+    await options[1]!.trigger('click')
+    expect(submit(wrapper).text()).toBe('Guardar alterações')
+    await wrapper.get('form').trigger('submit')
+    await flushPromises()
+
+    const update = queries.find((q) => q.table === 'user_settings' && has(q, 'update'))
+    expect(argsOf(update!, 'update')?.[0]).toMatchObject({ slip_model: 'balanced' })
     expect(submit(wrapper).text()).toBe('Sem alterações')
   })
 

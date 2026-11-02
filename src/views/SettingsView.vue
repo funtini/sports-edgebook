@@ -18,6 +18,7 @@ import {
   formatMoney,
   type MoneyDisplay,
 } from '@/domain/money'
+import { DEFAULT_SLIP_MODEL, SLIP_MODELS, type SlipModel } from '@/domain/slipRead'
 import { fairOdd } from '@/domain/value'
 import { userMessage } from '@/lib/errors'
 import { LOCALES, THEMES } from '@/lib/preferences'
@@ -32,6 +33,7 @@ const { theme, setTheme } = useTheme()
 const unitValue = ref<number | null>(DEFAULT_UNIT_VALUE)
 const bankroll = ref<number | null>(null)
 const moneyDisplay = ref<MoneyDisplay>(DEFAULT_MONEY_DISPLAY)
+const slipModel = ref<SlipModel>(DEFAULT_SLIP_MODEL)
 const loading = ref(true)
 const saving = ref(false)
 const saved = ref(false)
@@ -39,6 +41,13 @@ const error = ref<string | null>(null)
 
 const displayOptions = computed(() =>
   MONEY_DISPLAYS.map((value) => ({ value, label: t(`settings.display.${value}`) })),
+)
+const slipModelOptions = computed(() =>
+  SLIP_MODELS.map((value) => ({
+    value,
+    label: t(`settings.slipModel.${value}`),
+    hint: t(`settings.slipModel.${value}Hint`),
+  })),
 )
 const localeOptions = computed(() =>
   LOCALES.map((value) => ({ value, label: t(`app.language.${value}`) })),
@@ -58,7 +67,8 @@ const dirty = computed(() => {
   return (
     unitValue.value !== row.unit_value ||
     (bankroll.value || null) !== row.starting_bankroll_units ||
-    moneyDisplay.value !== store.moneyDisplay
+    moneyDisplay.value !== store.moneyDisplay ||
+    slipModel.value !== store.slipModel
   )
 })
 
@@ -94,7 +104,7 @@ const presetLabel = (euros: number) =>
 
 // The confirmation only describes what was saved; any edit makes it stale.
 watch(
-  [unitValue, bankroll, moneyDisplay],
+  [unitValue, bankroll, moneyDisplay, slipModel],
   () => {
     saved.value = false
   },
@@ -107,6 +117,7 @@ onMounted(async () => {
     unitValue.value = row.unit_value
     bankroll.value = row.starting_bankroll_units
     moneyDisplay.value = store.moneyDisplay
+    slipModel.value = store.slipModel
   } catch (e) {
     error.value = userMessage(e, 'settings.loadFailed')
   } finally {
@@ -123,11 +134,13 @@ async function save() {
       unit_value: unitValue.value as number,
       starting_bankroll_units: bankroll.value,
       money_display: moneyDisplay.value,
+      slip_model: slipModel.value,
     })
     // Shows what was stored (0 becomes empty) before confirming.
     unitValue.value = row.unit_value
     bankroll.value = row.starting_bankroll_units
     moneyDisplay.value = store.moneyDisplay
+    slipModel.value = store.slipModel
     saved.value = true
   } catch (e) {
     error.value = userMessage(e, 'settings.saveFailed')
@@ -214,6 +227,31 @@ async function save() {
           <p v-if="bankrollInEuros" class="m-0 text-sm text-eb-muted tabular-nums">
             {{ bankrollInEuros }}
           </p>
+        </fieldset>
+
+        <fieldset class="m-0 flex flex-col gap-3 border-0 p-0" :disabled="loading">
+          <legend class="mb-1 p-0 text-[17px] font-bold">
+            {{ t('settings.slipModel.legend') }}
+          </legend>
+          <div class="flex flex-col gap-2" data-slot="slip-model">
+            <button
+              v-for="option in slipModelOptions"
+              :key="option.value"
+              type="button"
+              :aria-pressed="slipModel === option.value"
+              :class="[
+                'flex min-h-14 w-full flex-col items-start justify-center rounded-xl border px-3.5 py-2 text-left',
+                slipModel === option.value
+                  ? 'border-eb-accent bg-eb-accent-soft'
+                  : 'border-eb-border bg-eb-surface',
+              ]"
+              @click="slipModel = option.value"
+            >
+              <span class="text-[15px] font-semibold">{{ option.label }}</span>
+              <span class="text-[13px] text-eb-muted">{{ option.hint }}</span>
+            </button>
+          </div>
+          <p class="m-0 text-sm text-eb-muted">{{ t('settings.slipModel.help') }}</p>
         </fieldset>
 
         <Message v-if="error" severity="error">{{ message(error) }}</Message>

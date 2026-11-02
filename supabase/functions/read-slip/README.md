@@ -10,14 +10,21 @@ Supabase Edge Function that reads one bet slip image with the Claude API and ret
 - `handler.ts`: the request rules (body, 5 MB limit, 30 reads a day, output validation), with its
   outside effects injected so Vitest can test it (`__tests__/`).
 - `prompt.ts`: what the model is told, mapped to the market catalogue.
-- `config.ts`: the model and its effort. Change the model here and deploy again.
+- `config.ts`: the Claude model and effort behind each choice in Definições (`economy`, `balanced`,
+  `best`). Change a model here and deploy again.
 - `../../../src/domain/slipRead.ts`: the Zod schema shared with the frontend.
 
 ## Request and response
 
 ```ts
 const { data, error } = await supabase.functions.invoke('read-slip', {
-  body: { image: base64Jpeg, mediaType: 'image/jpeg', timeZone: 'Europe/Lisbon' },
+  // `model` is optional: without it the choice in Definições (user_settings.slip_model) is used.
+  body: {
+    image: base64Jpeg,
+    mediaType: 'image/jpeg',
+    timeZone: 'Europe/Lisbon',
+    model: 'balanced',
+  },
 })
 ```
 
@@ -27,7 +34,13 @@ const { data, error } = await supabase.functions.invoke('read-slip', {
   error, or the key is missing). The body is `{ "error": "<code>" }`.
 - `401` without a valid session.
 
-The image is never stored or logged; only the time of each read is kept, in `slip_reads`.
+The image is never stored or logged. `slip_reads` keeps the time of each read, the Claude model id
+and its input and output tokens, so the cost can be checked:
+
+```sql
+select model, count(*), sum(input_tokens) as input, sum(output_tokens) as output
+from slip_reads group by model;
+```
 
 ## Setup (owner, once)
 
@@ -39,7 +52,7 @@ Settings → General, or the `xxxx` in `https://xxxx.supabase.co`).
    ```sh
    npx supabase login
    npx supabase link --project-ref <project-ref>
-   npx supabase db push
+   npx supabase db push --remote --dry-run   # check the list, then run it without --dry-run
    ```
 
 2. Create an API key at [platform.claude.com](https://platform.claude.com/settings/keys) and store
