@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import AppIcon from '@/components/AppIcon.vue'
+import PredictionEditDialog from '@/components/PredictionEditDialog.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
 import { useLocale } from '@/composables/useLocale'
@@ -30,6 +31,13 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const settlement = useSettlement(rows)
 const { saving, settle, error: settleError } = settlement
+/** The row open in "Editar prognóstico". */
+const editing = ref<PredictionWithRelations | null>(null)
+
+function edited(updated: PredictionWithRelations) {
+  settlement.replace(updated)
+  editing.value = null
+}
 
 const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
@@ -48,6 +56,7 @@ const loads = useLatestRequest()
 async function load() {
   const isLatest = loads.start()
   settlement.reset()
+  editing.value = null
   loading.value = true
   error.value = null
   scoreError.value = null
@@ -242,7 +251,9 @@ async function saveScore() {
             :money-display="settings.moneyDisplay"
             layout="line"
             :busy="saving.has(prediction.id)"
+            editable
             @settle="settle(prediction, $event)"
+            @edit="editing = prediction"
           />
         </div>
 
@@ -282,5 +293,12 @@ async function saveScore() {
         </div>
       </section>
     </div>
+    <PredictionEditDialog
+      v-if="editing"
+      :key="editing.id"
+      :prediction="editing"
+      @close="editing = null"
+      @saved="edited"
+    />
   </div>
 </template>

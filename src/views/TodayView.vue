@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Message from 'primevue/message'
 import AppIcon from '@/components/AppIcon.vue'
+import PredictionEditDialog from '@/components/PredictionEditDialog.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { profitClass } from '@/components/profitClass'
 import { useKeyShortcut } from '@/composables/useKeyShortcut'
@@ -35,6 +36,13 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const settlement = useSettlement(rows)
 const { saving, settle, error: settleError } = settlement
+/** The row open in "Editar prognóstico". */
+const editing = ref<PredictionWithRelations | null>(null)
+
+function edited(updated: PredictionWithRelations) {
+  settlement.replace(updated)
+  editing.value = null
+}
 
 /** Today's local midnight; moves on at midnight so a screen left open follows the date. */
 const today = ref(startOfDay(new Date()))
@@ -161,7 +169,9 @@ function openPicker(event: Event) {
   }
 }
 
-useKeyShortcut('n', () => router.push({ name: 'predictions' }))
+useKeyShortcut('n', () => {
+  if (!editing.value) void router.push({ name: 'predictions' })
+})
 
 function jumpToOldestPending() {
   const oldest = pendingBefore.value[0]
@@ -172,6 +182,7 @@ const loads = useLatestRequest()
 async function load() {
   const isLatest = loads.start()
   settlement.reset()
+  editing.value = null
   loading.value = true
   error.value = null
   rows.value = []
@@ -426,9 +437,18 @@ watch(
           :money-display="settings.moneyDisplay"
           layout="line"
           :busy="saving.has(prediction.id)"
+          editable
           @settle="settle(prediction, $event)"
+          @edit="editing = prediction"
         />
       </div>
     </section>
+    <PredictionEditDialog
+      v-if="editing"
+      :key="editing.id"
+      :prediction="editing"
+      @close="editing = null"
+      @saved="edited"
+    />
   </div>
 </template>

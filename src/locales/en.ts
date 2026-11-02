@@ -237,6 +237,7 @@ const en: Messages = {
     valueIndex: 'Value index:',
     valueTooltip: 'Value index (probability × odd)',
     settle: 'Settle',
+    edit: 'Edit prediction',
     outcome: {
       won: 'Won',
       lost: 'Lost',
@@ -248,6 +249,14 @@ const en: Messages = {
       lost: 'Loss',
       void: 'Void',
     },
+  },
+  predictionEdit: {
+    title: 'Edit prediction',
+    close: 'Close',
+    cancel: 'Cancel',
+    save: 'Save changes',
+    saved: 'Prediction updated',
+    saveFailed: 'Could not save the changes.',
   },
   punter: {
     title: 'Real bet (punter)',

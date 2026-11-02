@@ -240,6 +240,7 @@ const ptPT = {
     valueIndex: 'Índice de valor:',
     valueTooltip: 'Índice de valor (probabilidade × odd)',
     settle: 'Liquidar',
+    edit: 'Editar prognóstico',
     outcome: {
       won: 'Ganho',
       lost: 'Perdido',
@@ -251,6 +252,14 @@ const ptPT = {
       lost: 'Prejuízo',
       void: 'Nulo',
     },
+  },
+  predictionEdit: {
+    title: 'Editar prognóstico',
+    close: 'Fechar',
+    cancel: 'Cancelar',
+    save: 'Guardar alterações',
+    saved: 'Prognóstico atualizado',
+    saveFailed: 'Não foi possível guardar as alterações.',
   },
   punter: {
     title: 'Aposta real (punter)',

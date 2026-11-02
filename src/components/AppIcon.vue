@@ -26,6 +26,7 @@ export type IconName =
   | 'trash'
   | 'image'
   | 'camera'
+  | 'pencil'
 
 defineProps<{ name: IconName }>()
 
@@ -79,6 +80,7 @@ const PATHS: Record<IconName, string[]> = {
     'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z',
     'M16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
   ],
+  pencil: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z'],
   trash: ['M3 6h18', 'M8 6V4h8v2', 'M19 6l-1 14H6L5 6', 'M10 11v6M14 11v6'],
 }
 </script>

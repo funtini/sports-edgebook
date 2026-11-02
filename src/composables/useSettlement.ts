@@ -23,6 +23,7 @@ export function useSettlement(rows: Ref<PredictionWithRelations[]>) {
     error.value = null
   }
 
+  /** Puts a saved row in place of the one with its id (after a settle or an edit). */
   function replace(updated: PredictionWithRelations) {
     rows.value = rows.value.map((row) => (row.id === updated.id ? updated : row))
   }
@@ -49,5 +50,5 @@ export function useSettlement(rows: Ref<PredictionWithRelations[]>) {
     }
   }
 
-  return { saving, error, settle, reset }
+  return { saving, error, settle, reset, replace }
 }

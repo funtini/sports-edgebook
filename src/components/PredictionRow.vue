@@ -6,6 +6,7 @@ import { OVER_UNDER_MARK } from '@/domain/markets'
 import { formatDecimal, formatMoney, type MoneyDisplay } from '@/domain/money'
 import { isPunterBet, predictionProfit } from '@/domain/settlement'
 import type { BetStatus, PredictionWithRelations } from '@/types/db'
+import AppIcon from './AppIcon.vue'
 import ConfidenceBadge from './ConfidenceBadge.vue'
 import ValuePill from './ValuePill.vue'
 
@@ -22,9 +23,11 @@ const props = defineProps<{
    * selection from 680px (Evento's column), and the card when narrower.
    */
   layout?: 'card' | 'line'
+  /** The bet's summary becomes a button that emits `edit` ("Editar prognóstico"). */
+  editable?: boolean
 }>()
 
-const emit = defineEmits<{ settle: [status: BetStatus] }>()
+const emit = defineEmits<{ settle: [status: BetStatus]; edit: [] }>()
 
 const { t, intlLocale, betParts, betSelection } = useLocale()
 
@@ -98,23 +101,34 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
         class="flex items-start justify-between gap-3"
         :class="line && 'lg:@min-[680px]:contents'"
       >
-        <div
-          class="min-w-0"
-          :class="
+        <!-- With `editable`, the summary is the button that opens "Editar prognóstico". -->
+        <component
+          :is="editable ? 'button' : 'div'"
+          :type="editable ? 'button' : undefined"
+          class="min-w-0 text-left"
+          :class="[
+            editable &&
+              'group -mx-1.5 -my-1 min-h-11 cursor-pointer rounded-lg px-1.5 py-1 text-eb-text hover:bg-eb-surface-2',
             line &&
-            'lg:@min-[680px]:col-start-1 lg:@min-[680px]:row-[1] lg:@min-[680px]:self-end lg:@min-[880px]:self-center'
-          "
+              'lg:@min-[680px]:col-start-1 lg:@min-[680px]:row-[1] lg:@min-[680px]:self-end lg:@min-[880px]:self-center',
+          ]"
+          :data-edit="editable ? '' : undefined"
+          @click="editable && emit('edit')"
         >
-          <div class="text-xs text-eb-muted">
+          <span class="block text-xs text-eb-muted">
             {{ market
             }}<span
               v-if="prediction.is_live"
               class="ml-1.5 rounded bg-eb-neg-soft px-1.5 py-px text-[11px] font-bold text-eb-neg"
               data-live
               >{{ t('timing.live') }}</span
-            >
-          </div>
-          <div class="text-[15px] font-semibold break-words" data-selection>
+            ><AppIcon
+              v-if="editable"
+              name="pencil"
+              class="ml-1.5 inline size-3.5 align-[-2px] text-eb-muted group-hover:text-eb-accent-text"
+            /><span v-if="editable" class="sr-only">{{ `, ${t('predictionRow.edit')}` }}</span>
+          </span>
+          <span class="block text-[15px] font-semibold break-words" data-selection>
             <template v-if="selection.side">{{ selection.side }} </template>
             <template v-if="selection.overUnder">
               <span
@@ -130,8 +144,8 @@ function toggle(status: Exclude<BetStatus, 'pending'>) {
               ><span class="sr-only">{{ t(`catalogue.overUnder.${selection.overUnder}`) }}</span>
             </template>
             {{ selection.line }}
-          </div>
-        </div>
+          </span>
+        </component>
         <div
           class="text-lg font-bold"
           :class="

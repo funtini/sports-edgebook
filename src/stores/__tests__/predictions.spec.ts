@@ -92,6 +92,47 @@ describe('predictions store', () => {
     expect(argsOf(queries[1]!, 'update')?.[0]).toEqual({ status: 'pending', settled_at: null })
   })
 
+  describe('update', () => {
+    const stored = { id: 'p', confidence: 3, probability: 0.7 }
+    const edit = {
+      odd: 2.1,
+      confidence: 3,
+      is_live: true,
+      is_punter: true,
+      stake_units: 1.5,
+      bookmaker: 'Betano',
+      notes: null,
+    }
+    const updates = (queries: Query[]) =>
+      queries.filter((q) => q.table === 'predictions').map((q) => argsOf(q, 'update')?.[0])
+
+    it('saves the editable fields and keeps the stored probability for the same level', async () => {
+      const queries = setup((q) =>
+        q.table === 'user_settings' ? { data: settingsRow(0.6) } : { data: { id: 'p' } },
+      )
+      await usePredictionsStore().update(stored, edit)
+      expect(updates(queries)).toEqual([{ ...edit, probability: 0.7 }])
+      expect(argsOf(queries[queries.length - 1]!, 'eq')).toEqual(['id', 'p'])
+      expect(queries.some((q) => q.table === 'user_settings')).toBe(false)
+    })
+
+    it("takes a new level's probability from the current anchors", async () => {
+      const queries = setup((q) =>
+        q.table === 'user_settings' ? { data: settingsRow(0.6) } : { data: { id: 'p' } },
+      )
+      await usePredictionsStore().update(stored, { ...edit, confidence: 4 })
+      expect(updates(queries)[0]).toMatchObject({ confidence: 4, probability: 0.75 })
+    })
+
+    it('validates before touching the database', async () => {
+      const queries = setup()
+      await expect(
+        usePredictionsStore().update(stored, { ...edit, stake_units: null }),
+      ).rejects.toThrow(/validation.punterStakeRequired/)
+      expect(queries).toHaveLength(0)
+    })
+  })
+
   it('lists predictions on games of a local day, by kickoff', async () => {
     const row = (id: string, kickoff_at: string) => ({
       id,
