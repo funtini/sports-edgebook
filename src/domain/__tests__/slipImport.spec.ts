@@ -517,4 +517,52 @@ describe('buildImportPlan', () => {
     expect(plan.canSave).toBe(false)
     expect(plan.rows.multiple).toBeNull()
   })
+
+  describe('saving a multiple slip as predictions only', () => {
+    const read: SlipRead = {
+      kind: 'multiple',
+      bookmaker: 'Betano',
+      stake: 20,
+      totalOdd: 4.1,
+      status: 'pending',
+      legs: [leg({ odd: 1.9 }), leg({ homeTeam: 'Braga', awayTeam: 'Benfica', odd: 2.1 })],
+    }
+    const predictionsOnly = { ...slip, saveAs: 'predictions' as const }
+
+    it('writes each new leg as its own prediction, not punter, and no multiple', () => {
+      const ctx = context({ predictions: [prediction()] })
+      const plan = buildImportPlan(
+        read,
+        predictionsOnly,
+        [{ confidence: null }, { confidence: 4 }],
+        ctx,
+      )
+      expect(plan.canSave).toBe(true)
+      expect(plan.rows.predictions).toEqual([
+        expect.objectContaining({ isPunter: false, stakeUnits: null, bookmaker: null }),
+      ])
+      expect(plan.rows.upgrades).toEqual([])
+      expect(plan.rows.multiple).toBeNull()
+    })
+
+    it('saves a single leg left after removing the others', () => {
+      const plan = buildImportPlan(
+        read,
+        predictionsOnly,
+        [{ confidence: 3 }, { confidence: 3, removed: true }],
+        context(),
+      )
+      expect(plan.tooFewLegs).toBe(false)
+      expect(plan.canSave).toBe(true)
+      expect(plan.rows.predictions).toHaveLength(1)
+    })
+
+    it('has nothing to save when every leg is already a prediction', () => {
+      const one: SlipRead = { ...read, legs: [leg({ odd: 1.9 })] }
+      const ctx = context({ predictions: [prediction()] })
+      const plan = buildImportPlan(one, predictionsOnly, [{ confidence: null }], ctx)
+      expect(plan.nothingToSave).toBe(true)
+      expect(plan.canSave).toBe(false)
+    })
+  })
 })

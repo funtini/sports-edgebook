@@ -208,6 +208,42 @@ describe('SlipConfirm', () => {
     expect(saveButton(wrapper).attributes('disabled')).toBeDefined()
   })
 
+  it('saves a multiple slip as its predictions only, without the multiple or a stake', async () => {
+    const queries = setup()
+    const read: SlipRead = { ...multiple, stake: null }
+    const wrapper = render(read)
+    expect(missing(wrapper)).toContain('indicar o valor apostado')
+
+    const saveAs = wrapper.find('[data-save-as]')
+    await saveAs
+      .findAll('button')
+      .find((b) => b.text() === 'Só prognósticos')!
+      .trigger('click')
+    expect(wrapper.find('[data-predictions-only-note]').exists()).toBe(true)
+    expect(wrapper.find('#slip-stake').exists()).toBe(false)
+
+    await card(wrapper, 1).find('[data-answer="no"]').trigger('click')
+    for (const index of [0, 1, 2]) {
+      await card(wrapper, index).find('[data-confidence="3"]').trigger('click')
+    }
+    expect(missing(wrapper)).toBe('Tudo pronto para registar.')
+    expect(saveButton(wrapper).text()).toBe('Registar 3 prognósticos')
+
+    await saveButton(wrapper).trigger('click')
+    await flushPromises()
+    const tables = queries.filter((q) => has(q, 'insert')).map((q) => q.table)
+    expect(tables).not.toContain('multiples')
+    const predictions = queries
+      .filter((q) => q.table === 'predictions' && has(q, 'insert'))
+      .map((q) => q.ops.find(([m]) => m === 'insert')![1][0])
+    expect(predictions).toHaveLength(3)
+    for (const row of predictions)
+      expect(row).toMatchObject({ is_punter: false, stake_units: null, bookmaker: null })
+    expect(wrapper.emitted('saved')?.[0]).toEqual([
+      { predictions: 3, multiple: false, upgraded: false },
+    ])
+  })
+
   describe('a single over an existing prediction', () => {
     const singleRead: SlipRead = {
       kind: 'single',

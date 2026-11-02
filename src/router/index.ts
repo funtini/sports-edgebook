@@ -18,6 +18,10 @@ const router = createRouter({
       path: '/registo/importar',
       name: 'slip-import',
       component: () => import('@/views/SlipImportView.vue'),
+      // `?origem=multiplas` when opened from Múltiplas: the import goes back there.
+      props: (route) => ({
+        from: route.query.origem === 'multiplas' ? 'multiples' : 'predictions',
+      }),
     },
     {
       path: '/eventos/:id',
