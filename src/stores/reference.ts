@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
+import { idSchema } from '@/domain/schemas'
 import type { LeagueRow, TeamRow } from '@/types/db'
 import { cleanName, escapeLike, requireSupabase, unwrap } from './client'
 
@@ -48,5 +49,25 @@ export const useReferenceStore = defineStore('reference', () => {
     return created
   }
 
-  return { leagues, teams, load, ensureLeague, ensureTeam }
+  /**
+   * Deletes the team when no event uses it any more, e.g. "Cantos Marítimo" after its event was
+   * corrected to "Marítimo", so it stops being suggested. Its aliases go with it.
+   */
+  async function removeIfUnused(teamId: string): Promise<boolean> {
+    const id = idSchema.parse(teamId)
+    const db = requireSupabase()
+    const used = unwrap<{ id: string }[]>(
+      await db
+        .from('events')
+        .select('id')
+        .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
+        .limit(1),
+    )
+    if (used.length > 0) return false
+    unwrap(await db.from('teams').delete().eq('id', id))
+    teams.value = teams.value.filter((t) => t.id !== id)
+    return true
+  }
+
+  return { leagues, teams, load, ensureLeague, ensureTeam, removeIfUnused }
 })

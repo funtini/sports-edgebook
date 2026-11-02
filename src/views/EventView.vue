@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import AppIcon from '@/components/AppIcon.vue'
+import EventEditDialog from '@/components/EventEditDialog.vue'
 import PredictionEditDialog from '@/components/PredictionEditDialog.vue'
 import PredictionRow from '@/components/PredictionRow.vue'
 import { useLatestRequest } from '@/composables/useLatestRequest'
@@ -39,6 +40,23 @@ function edited(updated: PredictionWithRelations) {
   editing.value = null
 }
 
+const router = useRouter()
+/** "Editar evento" is open. */
+const editingEvent = ref(false)
+
+function eventEdited(updated: EventWithTeams) {
+  event.value = updated
+  // The rows embed their event (shown in "Editar prognóstico").
+  rows.value = rows.value.map((row) => ({ ...row, event: updated }))
+  editingEvent.value = false
+}
+
+/** This event was merged into `kept` and deleted: show `kept`, with every prediction. */
+function eventMerged(kept: EventWithTeams) {
+  editingEvent.value = false
+  void router.replace({ name: 'event', params: { id: kept.id } })
+}
+
 const score = ref<ScoreForm>({ home: '', away: '' })
 const scoreError = ref<string | null>(null)
 const savingScore = ref(false)
@@ -57,6 +75,7 @@ async function load() {
   const isLatest = loads.start()
   settlement.reset()
   editing.value = null
+  editingEvent.value = false
   loading.value = true
   error.value = null
   scoreError.value = null
@@ -147,9 +166,23 @@ async function saveScore() {
       <section
         class="rounded-2xl border border-eb-border bg-eb-surface px-4 py-[18px] lg:col-start-1 lg:row-start-1 lg:p-5"
       >
-        <div class="flex flex-wrap justify-between gap-x-3 text-[13px] text-eb-muted">
-          <span class="font-semibold">{{ event.league?.name }}</span>
-          <span>{{ kickoff }}</span>
+        <div class="flex items-start justify-between gap-2">
+          <div
+            class="flex min-w-0 flex-1 flex-wrap justify-between gap-x-3 pt-px text-[13px] text-eb-muted"
+          >
+            <span class="font-semibold">{{ event.league?.name }}</span>
+            <span>{{ kickoff }}</span>
+          </div>
+          <button
+            type="button"
+            class="-my-3 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-xl text-eb-muted hover:bg-eb-surface-2 hover:text-eb-accent-text"
+            :title="t('event.edit')"
+            data-edit-event
+            @click="editingEvent = true"
+          >
+            <AppIcon name="pencil" class="size-[18px]" />
+            <span class="sr-only">{{ t('event.edit') }}</span>
+          </button>
         </div>
         <h1
           class="m-0 mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 text-lg font-bold"
@@ -299,6 +332,14 @@ async function saveScore() {
       :prediction="editing"
       @close="editing = null"
       @saved="edited"
+    />
+    <EventEditDialog
+      v-if="editingEvent && event"
+      :key="event.id"
+      :event="event"
+      @close="editingEvent = false"
+      @saved="eventEdited"
+      @merged="eventMerged"
     />
   </div>
 </template>

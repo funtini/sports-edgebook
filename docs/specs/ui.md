@@ -72,6 +72,16 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 - **Footer** (sticky): "Cancelar" and "Guardar alterações"; errors inline per field, a save failure as a message above the buttons. Saving closes it, shows a "Prognóstico atualizado" toast and puts the saved row in the list. Escape, the scrim and the close button cancel, except while saving.
 - On Hoje the `N` shortcut is off while it is open.
 
+### Edit an event
+
+`src/components/EventEditDialog.vue`, opened by the pencil button at the top right of the Evento game card. Rules: [domain.md](domain.md#editing-an-event).
+
+- Same frame as [Edit a prediction](#edit-a-prediction): bottom sheet on phone, centred modal (max 560px) from 640px, Escape / scrim / close button cancel except while saving.
+- **Header**: "Editar evento" and the game as stored ("Casa – Fora").
+- **Form**: a one-line hint, then the "Novo evento" fields of Registo (`GameFields.vue`): Data, Hora, Liga (opcional), Equipa da casa, Equipa de fora, with league and team suggestions.
+- **Footer**: "Cancelar" and "Guardar alterações". Saving closes it, shows an "Evento atualizado" toast and updates the game card.
+- **Same game found**: the footer turns into an amber "Este jogo já existe" card (the existing game, date · time, league, score if any, and what merging does) with "Voltar" and "Juntar eventos". Changing any field drops the card. Merging shows "Eventos juntos" and opens the kept event.
+
 ## Screens
 
 ### Hoje
@@ -86,7 +96,7 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 ### Evento
 
-- **Phone**: "‹ Hoje", game card (league, date · time, teams with the score in the middle, Resultado inputs + "Guardar resultado"), "Prognósticos" list, dashed "+ Novo prognóstico", "Análise do jogo · Em breve" placeholder.
+- **Phone**: "‹ Hoje", game card (league, date · time, a pencil button that opens [Editar evento](#edit-an-event), teams with the score in the middle, Resultado inputs + "Guardar resultado"), "Prognósticos" list, dashed "+ Novo prognóstico", "Análise do jogo · Em breve" placeholder.
 - **Desktop**: "‹ Hoje", then two columns: left (340px) the game card and the analysis placeholder under it; right the "Prognósticos" title with count, the dashed "+ Novo prognóstico" button on its right (the full-width one under the list is phone only), and the rows with `layout="line"` (one line from a 680px column, about 1080px of window; see [Prediction row](#prediction-row)).
 
 ### Registo

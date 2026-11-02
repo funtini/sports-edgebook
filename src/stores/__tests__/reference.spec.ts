@@ -56,4 +56,33 @@ describe('reference store', () => {
     mocked.client = null
     await expect(useReferenceStore().load()).rejects.toThrow(/errors.supabaseNotConfigured/)
   })
+
+  describe('removeIfUnused', () => {
+    const TEAM = '2d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f60'
+
+    it('deletes a team no event uses', async () => {
+      const queries = setup(() => ({ data: [] }))
+      const store = useReferenceStore()
+      store.teams = [{ id: TEAM, name: 'Cantos Marítimo' } as never]
+      expect(await store.removeIfUnused(TEAM)).toBe(true)
+      expect(argsOf(queries[0]!, 'or')).toEqual([`home_team_id.eq.${TEAM},away_team_id.eq.${TEAM}`])
+      expect(queries[1]!.table).toBe('teams')
+      expect(has(queries[1]!, 'delete')).toBe(true)
+      expect(store.teams).toEqual([])
+    })
+
+    it('keeps a team an event still uses', async () => {
+      const queries = setup(() => ({ data: [{ id: 'e' }] }))
+      expect(await useReferenceStore().removeIfUnused(TEAM)).toBe(false)
+      expect(queries).toHaveLength(1)
+    })
+
+    it('rejects a malformed id without querying', async () => {
+      const queries = setup(() => ({}))
+      await expect(useReferenceStore().removeIfUnused('x),id.neq.(y')).rejects.toThrow(
+        /validation.idInvalid/,
+      )
+      expect(queries).toHaveLength(0)
+    })
+  })
 })
