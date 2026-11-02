@@ -313,8 +313,8 @@ const ptPT = {
     filters: 'Filtros do dashboard',
     periodLabel: 'Período',
     period: {
-      week: 'Semana',
-      month: 'Mês',
+      week: '7 dias',
+      month: '30 dias',
       year: 'Ano',
       all: 'Tudo',
     },

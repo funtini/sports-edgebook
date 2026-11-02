@@ -1,21 +1,21 @@
-import { toDayKey } from './days'
+import { addDays, toDayKey } from './days'
 
-/** Dashboard periods: calendar week (from Monday), month and year up to today, or everything. */
+/**
+ * Dashboard periods up to today: the last 7 and 30 days (today included), the calendar year, or
+ * everything. Week and month roll so they never start empty on a Monday or on the 1st.
+ */
 export const PERIODS = ['week', 'month', 'year', 'all'] as const
 export type Period = (typeof PERIODS)[number]
 
 /** First local day of `period` containing `today`; null for `all`. */
 export function periodStart(period: Period, today: Date): Date | null {
-  const y = today.getFullYear()
-  const m = today.getMonth()
   switch (period) {
     case 'week':
-      // getDay() is 0 on Sunday: the week starts on the Monday before it.
-      return new Date(y, m, today.getDate() - ((today.getDay() + 6) % 7))
+      return addDays(today, -6)
     case 'month':
-      return new Date(y, m, 1)
+      return addDays(today, -29)
     case 'year':
-      return new Date(y, 0, 1)
+      return new Date(today.getFullYear(), 0, 1)
     case 'all':
       return null
   }

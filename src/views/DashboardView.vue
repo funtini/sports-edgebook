@@ -309,7 +309,7 @@ function yieldBar(value: number | null) {
     <p v-if="loading" class="text-center text-eb-muted">{{ t('common.loading') }}</p>
 
     <section
-      v-else-if="!totals.n && !error"
+      v-else-if="!periodBets.length && !error"
       class="flex flex-col items-center gap-1 rounded-2xl border border-eb-border bg-eb-surface p-8 text-center"
       data-empty
     >

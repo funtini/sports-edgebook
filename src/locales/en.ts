@@ -310,8 +310,8 @@ const en: Messages = {
     filters: 'Dashboard filters',
     periodLabel: 'Period',
     period: {
-      week: 'Week',
-      month: 'Month',
+      week: '7 days',
+      month: '30 days',
       year: 'Year',
       all: 'All',
     },
