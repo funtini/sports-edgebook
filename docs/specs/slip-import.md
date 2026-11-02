@@ -37,27 +37,27 @@ Response shape (`src/domain/slipRead.ts`, validated with Zod on both sides; anyt
 interface SlipRead {
   kind: 'single' | 'multiple'
   bookmaker: string | null
-  stake: number | null          // in currency, as printed on the slip
+  stake: number | null // in currency, as printed on the slip
   totalOdd: number | null
   status: 'pending' | 'won' | 'lost' | 'void' | null
   legs: SlipLeg[]
 }
 
 interface SlipLeg {
-  rawText: string               // the slip's own words for the leg, shown as "Na casa:"
+  rawText: string // the slip's own words for the leg, shown as "Na casa:"
   homeTeam: string
   awayTeam: string
   league: string | null
-  kickoffAt: string | null      // ISO; null when the slip shows no date
+  kickoffAt: string | null // ISO; null when the slip shows no date
   timing: 'pre' | 'live' | null
-  market: Market | null         // catalogue keys
+  market: Market | null // catalogue keys
   betType: BetType | null
   period: MatchPeriod | null
-  selection: string | null      // catalogue selection code as stored (`over`, `home_under`…)
+  selection: string | null // catalogue selection code as stored (`over`, `home_under`…)
   line: number | null
   odd: number | null
   status: 'pending' | 'won' | 'lost' | 'void' | null
-  unsure: (keyof SlipLeg)[]     // fields the model is not sure about
+  unsure: (keyof SlipLeg)[] // fields the model is not sure about
 }
 ```
 
@@ -69,6 +69,7 @@ Pure functions in `src/domain/slipImport.ts`, with tests.
 - **Two team names match** when, after normalising:
   - they are equal;
   - one contains the other as whole words ("Braga" and "SC Braga");
+  - one abbreviates the other word by word ("Man Utd" and "Manchester United"): a word of three or more letters matches a longer word it starts ("Inter", "Internazionale"), and a word of three or four letters also matches a longer word with the same first letter that holds its letters in order ("Utd", "United");
   - or the slip name is a saved alias of the app team (`team_aliases`, same normalisation).
 - **Same day** means the same calendar date of `kickoff_at` in the browser's time zone. When the slip has no date, the candidates are games from yesterday to seven days ahead, and the date becomes an unsure field.
 - **Event match**, for each leg, against the owner's events on the same day:
@@ -76,6 +77,8 @@ Pure functions in `src/domain/slipImport.ts`, with tests.
   - **Only one team matches** an event on that day: the leg asks **"Este evento já existe na app?"** and shows the slip's game next to the app's ("Na casa: Sporting CP – Rio Ave", "Na app: Sporting – Rio Ave FC"), with "Sim, é o mesmo jogo" and "Não, é outro jogo". Yes links the leg and, on save, stores the slip's spelling of the other team as an alias of the app team, so the next import links it on its own. No makes a new event. Matching on one team is on purpose: slips write names in other languages or abbreviated, and requiring both names would miss real duplicates.
   - **No match**: a new event, with "Novo evento" on the card. New teams and leagues are created on save, reusing existing teams by the same name rule.
   - Several candidate events: the question lists them, nearest kickoff first, plus "Não, é outro jogo".
+  - Several events that match both teams (possible on a slip with no date) also ask, instead of linking.
+  - `buildImportPlan` turns a read, the Boletim card and the owner's answers per leg into the window's plan (event state, duplicate state, unsure fields, what is missing) and the rows saving writes, in the order of [Saving](#saving). New rows refer to each other by key until they are written.
 
 ## Duplicate predictions
 
