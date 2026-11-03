@@ -44,7 +44,6 @@ const error = ref<string | null>(null)
 const dragging = ref(false)
 
 const galleryInput = ref<HTMLInputElement | null>(null)
-const cameraInput = ref<HTMLInputElement | null>(null)
 const ACCEPT = SLIP_IMAGE_TYPES.join(',')
 
 function dropImage() {
@@ -169,17 +168,6 @@ function saved(result: ImportSaved) {
       data-gallery-input
       @change="onFile"
     />
-    <input
-      ref="cameraInput"
-      type="file"
-      accept="image/*"
-      capture="environment"
-      class="sr-only"
-      tabindex="-1"
-      aria-hidden="true"
-      data-camera-input
-      @change="onFile"
-    />
 
     <!-- Enviar -->
     <template v-if="stage === 'pick'">
@@ -194,36 +182,16 @@ function saved(result: ImportSaved) {
         <AppIcon name="image" class="size-9 text-eb-muted" />
         <p class="m-0 text-base font-semibold">{{ t('slipImport.dropZone') }}</p>
         <p class="m-0 text-[13px] text-eb-muted">{{ t('slipImport.dropZoneTypes') }}</p>
-        <div class="mt-1 flex w-full max-w-sm flex-col gap-2 lg:flex-row lg:justify-center">
-          <Button
-            type="button"
-            class="min-h-12 lg:hidden"
-            data-take-photo
-            @click="cameraInput?.click()"
-          >
-            <AppIcon name="camera" class="size-4" />
-            {{ t('slipImport.takePhoto') }}
-          </Button>
-          <Button
-            type="button"
-            severity="secondary"
-            outlined
-            class="min-h-12 lg:hidden"
-            @click="galleryInput?.click()"
-          >
-            <AppIcon name="image" class="size-4" />
-            {{ t('slipImport.fromGallery') }}
-          </Button>
-          <Button
-            type="button"
-            class="hidden min-h-12 lg:inline-flex"
-            data-choose-image
-            @click="galleryInput?.click()"
-          >
-            <AppIcon name="image" class="size-4" />
-            {{ t('slipImport.chooseImage') }}
-          </Button>
-        </div>
+        <!-- One button: on a phone the system picker already offers the camera and the gallery. -->
+        <Button
+          type="button"
+          class="mt-1 min-h-12 w-full max-w-sm lg:w-auto"
+          data-choose-image
+          @click="galleryInput?.click()"
+        >
+          <AppIcon name="image" class="size-4" />
+          {{ t('slipImport.chooseImage') }}
+        </Button>
       </div>
       <Message v-if="error" severity="error">{{ message(error) }}</Message>
       <p class="m-0 text-center text-[13px] text-eb-muted">{{ t('slipImport.notStored') }}</p>

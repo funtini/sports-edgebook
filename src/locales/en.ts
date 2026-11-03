@@ -512,8 +512,6 @@ const en: Messages = {
     title: 'Import bet',
     dropZone: 'Choose an image of the bet slip',
     dropZoneTypes: 'PNG, JPEG or WebP',
-    takePhoto: 'Take photo',
-    fromGallery: 'Choose from gallery',
     chooseImage: 'Choose image',
     notStored: 'The image is not stored.',
     wrongType: 'Choose a PNG, JPEG or WebP image.',
