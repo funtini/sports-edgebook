@@ -9,6 +9,8 @@ import {
   lineKind,
   MARKETS,
   MATCH_PERIODS,
+  type Market,
+  type MatchPeriod,
 } from './markets.ts'
 
 /**
@@ -159,8 +161,90 @@ export function flagCatalogueIssues(leg: SlipLeg): SlipLeg {
 }
 
 /**
+ * Words bookmakers put before each team to name the market ("Cantos Marítimo - Cantos Santa Clara"),
+ * in the languages slips come in. Yellow cards before cards, so the longer name wins.
+ */
+const MARKET_PREFIXES: readonly [RegExp, Market][] = [
+  [
+    /^(?:cart[õo]es\s+amarel[oa]s|amarelos|yellow\s+cards|tarjetas\s+amarillas)\s+/iu,
+    'yellow_cards',
+  ],
+  [/^(?:cart[õo]es|cards|bookings|booking\s+points|tarjetas)\s+/iu, 'cards'],
+  [/^(?:cantos|corners|c[óo]rners|escanteios|esquinas)\s+/iu, 'corners'],
+]
+
+/** Period words after the game ("Santa Clara 1.ª parte", "Chelsea 2nd half"). */
+const PERIOD_WORDS: readonly [RegExp, MatchPeriod][] = [
+  [
+    /\s*(?:1\s*\.?\s*[ªºa°]?\s*(?:parte|tempo|half)|1st\s+half|first\s+half|primeira\s+parte|primer\s+tiempo|1\s*h)\s*$/iu,
+    'HT',
+  ],
+  [
+    /\s*(?:2\s*\.?\s*[ªºa°]?\s*(?:parte|tempo|half)|2nd\s+half|second\s+half|segunda\s+parte|segundo\s+tiempo|2\s*h)\s*$/iu,
+    '2P',
+  ],
+]
+
+function marketPrefix(text: string): { market: Market; rest: string } | null {
+  for (const [pattern, market] of MARKET_PREFIXES) {
+    const match = pattern.exec(text.trim())
+    if (match) return { market, rest: text.trim().slice(match[0].length) }
+  }
+  return null
+}
+
+function periodSuffix(text: string): { period: MatchPeriod; rest: string } | null {
+  for (const [pattern, period] of PERIOD_WORDS) {
+    const match = pattern.exec(text)
+    if (match && match.index > 0) return { period, rest: text.slice(0, match.index).trim() }
+  }
+  return null
+}
+
+/**
+ * Fixes the event-name pattern bookmakers use for corners and cards, whatever the model made of it:
+ * market words before the teams ("Cantos Marítimo - Cantos Santa Clara") are taken off the names
+ * and set the market, and a period after the game ("… 1.ª parte") sets the period. A market or
+ * period changed this way is marked unsure, so the owner confirms it.
+ */
+export function fixEventNameMarket(leg: SlipLeg): SlipLeg {
+  const unsure = new Set(leg.unsure)
+  const next = { ...leg }
+
+  const home = marketPrefix(leg.homeTeam)
+  const away = marketPrefix(leg.awayTeam)
+  // The slip's own words count too, for a model that already cleaned the names.
+  const raw = marketPrefix(leg.rawText)
+  const market = home?.market ?? away?.market ?? raw?.market
+  if (home?.rest) next.homeTeam = home.rest
+  if (away?.rest) next.awayTeam = away.rest
+  if (market && market !== leg.market) {
+    next.market = market
+    unsure.add('market')
+    if (leg.betType && !BET_TYPES_BY_MARKET[market].includes(leg.betType)) unsure.add('betType')
+  }
+
+  const awayPeriod = periodSuffix(next.awayTeam)
+  if (awayPeriod) next.awayTeam = awayPeriod.rest
+  const homePeriod = periodSuffix(next.homeTeam)
+  if (homePeriod) next.homeTeam = homePeriod.rest
+  const period = awayPeriod?.period ?? homePeriod?.period
+  if (period && period !== leg.period) {
+    next.period = period
+    unsure.add('period')
+  }
+
+  return { ...next, unsure: SLIP_LEG_FIELDS.filter((field) => unsure.has(field)) }
+}
+
+/** A leg as the window gets it: event-name market words fixed, then catalogue issues flagged. */
+export function checkLeg(leg: SlipLeg): SlipLeg {
+  return flagCatalogueIssues(fixEventNameMarket(leg))
+}
+
+/**
  * The read from the model's text output: JSON (a ```json fence around it is tolerated), checked
- * against `slipReadSchema`, with catalogue issues flagged as unsure. Null when it is not valid:
+ * against `slipReadSchema`, each leg through `checkLeg`. Null when it is not valid:
  * a failed read is never returned in part.
  */
 export function parseSlipRead(text: string): SlipRead | null {
@@ -176,5 +260,5 @@ export function parseSlipRead(text: string): SlipRead | null {
   }
   const result = slipReadSchema.safeParse(data)
   if (!result.success) return null
-  return { ...result.data, legs: result.data.legs.map(flagCatalogueIssues) }
+  return { ...result.data, legs: result.data.legs.map(checkLeg) }
 }

@@ -9,7 +9,7 @@ import {
   type Ref,
 } from '@/domain/slipImport'
 import {
-  flagCatalogueIssues,
+  checkLeg,
   SLIP_READ_ERRORS,
   slipReadSchema,
   type SlipRead,
@@ -98,7 +98,7 @@ export const useSlipImportStore = defineStore('slipImport', () => {
     if (response.error) throw new UserError(readErrorKey(await readErrorCode(response.error)))
     const parsed = slipReadSchema.safeParse(response.data)
     if (!parsed.success) throw new UserError(readErrorKey('read_failed'))
-    return { ...parsed.data, legs: parsed.data.legs.map(flagCatalogueIssues) }
+    return { ...parsed.data, legs: parsed.data.legs.map(checkLeg) }
   }
 
   async function predictionsOf(eventIds: string[]): Promise<ContextPrediction[]> {
