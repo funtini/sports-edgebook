@@ -261,6 +261,22 @@ const ptPT = {
     saved: 'Prognóstico atualizado',
     saveFailed: 'Não foi possível guardar as alterações.',
   },
+  eventEdit: {
+    title: 'Editar evento',
+    hint: 'Corrige equipas, liga, data ou hora. Os prognósticos ficam neste evento.',
+    close: 'Fechar',
+    cancel: 'Cancelar',
+    save: 'Guardar alterações',
+    saved: 'Evento atualizado',
+    saveFailed: 'Não foi possível guardar as alterações.',
+    duplicateTitle: 'Este jogo já existe',
+    duplicateText:
+      'Os prognósticos deste evento passam para o existente e este evento é apagado. O resultado do existente mantém-se.',
+    merge: 'Juntar eventos',
+    back: 'Voltar',
+    merged: 'Eventos juntos',
+    mergeFailed: 'Não foi possível juntar os eventos.',
+  },
   punter: {
     title: 'Aposta real (punter)',
     hint: 'Conta para o lucro real',
@@ -401,6 +417,7 @@ const ptPT = {
     loadFailed: 'Não foi possível carregar o jogo.',
     invalidScore: 'Resultado inválido',
     saveScoreFailed: 'Não foi possível guardar o resultado.',
+    edit: 'Editar evento',
   },
   settlement: {
     saveFailed: 'Não foi possível guardar a liquidação.',

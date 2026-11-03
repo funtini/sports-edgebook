@@ -141,6 +141,15 @@ Route `/eventos/:id`, one game. Phase 7 adds the Game Analyser below (see [futur
 
 Code: `src/views/EventView.vue`, `eventScoreSchema` / `scoreFormSchema` in `src/domain/schemas.ts`, `setScore` in `src/stores/events.ts`.
 
+### Editing an event
+
+From the game card (see [ui.md](ui.md#edit-an-event)) the owner can correct an event's **date**, **time**, **league** and **teams**, e.g. one a slip import read wrongly ("Cantos Marítimo – Cantos Santa Clara" for "Marítimo – Santa Clara"). Code: `src/domain/eventEdit.ts`, `update` / `onDayOf` / `merge` in `src/stores/events.ts`, `removeIfUnused` in `src/stores/reference.ts`.
+
+- Same validation as "Novo evento" (`newGameFormSchema`): date and time required, home and away different. League and team names reuse an existing row when the name matches ignoring case and extra spaces, or create one, as in Registo.
+- The predictions stay on the event; their pick, odd and probability are untouched. The score is edited with Resultado, not here.
+- **Same game**: before saving, the owner's events on the corrected game's local day are checked for one with the same two teams, home and away in either order (`findSameGame`). If one exists the edit is not saved and "Juntar eventos" is offered: this event's predictions move to the existing one, which keeps its own date, league and teams and takes this event's score only when it has none (`mergedScore`), and this event is deleted. Predictions move first, so a failure part-way never loses one. Two identical predictions are not joined; both stay.
+- **Unused teams**: after a save or a merge, each team the event no longer uses is deleted (with its aliases) when no other event uses it, so a misread name stops being suggested. A failure here is ignored.
+
 ## Data model
 
 See `supabase/migrations/`; row types in `src/types/db.ts`, input validation in `src/domain/schemas.ts`. Tables: `leagues`, `teams`, `team_aliases`, `events`, `markets` (legacy, see below), `predictions`, `multiples` (`origin` `manual` / `generated` / `mixed`), `multiple_legs` (`origin` `manual` / `generated`, `odd_at_selection`), `user_settings`. There are no SQL views for metrics: the dashboard computes them in TypeScript from the rows it loads (see [metrics.md](metrics.md#engine)).

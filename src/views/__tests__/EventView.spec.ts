@@ -13,6 +13,12 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
+const router = vi.hoisted(() => ({ replace: vi.fn<(to: unknown) => Promise<void>>() }))
+vi.mock('vue-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('vue-router')>()),
+  useRouter: () => router,
+}))
+
 const EVENT_ID = '0b9f7c1e-3d1a-4c9e-9a51-1f2d3c4b5a60'
 
 const settingsRow = {
@@ -133,6 +139,77 @@ describe('EventView', () => {
     expect(wrapper.find('[data-prediction-edit]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Odd 2,40')
     expect(wrapper.get('[data-box="stake"]').text()).toBe('Apostado3,00')
+  })
+
+  describe('Editar evento', () => {
+    const SPORTING = '7c8d9e0f-1a2b-4c3d-8e4f-5a6b7c8d9e0f'
+    const PORTO = '8d9e0f1a-2b3c-4d4e-9f5a-6b7c8d9e0f1a'
+    const OTHER = 'c4b5a60e-1f2d-4c3b-9a51-0b9f7c1e3d1a'
+    const LEAGUE = '9e0f1a2b-3c4d-4e5f-8a6b-7c8d9e0f1a2b'
+    const ids: Record<string, string> = { sporting: SPORTING, porto: PORTO }
+
+    function editing(sameDay: unknown[] = []): Responder {
+      const respond = backend()
+      return (q) => {
+        const name = argsOf(q, 'ilike')?.[1] as string | undefined
+        if (q.table === 'leagues') return { data: name ? [{ id: LEAGUE, name }] : [] }
+        if (q.table === 'teams')
+          return { data: name ? [{ id: ids[name.toLowerCase()], name }] : [] }
+        if (q.table === 'events' && has(q, 'gte')) return { data: sameDay }
+        if (q.table === 'events' && has(q, 'or')) return { data: [{ id: 'still-used' }] }
+        if (q.table === 'events' && has(q, 'update')) {
+          return {
+            data: event({
+              home_team: { id: SPORTING, name: 'Sporting' },
+              away_team: { id: PORTO, name: 'Porto' },
+            }),
+          }
+        }
+        if (q.table === 'predictions' && has(q, 'update')) return { data: null }
+        return respond(q)
+      }
+    }
+
+    it('corrects the teams and shows the game with its new name', async () => {
+      const queries = setup(editing())
+      const wrapper = await render()
+
+      await wrapper.get('[data-edit-event]').trigger('click')
+      expect(wrapper.find('[data-event-edit]').exists()).toBe(true)
+      await wrapper.get('#edit-home').setValue('Sporting')
+      await wrapper.get('[data-event-edit] form').trigger('submit')
+      await flushPromises()
+
+      const update = queries.find((q) => q.table === 'events' && has(q, 'update'))!
+      expect(argsOf(update, 'update')?.[0]).toMatchObject({
+        home_team_id: SPORTING,
+        away_team_id: PORTO,
+      })
+      expect(wrapper.find('[data-event-edit]').exists()).toBe(false)
+      expect(wrapper.get('h1').text()).toMatch(/^Sporting\s*vs\s*Porto$/)
+    })
+
+    it('opens the kept event after merging into it', async () => {
+      router.replace.mockClear()
+      const kept = event({
+        id: OTHER,
+        home_team_id: SPORTING,
+        away_team_id: PORTO,
+        home_team: { id: SPORTING, name: 'Sporting' },
+        away_team: { id: PORTO, name: 'Porto' },
+      })
+      setup(editing([kept]))
+      const wrapper = await render()
+
+      await wrapper.get('[data-edit-event]').trigger('click')
+      await wrapper.get('#edit-home').setValue('Sporting')
+      await wrapper.get('[data-event-edit] form').trigger('submit')
+      await flushPromises()
+      await wrapper.get('[data-merge]').trigger('click')
+      await flushPromises()
+
+      expect(router.replace).toHaveBeenCalledWith({ name: 'event', params: { id: OTHER } })
+    })
   })
 
   it('says the game was not found for an unknown or malformed id', async () => {

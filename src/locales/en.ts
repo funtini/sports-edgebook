@@ -258,6 +258,22 @@ const en: Messages = {
     saved: 'Prediction updated',
     saveFailed: 'Could not save the changes.',
   },
+  eventEdit: {
+    title: 'Edit event',
+    hint: 'Fix the teams, league, date or time. The predictions stay on this event.',
+    close: 'Close',
+    cancel: 'Cancel',
+    save: 'Save changes',
+    saved: 'Event updated',
+    saveFailed: 'Could not save the changes.',
+    duplicateTitle: 'This game already exists',
+    duplicateText:
+      "This event's predictions move to the existing one and this event is deleted. The existing event's result is kept.",
+    merge: 'Merge events',
+    back: 'Back',
+    merged: 'Events merged',
+    mergeFailed: 'Could not merge the events.',
+  },
   punter: {
     title: 'Real bet (punter)',
     hint: 'Counts towards real profit',
@@ -398,6 +414,7 @@ const en: Messages = {
     loadFailed: 'Could not load the game.',
     invalidScore: 'Invalid result',
     saveScoreFailed: 'Could not save the result.',
+    edit: 'Edit event',
   },
   settlement: {
     saveFailed: 'Could not save the settlement.',
