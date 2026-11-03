@@ -6,30 +6,21 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import AppIcon from '@/components/AppIcon.vue'
-import ChipGroup from '@/components/ChipGroup.vue'
 import ConfidencePicker from '@/components/ConfidencePicker.vue'
 import GamePicker from '@/components/GamePicker.vue'
 import NotesField from '@/components/NotesField.vue'
+import PickFields from '@/components/PickFields.vue'
 import PunterFields from '@/components/PunterFields.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import ValueIndex from '@/components/ValueIndex.vue'
 import { useLocale } from '@/composables/useLocale'
 import { DESKTOP_QUERY, useMediaQuery } from '@/composables/useMediaQuery'
 import { probabilityFor } from '@/domain/confidence'
-import { parseDecimal, toggleSign } from '@/domain/decimal'
-import { formatPercent, numberFormat } from '@/domain/intl'
+import { parseDecimal } from '@/domain/decimal'
+import { formatPercent } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
 import { fairOdd } from '@/domain/value'
 import { toSearchResult, type EventSearchResult, type RecentEvent } from '@/domain/eventSource'
-import {
-  BET_TYPES_BY_MARKET,
-  lineKind,
-  MARKETS,
-  MATCH_PERIODS,
-  PICKS,
-  stepLine,
-  type BetType,
-} from '@/domain/markets'
 import { emptyPredictionDraft, predictionInput } from '@/domain/predictionDraft'
 import {
   newGameFormSchema,
@@ -88,26 +79,10 @@ const probabilityLabel = computed(() => {
   })
 })
 
-const marketOptions = computed(() =>
-  MARKETS.map((value) => ({ value, label: t(`catalogue.market.${value}`) })),
-)
-const betTypeOptions = computed(() =>
-  BET_TYPES_BY_MARKET[draft.market].map((value) => ({
-    value,
-    label: t(`catalogue.betType.${value}`),
-  })),
-)
-const periodOptions = MATCH_PERIODS.map((value) => ({ value, label: value }))
 const timingOptions = computed(() => [
   { value: 'prematch' as const, label: t('timing.prematch') },
   { value: 'live' as const, label: t('timing.live') },
 ])
-const overUnderOptions = computed(() =>
-  (['over', 'under'] as const).map((value) => ({
-    value,
-    label: t(`catalogue.overUnder.${value}`),
-  })),
-)
 const timing = computed({
   get: () => (draft.isLive ? 'live' : 'prematch'),
   set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
@@ -126,37 +101,6 @@ function defaultTiming() {
   draft.isLive = !!kickoff.value && kickoff.value.getTime() <= Date.now()
 }
 watch(kickoff, defaultTiming)
-const pickOptions = computed(() =>
-  PICKS[draft.betType].map((value) => ({ value, label: t(`catalogue.pick.${value}`) })),
-)
-const line = computed(() => lineKind(draft.betType))
-/** Linha after − / +, null when it cannot step (see `stepLine`). */
-const steppedLine = (direction: 1 | -1) =>
-  line.value ? stepLine(line.value, parseDecimal(draft.line), direction) : null
-const lineFormat = computed(() =>
-  numberFormat(intlLocale.value, { maximumFractionDigits: 2, useGrouping: false }),
-)
-function step(direction: 1 | -1) {
-  const next = steppedLine(direction)
-  if (next != null) draft.line = lineFormat.value.format(next)
-}
-
-// A type the new market does not offer falls back to its first; a side only fits its own type.
-watch(
-  () => draft.market,
-  (market) => {
-    if (!BET_TYPES_BY_MARKET[market].includes(draft.betType)) {
-      draft.betType = BET_TYPES_BY_MARKET[market][0] as BetType
-    }
-  },
-)
-watch(
-  () => draft.betType,
-  () => {
-    draft.pick = ''
-    if (!lineKind(draft.betType)) draft.line = ''
-  },
-)
 
 /** Clears everything about the prediction but keeps the game. */
 function resetPrediction() {
@@ -335,138 +279,15 @@ onMounted(async () => {
               :label="t('logging.timing')"
               class="lg:max-w-[320px]"
             />
-            <div class="flex flex-col gap-1.5">
-              <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.market') }}</span>
-              <ChipGroup
-                v-model="draft.market"
-                :options="marketOptions"
-                :label="t('logging.market')"
-              />
-            </div>
-
-            <div class="flex flex-col gap-1.5">
-              <span class="text-[13px] font-semibold text-eb-muted">{{ t('logging.type') }}</span>
-              <ChipGroup
-                v-model="draft.betType"
-                :options="betTypeOptions"
-                :label="t('logging.type')"
-                :invalid="!!errors.bet_type"
-              />
-              <small v-if="errors.bet_type" class="text-eb-neg">{{
-                message(errors.bet_type)
-              }}</small>
-            </div>
-
-            <!-- Desktop: Período and Seleção side by side, then Linha and Odd. -->
-            <div class="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-              <div class="flex flex-col gap-1.5">
-                <span class="text-[13px] font-semibold text-eb-muted">{{
-                  t('logging.period')
-                }}</span>
-                <SegmentedControl
-                  v-model="draft.period"
-                  :options="periodOptions"
-                  :label="t('logging.period')"
-                />
-              </div>
-
-              <div v-if="draft.betType === 'other'" class="flex flex-col gap-1">
-                <label for="selection" class="text-[13px] font-semibold text-eb-muted">{{
-                  t('logging.selection')
-                }}</label>
-                <InputText
-                  id="selection"
-                  v-model="draft.pick"
-                  autocomplete="off"
-                  :placeholder="t('logging.selectionPlaceholder')"
-                  class="min-h-12 w-full"
-                  :invalid="!!errors.selection"
-                />
-                <small v-if="errors.selection" class="text-eb-neg">{{
-                  message(errors.selection)
-                }}</small>
-              </div>
-              <div v-else-if="pickOptions.length > 0" class="flex flex-col gap-1.5">
-                <span class="text-[13px] font-semibold text-eb-muted">{{
-                  t('logging.selection')
-                }}</span>
-                <ChipGroup
-                  v-model="draft.pick"
-                  :options="pickOptions"
-                  :label="t('logging.selection')"
-                  :invalid="!!errors.selection"
-                />
-                <small v-if="errors.selection" class="text-eb-neg">{{
-                  message(errors.selection)
-                }}</small>
-              </div>
-
-              <div v-if="line" class="flex flex-col gap-1">
-                <label for="line" class="text-[13px] font-semibold text-eb-muted">{{
-                  t('logging.line')
-                }}</label>
-                <div class="flex gap-1">
-                  <!-- A total's side is picked here, so its line is never signed. -->
-                  <SegmentedControl
-                    v-if="line === 'total'"
-                    v-model="draft.overUnder"
-                    :options="overUnderOptions"
-                    :label="t('logging.overUnder')"
-                    class="mr-1 shrink-0 [&_button]:px-3"
-                  />
-                  <Button
-                    type="button"
-                    :aria-label="t('logging.lineDown')"
-                    severity="secondary"
-                    outlined
-                    class="min-h-12 min-w-12 shrink-0"
-                    :disabled="steppedLine(-1) == null"
-                    data-line-down
-                    @click="step(-1)"
-                  >
-                    <AppIcon name="minus" class="size-4" stroke-width="2.5" />
-                  </Button>
-                  <InputText
-                    id="line"
-                    v-model="draft.line"
-                    inputmode="decimal"
-                    :placeholder="
-                      t(
-                        line === 'total'
-                          ? 'logging.lineTotalPlaceholder'
-                          : 'logging.lineHandicapPlaceholder',
-                      )
-                    "
-                    autocomplete="off"
-                    class="min-h-12 w-full min-w-0 text-center tabular-nums"
-                    :invalid="!!errors.line"
-                  />
-                  <Button
-                    type="button"
-                    :aria-label="t('logging.lineUp')"
-                    severity="secondary"
-                    outlined
-                    class="min-h-12 min-w-12 shrink-0"
-                    :disabled="steppedLine(1) == null"
-                    data-line-up
-                    @click="step(1)"
-                  >
-                    <AppIcon name="plus" class="size-4" stroke-width="2.5" />
-                  </Button>
-                  <Button
-                    v-if="line === 'handicap'"
-                    type="button"
-                    label="±"
-                    :aria-label="t('logging.toggleSign')"
-                    severity="secondary"
-                    outlined
-                    class="min-h-12 min-w-12 shrink-0"
-                    @click="draft.line = toggleSign(draft.line)"
-                  />
-                </div>
-                <small v-if="errors.line" class="text-eb-neg">{{ message(errors.line) }}</small>
-              </div>
-
+            <PickFields
+              v-model:market="draft.market"
+              v-model:bet-type="draft.betType"
+              v-model:period="draft.period"
+              v-model:pick="draft.pick"
+              v-model:line="draft.line"
+              v-model:over-under="draft.overUnder"
+              :errors="errors"
+            >
               <div class="flex flex-col gap-1">
                 <label for="odd" class="text-[13px] font-semibold text-eb-muted">{{
                   t('logging.odd')
@@ -482,7 +303,7 @@ onMounted(async () => {
                 />
                 <small v-if="errors.odd" class="text-eb-neg">{{ message(errors.odd) }}</small>
               </div>
-            </div>
+            </PickFields>
           </fieldset>
 
           <fieldset class="m-0 flex min-w-0 flex-col gap-3 border-0 p-0" :disabled="loading">

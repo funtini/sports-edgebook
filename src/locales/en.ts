@@ -257,6 +257,9 @@ const en: Messages = {
     save: 'Save changes',
     saved: 'Prediction updated',
     saveFailed: 'Could not save the changes.',
+    editPick: 'Change pick (market, selection, line)',
+    pickTitle: 'Pick',
+    keepPick: 'Keep original',
   },
   eventEdit: {
     title: 'Edit event',

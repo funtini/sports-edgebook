@@ -151,6 +151,66 @@ describe('PredictionEditDialog', () => {
     expect(wrapper.emitted('saved')).toBeUndefined()
   })
 
+  it('leaves the pick out of the save until "Alterar escolha" is opened', async () => {
+    const queries = setup()
+    const wrapper = render()
+    await flushPromises()
+    expect(wrapper.find('[data-pick-fields]').exists()).toBe(false)
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(updates(queries)[0]).not.toHaveProperty('market')
+  })
+
+  it('opens the pick as logged and saves a changed one', async () => {
+    const queries = setup()
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.find('[data-edit-pick]').trigger('click')
+
+    const fields = wrapper.find('[data-pick-fields]')
+    const pressed = fields.findAll('button[aria-pressed="true"]').map((b) => b.text())
+    expect(pressed).toEqual(['Golos', 'Total', 'FT', 'Over'])
+    expect((wrapper.find('#edit-line').element as HTMLInputElement).value).toBe('2,5')
+
+    const chip = (text: string) =>
+      wrapper.findAll('[data-pick-fields] button').find((b) => b.text() === text)!
+    await chip('Cantos').trigger('click')
+    await chip('Handicap').trigger('click')
+    await chip('V2').trigger('click')
+    await wrapper.find('#edit-line').setValue('-1,5')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+
+    expect(updates(queries)[0]).toMatchObject({
+      market: 'corners',
+      bet_type: 'handicap',
+      period: 'FT',
+      selection: 'away',
+      line: -1.5,
+      odd: 1.9,
+    })
+  })
+
+  it('shows pick errors, and "Manter original" drops the pick change', async () => {
+    const queries = setup()
+    const wrapper = render()
+    await flushPromises()
+    await wrapper.find('[data-edit-pick]').trigger('click')
+    const chip = (text: string) =>
+      wrapper.findAll('[data-pick-fields] button').find((b) => b.text() === text)!
+    await chip('Ambas marcam').trigger('click')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(wrapper.find('[data-pick-fields]').text()).toContain('Indica a seleção')
+    expect(updates(queries)).toHaveLength(0)
+
+    await wrapper.find('[data-keep-pick]').trigger('click')
+    expect(wrapper.find('[data-pick-fields]').exists()).toBe(false)
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(updates(queries)[0]).not.toHaveProperty('bet_type')
+  })
+
   it('keeps the dialog open with a message when the save fails', async () => {
     setup(true)
     const wrapper = render()

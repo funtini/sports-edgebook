@@ -44,9 +44,9 @@ export const usePredictionsStore = defineStore('predictions', () => {
   }
 
   /**
-   * Saves the editable fields of a logged prediction (`predictionUpdateSchema`). The stored
-   * probability stays unless the confidence level changes (`editedProbability`). Status, the pick
-   * and the event are left as they are.
+   * Saves the editable fields of a logged prediction (`predictionUpdateSchema`), the pick only when
+   * it is sent. The stored probability stays unless the confidence level changes
+   * (`editedProbability`). Status and the event are left as they are.
    */
   async function update(
     stored: Pick<PredictionWithRelations, 'id' | 'confidence' | 'probability'>,
