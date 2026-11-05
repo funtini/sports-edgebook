@@ -110,7 +110,7 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 Route `/registo/importar`. Behaviour, matching and saving rules: [slip-import.md](slip-import.md).
 
-- **Enviar**: "‹ Registo", title "Importar aposta", a dashed drop zone ("Escolhe uma imagem do boletim · PNG, JPEG ou WebP"; on phone, "Tirar foto" and "Escolher da galeria"), and the note "A imagem não é guardada."
+- **Enviar**: "‹ Registo", title "Importar aposta", a dashed drop zone ("Escolhe uma imagem do boletim · PNG, JPEG ou WebP"), one "Escolher imagem" button (on a phone the system picker offers the camera and the gallery), and the note "A imagem não é guardada."
 - **A ler**: the image as a thumbnail and a progress line ("A ler o boletim…").
 - **Confirmar aposta**:
   - Desktop: a modal over a scrim. The image is on the left (about 420px, scrolls on its own); the right column holds the Boletim card, then one card per prediction.

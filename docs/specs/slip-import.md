@@ -9,7 +9,7 @@ Phase 4. The owner uploads a screenshot or photo of a bet slip from a bookmaker 
    - Desktop: an "Importar aposta" button next to the "Novo prognóstico" title.
    - Both open `/registo/importar`.
    - Also on Múltiplas: an "Importar aposta" button next to the title, on phone and desktop. It opens `/registo/importar?origem=multiplas`, and the import goes back to Múltiplas: "‹ Múltiplas", and after saving (Guardadas when a multiple was saved).
-2. **Enviar**: one image per import (PNG, JPEG or WebP; the camera on phone). The image is shrunk in the browser to at most 1600px on its long side and re-encoded as JPEG before upload.
+2. **Enviar**: one image per import (PNG, JPEG or WebP), from a single "Escolher imagem" button (on a phone the system picker offers the camera and the gallery) or dropped on the zone. The image is shrunk in the browser to at most 1600px on its long side and re-encoded as JPEG before upload.
 3. **A ler**: the image goes to the `read-slip` Edge Function (below). The screen shows the image and a progress state; on failure it says so and offers "Tentar outra vez" and "Escolher outra imagem".
 4. **Confirmar aposta**: the confirmation window (below). Nothing is written to the database before the owner presses the save button.
 5. **Saved**: back to Hoje (or Múltiplas, see Entry) with a toast ("3 prognósticos e a múltipla registados"; "3 prognósticos registados" when only the predictions were kept).

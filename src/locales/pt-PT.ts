@@ -515,8 +515,6 @@ const ptPT = {
     title: 'Importar aposta',
     dropZone: 'Escolhe uma imagem do boletim',
     dropZoneTypes: 'PNG, JPEG ou WebP',
-    takePhoto: 'Tirar foto',
-    fromGallery: 'Escolher da galeria',
     chooseImage: 'Escolher imagem',
     notStored: 'A imagem não é guardada.',
     wrongType: 'Escolhe uma imagem PNG, JPEG ou WebP.',
