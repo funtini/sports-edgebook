@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { emptyNewGame, emptyPredictionDraft, predictionInput } from '../predictionDraft'
+import {
+  emptyNewGame,
+  emptyPredictionDraft,
+  pickDraftFrom,
+  pickInput,
+  predictionInput,
+} from '../predictionDraft'
 import { predictionFormSchema } from '../schemas'
 
 const draft = {
@@ -59,6 +65,45 @@ describe('predictionInput', () => {
     expect(input.odd).toBeUndefined()
     expect(input.confidence).toBeUndefined()
     expect(input.notes).toBeNull()
+  })
+})
+
+const stored = { market: 'goals', bet_type: 'total', period: 'FT', selection: 'over', line: 2.5 }
+
+describe('pickDraftFrom', () => {
+  const pick = (bet_type: string, selection: string, line: number | null) =>
+    pickDraftFrom({ market: 'goals', bet_type, period: 'HT', selection, line })
+
+  it("shows a total's side in over / under and its size in Linha", () => {
+    expect(pick('total', 'under', 2.5)).toEqual({
+      market: 'goals',
+      betType: 'total',
+      period: 'HT',
+      pick: '',
+      line: '2,5',
+      overUnder: 'under',
+    })
+    expect(pick('team_total', 'home_over', 1.5)).toMatchObject({
+      pick: 'home',
+      line: '1,5',
+      overUnder: 'over',
+    })
+  })
+
+  it('keeps a handicap signed and a side without a line blank', () => {
+    expect(pick('handicap', 'away', -1)).toMatchObject({ pick: 'away', line: '-1' })
+    expect(pick('btts', 'yes', null)).toMatchObject({ pick: 'yes', line: '' })
+    expect(pickDraftFrom({ ...stored, line: 0.75 }, 'en-GB').line).toBe('0.75')
+  })
+
+  it('round-trips through pickInput', () => {
+    for (const row of [
+      stored,
+      { ...stored, bet_type: 'result_total', market: 'result', selection: '1x_under', line: 3.5 },
+      { ...stored, bet_type: 'other', selection: 'Golo nos 10 min', line: null },
+    ]) {
+      expect(pickInput(pickDraftFrom(row))).toEqual(row)
+    }
   })
 })
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_CONFIDENCE_ANCHORS } from '../confidence'
+import { pickDraftFrom } from '../predictionDraft'
 import { editDraftFrom, editedProbability, predictionEditInput } from '../predictionEdit'
 import { predictionUpdateSchema } from '../schemas'
 
@@ -16,6 +17,7 @@ const stored = {
 describe('editDraftFrom', () => {
   it('fills the form from the stored row, numbers in the active language', () => {
     expect(editDraftFrom(stored)).toEqual({
+      pick: null,
       odd: '1,85',
       confidence: 4,
       isLive: false,
@@ -60,6 +62,51 @@ describe('predictionEditInput', () => {
     const draft = { ...editDraftFrom(stored), notes: '  late goal  ', bookmaker: ' ' }
     expect(predictionEditInput(draft)).toMatchObject({ notes: 'late goal', bookmaker: null })
     expect(predictionEditInput({ ...draft, notes: '   ' }).notes).toBeNull()
+  })
+})
+
+describe('predictionEditInput with the pick', () => {
+  const logged = {
+    market: 'goals',
+    bet_type: 'total',
+    period: 'FT',
+    selection: 'over',
+    line: 2.5,
+  }
+
+  it('leaves the pick out until it is opened', () => {
+    expect(predictionEditInput(editDraftFrom(stored))).not.toHaveProperty('market')
+  })
+
+  it('round-trips an opened, untouched pick', () => {
+    const draft = { ...editDraftFrom(stored), pick: pickDraftFrom(logged) }
+    expect(predictionUpdateSchema.parse(predictionEditInput(draft))).toMatchObject(logged)
+  })
+
+  it('stores a changed pick as logging would', () => {
+    const pick = { ...pickDraftFrom(logged), betType: 'team_total' as const, pick: 'away' }
+    const draft = { ...editDraftFrom(stored), pick: { ...pick, overUnder: 'under' as const } }
+    expect(predictionUpdateSchema.parse(predictionEditInput(draft))).toMatchObject({
+      bet_type: 'team_total',
+      selection: 'away_under',
+      line: 2.5,
+    })
+  })
+
+  it("holds the pick to the catalogue's rules", () => {
+    const pick = { ...pickDraftFrom(logged), market: 'result' as const, line: '' }
+    const issues = predictionUpdateSchema.safeParse(
+      predictionEditInput({ ...editDraftFrom(stored), pick }),
+    ).error?.issues
+    expect(issues?.map((i) => [i.path[0], i.message])).toEqual([
+      ['bet_type', 'validation.typeRequired'],
+      ['line', 'validation.lineRequired'],
+    ])
+  })
+
+  it('refuses part of a pick', () => {
+    const result = predictionUpdateSchema.safeParse({ ...stored, market: 'goals' })
+    expect(result.error?.issues[0]?.message).toBe('validation.typeRequired')
   })
 })
 

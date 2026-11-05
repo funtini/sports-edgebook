@@ -68,8 +68,9 @@ With `layout="line"` the row keeps this stacked layout below 1024px; from `lg` i
 
 - **Phone**: a bottom sheet over a scrim (max 92% of the height, rounded top, the form scrolls). **From 640px**: a centred modal, max 560px wide.
 - **Header**: "Editar prognóstico", the game ("Casa – Fora", muted) and the bet's summary (Mercado - Tipo - Período - Seleção), read-only; a 44px close button.
-- **Form**, the logging form's pieces in its order: Pré-jogo / Live switch, Odd, Confiança (the five buttons, probability · odd justa beside the title), the Índice de valor card, the punter card (Valor apostado, Casa de apostas) and Notas (open when the row has notes).
+- **Form**, the logging form's pieces in its order: Pré-jogo / Live switch, a dashed "Alterar escolha (mercado, seleção, linha)" button, Odd, Confiança (the five buttons, probability · odd justa beside the title), the Índice de valor card, the punter card (Valor apostado, Casa de apostas) and Notas (open when the row has notes).
 - **Footer** (sticky): "Cancelar" and "Guardar alterações"; errors inline per field, a save failure as a message above the buttons. Saving closes it, shows a "Prognóstico atualizado" toast and puts the saved row in the list. Escape, the scrim and the close button cancel, except while saving.
+- **Alterar escolha** opens a "Escolha" card in place of the button with Registo's Mercado, Tipo, Período, Seleção and Linha (`PickFields.vue`, stacked), filled with the pick as logged; "Manter original" closes it and keeps the logged pick. The header summary keeps showing the logged pick until the save.
 - On Hoje the `N` shortcut is off while it is open.
 
 ### Edit an event

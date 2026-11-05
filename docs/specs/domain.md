@@ -28,7 +28,8 @@ Errors show inline, from `predictionFormSchema` and `newGameFormSchema` (home an
 
 From a prediction row on Hoje or Evento (see [ui.md](ui.md#edit-a-prediction)) the owner can change the **odd**, **confidence**, **Pré-jogo / Live**, **punter** flag, **stake**, **bookmaker** and **notes** of a logged prediction, whatever its status (`predictionUpdateSchema`, `src/domain/predictionEdit.ts`, `update` in `src/stores/predictions.ts`).
 
-- The pick (market, type, period, selection, line) and the event stay as logged; a different pick is a new prediction.
+- The **pick** (market, type, period, selection, line) can be corrected too, behind "Alterar escolha". It is sent only when that section is open, and then whole and checked against the [catalogue](#markets) as when logging (`pickDraftFrom` / `pickInput` in `src/domain/predictionDraft.ts`). The event stays as logged ([Editing an event](#editing-an-event) fixes the game).
+- Status is not re-settled when the pick changes: a settled row keeps its Ganho / Perdido / Nulo until the owner changes it.
 - Same validation as logging: odd above 1, a punter bet needs a stake; turning punter off clears stake and bookmaker; blank notes are saved as null.
 - **Probability**: kept as stored while the confidence level stays the same, so editing never recomputes a row from current anchors. A new level takes its probability from the current anchors, as logging it again would (`editedProbability`).
 - Status and `settled_at` are untouched, so a settled row's profit follows the new odd and stake at once. Saved multiples keep each leg's `odd_at_selection`.

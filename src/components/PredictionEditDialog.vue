@@ -7,6 +7,7 @@ import { useToast } from 'primevue/usetoast'
 import AppIcon from './AppIcon.vue'
 import ConfidencePicker from './ConfidencePicker.vue'
 import NotesField from './NotesField.vue'
+import PickFields from './PickFields.vue'
 import PunterFields from './PunterFields.vue'
 import SegmentedControl from './SegmentedControl.vue'
 import ValueIndex from './ValueIndex.vue'
@@ -14,6 +15,7 @@ import { useLocale } from '@/composables/useLocale'
 import { parseDecimal } from '@/domain/decimal'
 import { formatPercent } from '@/domain/intl'
 import { formatDecimal } from '@/domain/money'
+import { pickDraftFrom } from '@/domain/predictionDraft'
 import { editDraftFrom, editedProbability, predictionEditInput } from '@/domain/predictionEdit'
 import { predictionUpdateSchema, type PredictionUpdate } from '@/domain/schemas'
 import { fairOdd } from '@/domain/value'
@@ -24,7 +26,8 @@ import type { PredictionWithRelations } from '@/types/db'
 
 /**
  * "Editar prognóstico" (docs/specs/ui.md#edit-a-prediction): odd, confidence, Pré-jogo / Live,
- * punter, stake, bookmaker and notes of a logged prediction. A sheet on phone, a modal from 640px.
+ * punter, stake, bookmaker and notes of a logged prediction, and its pick (Registo's Mercado, Tipo,
+ * Período, Seleção, Linha) behind "Alterar escolha". A sheet on phone, a modal from 640px.
  * Nothing is written before "Guardar alterações".
  */
 const props = defineProps<{ prediction: PredictionWithRelations }>()
@@ -54,6 +57,18 @@ const timing = computed({
   get: () => (draft.isLive ? 'live' : 'prematch'),
   set: (value: 'prematch' | 'live') => (draft.isLive = value === 'live'),
 })
+
+/** Opens Registo's pick fields, starting from the pick as logged. */
+function editPick() {
+  draft.pick = pickDraftFrom(props.prediction, intlLocale.value)
+}
+/** Closes them and keeps the pick as logged. */
+function keepPick() {
+  draft.pick = null
+  delete errors.value.bet_type
+  delete errors.value.selection
+  delete errors.value.line
+}
 
 const parsedOdd = computed(() => parseDecimal(draft.odd))
 /** The stored probability while the level is unchanged; the current anchor for a new level. */
@@ -158,6 +173,47 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
         @submit.prevent="save"
       >
         <SegmentedControl v-model="timing" :options="timingOptions" :label="t('logging.timing')" />
+
+        <section
+          v-if="draft.pick"
+          class="flex flex-col gap-3 rounded-xl border border-eb-border bg-eb-surface p-3"
+          :aria-label="t('predictionEdit.pickTitle')"
+          data-pick-fields
+        >
+          <div class="flex items-center justify-between gap-3">
+            <span class="text-[15px] font-bold">{{ t('predictionEdit.pickTitle') }}</span>
+            <Button
+              type="button"
+              :label="t('predictionEdit.keepPick')"
+              severity="secondary"
+              text
+              class="min-h-11 shrink-0"
+              data-keep-pick
+              @click="keepPick"
+            />
+          </div>
+          <PickFields
+            v-model:market="draft.pick.market"
+            v-model:bet-type="draft.pick.betType"
+            v-model:period="draft.pick.period"
+            v-model:pick="draft.pick.pick"
+            v-model:line="draft.pick.line"
+            v-model:over-under="draft.pick.overUnder"
+            :errors="errors"
+            :columns="false"
+            id-prefix="edit-"
+          />
+        </section>
+        <button
+          v-else
+          type="button"
+          class="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-dashed border-eb-border bg-transparent px-4 text-sm font-semibold text-eb-text hover:border-eb-accent"
+          data-edit-pick
+          @click="editPick"
+        >
+          <AppIcon name="pencil" class="size-4 text-eb-muted" />
+          {{ t('predictionEdit.editPick') }}
+        </button>
 
         <div class="flex flex-col gap-1">
           <label for="edit-odd" class="text-[13px] font-semibold text-eb-muted">{{

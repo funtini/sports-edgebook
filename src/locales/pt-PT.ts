@@ -260,6 +260,9 @@ const ptPT = {
     save: 'Guardar alterações',
     saved: 'Prognóstico atualizado',
     saveFailed: 'Não foi possível guardar as alterações.',
+    editPick: 'Alterar escolha (mercado, seleção, linha)',
+    pickTitle: 'Escolha',
+    keepPick: 'Manter original',
   },
   eventEdit: {
     title: 'Editar evento',

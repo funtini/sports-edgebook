@@ -97,8 +97,9 @@ export type PredictionCreate = z.input<typeof predictionCreateSchema>
 export type PredictionCreateParsed = z.output<typeof predictionCreateSchema>
 
 /**
- * The fields of a logged prediction that can be edited from a prediction row (Hoje, Evento); the
- * pick and the event stay as logged.
+ * The fields of a logged prediction that can be edited from a prediction row (Hoje, Evento). The
+ * pick (market, type, period, selection, line) is optional: sent whole when it changes, and then
+ * held to the catalogue's rules as when logging. The event stays as logged.
  */
 export const predictionUpdateSchema = predictionFields
   .pick({
@@ -110,6 +111,20 @@ export const predictionUpdateSchema = predictionFields
     bookmaker: true,
     notes: true,
   })
+  .extend({
+    market: predictionFields.shape.market.optional(),
+    bet_type: predictionFields.shape.bet_type.optional(),
+    period: predictionFields.shape.period.optional(),
+    selection: predictionFields.shape.selection.optional(),
+    line: predictionFields.shape.line,
+  })
+  .superRefine((p, ctx) => {
+    const sent = [p.market, p.bet_type, p.period, p.selection].filter((v) => v !== undefined)
+    if (sent.length === 0) return
+    if (sent.length < 4) {
+      ctx.addIssue({ code: 'custom', message: 'validation.typeRequired', path: ['bet_type'] })
+    } else checkPick(p as PredictionFields, ctx)
+  }, pickFieldsValid)
   .refine(punterHasStake, punterStakeIssue)
 
 export type PredictionUpdate = z.input<typeof predictionUpdateSchema>

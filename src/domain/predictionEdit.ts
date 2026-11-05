@@ -1,13 +1,19 @@
 import { probabilityFor, type ConfidenceAnchors, type ConfidenceLevel } from './confidence'
 import { parseDecimal } from './decimal'
 import { DEFAULT_LOCALE, numberFormat } from './intl'
+import { pickInput, type PickDraft } from './predictionDraft'
 import type { PredictionUpdate } from './schemas'
 
 /**
- * The fields of a logged prediction that can be edited from a prediction row, as typed. The pick
- * (market, type, period, selection, line) and the event stay as logged.
+ * The fields of a logged prediction that can be edited from a prediction row, as typed. The event
+ * stays as logged.
  */
 export interface PredictionEditDraft {
+  /**
+   * The pick (market, type, period, selection, line) once "Alterar escolha" is open (`pickDraftFrom`
+   * the stored row); null keeps it as logged.
+   */
+  pick: PickDraft | null
   /** Typed with comma or dot. */
   odd: string
   confidence: ConfidenceLevel | null
@@ -37,6 +43,7 @@ export function editDraftFrom(
 ): PredictionEditDraft {
   const typed = numberFormat(locale, { maximumFractionDigits: 3, useGrouping: false })
   return {
+    pick: null,
     odd: typed.format(prediction.odd),
     confidence: prediction.confidence as ConfidenceLevel,
     isLive: prediction.is_live,
@@ -47,11 +54,15 @@ export function editDraftFrom(
   }
 }
 
-/** Input for `predictionUpdateSchema`; stake and bookmaker only count for a punter bet. */
+/**
+ * Input for `predictionUpdateSchema`; the pick only when it is being edited, stake and bookmaker
+ * only for a punter bet.
+ */
 export function predictionEditInput(
   draft: PredictionEditDraft,
-): Record<keyof PredictionUpdate, unknown> {
+): Partial<Record<keyof PredictionUpdate, unknown>> {
   return {
+    ...(draft.pick ? pickInput(draft.pick) : {}),
     odd: parseDecimal(draft.odd) ?? undefined,
     confidence: draft.confidence ?? undefined,
     is_live: draft.isLive,
